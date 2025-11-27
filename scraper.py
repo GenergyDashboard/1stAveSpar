@@ -2,6 +2,7 @@ import os
 import json
 import random
 import time
+import re
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 
@@ -33,8 +34,37 @@ def scrape_solar_data():
     if not username or not password:
         raise ValueError("SOLIS_USERNAME and SOLIS_PASSWORD must be set")
     
+    print(f"🔐 Using username: {username[:3]}***")
+    
     os.makedirs('data', exist_ok=True)
     os.makedirs('data/daily', exist_ok=True)
+    
+    # Check if we have saved auth state in repository
+    use_auth_state = False
+    auth_state_file = 'data/auth_state_encoded.txt'
+    
+    if os.path.exists(auth_state_file):
+        try:
+            print("🔓 Found saved authentication state")
+            import base64
+            
+            # Read and decode the auth state
+            with open(auth_state_file, 'r') as f:
+                encoded = f.read()
+            
+            auth_data = base64.b64decode(encoded).decode()
+            
+            # Save to temp file
+            with open('auth_state_temp.json', 'w') as f:
+                f.write(auth_data)
+            
+            use_auth_state = True
+            print("✅ Using saved authentication state from repository")
+        except Exception as e:
+            print(f"⚠️  Could not use auth state: {e}")
+            print("   Will login normally")
+    else:
+        print("ℹ️  No saved auth state found, will login normally")
     
     with sync_playwright() as playwright:
         print("🌐 Launching browser...")
@@ -44,19 +74,25 @@ def scrape_solar_data():
             args=[
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--disable-blink-features=AutomationControlled'
+                '--disable-blink-features=AutomationControlled',
             ]
         )
         
-        context = browser.new_context(
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            viewport={'width': 1920, 'height': 1080},
-            locale='en-ZA',
-            timezone_id='Africa/Johannesburg',
-            extra_http_headers={
-                'Accept-Language': 'en-ZA,en;q=0.9',
-            }
-        )
+        # Create context with or without saved state
+        if use_auth_state and os.path.exists('auth_state_temp.json'):
+            print("🔓 Loading saved session...")
+            context = browser.new_context(
+                storage_state='auth_state_temp.json',
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                viewport={'width': 1920, 'height': 1080},
+            )
+        else:
+            context = browser.new_context(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                viewport={'width': 1920, 'height': 1080},
+                locale='en-US',
+                timezone_id='America/New_York',
+            )
         
         context.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {
@@ -67,68 +103,94 @@ def scrape_solar_data():
         page = context.new_page()
         
         try:
-            # Navigate to login page
-            print("📱 Navigating to Soliscloud...")
-            page.goto("https://www.soliscloud.com/login?redirect=/station", 
-                      wait_until="networkidle", 
-                      timeout=60000)
+            if use_auth_state:
+                # If using saved auth, go directly to station page
+                print("📱 Navigating to station page (using saved session)...")
+                page.goto("https://www.soliscloud.com/station", 
+                          wait_until="networkidle", 
+                          timeout=60000)
+                
+                human_delay(3, 5)
+                
+                # Check if we're actually logged in
+                current_url = page.url
+                if "login" in current_url:
+                    print("⚠️  Saved session expired, logging in normally...")
+                    use_auth_state = False
+                    page.goto("https://www.soliscloud.com/login?redirect=/station", 
+                              wait_until="networkidle", 
+                              timeout=60000)
+                else:
+                    print("✅ Session still valid, skipping login")
             
-            human_delay(3, 6)
-            random_mouse_movement(page)
+            if not use_auth_state:
+                # Normal login process
+                print("📱 Navigating to login page...")
+                page.goto("https://www.soliscloud.com/login?redirect=/station", 
+                          wait_until="networkidle", 
+                          timeout=60000)
+                
+                human_delay(3, 6)
+                random_mouse_movement(page)
+                
+                # Fill username
+                print("👤 Entering username...")
+                username_field = page.get_by_role("textbox", name="Username/Email")
+                username_field.click()
+                human_delay(1, 2)
+                
+                for char in username:
+                    username_field.type(char, delay=random.randint(50, 150))
+                
+                human_delay(5, 8)
+                random_mouse_movement(page)
+                
+                # Fill password
+                print("🔑 Entering password...")
+                password_field = page.get_by_role("textbox", name="Password")
+                password_field.click()
+                human_delay(1, 2)
+                
+                for char in password:
+                    password_field.type(char, delay=random.randint(50, 150))
+                
+                human_delay(5, 8)
+                random_mouse_movement(page)
+                
+                # Accept privacy policy
+                print("✅ Accepting privacy policy...")
+                try:
+                    page.locator("div").filter(has_text=re.compile(r"^I have agreedPrivacy Policy$")).locator("span").nth(1).click()
+                except:
+                    print("  Privacy policy already accepted")
+                
+                human_delay(6, 9)
+                random_mouse_movement(page)
+                
+                # Click login
+                print("🔐 Logging in...")
+                page.get_by_role("button", name="Login").click()
+                
+                # Wait for navigation
+                print("⏳ Waiting for redirect...")
+                try:
+                    page.wait_for_url("**/station**", timeout=30000)
+                except:
+                    # Check if we're stuck on login
+                    if "login" in page.url:
+                        page.screenshot(path="data/debug_login_failed.png")
+                        raise Exception("Login failed - still on login page. Check for captcha or wrong credentials.")
+                
+                page.wait_for_load_state("networkidle", timeout=60000)
+                human_delay(7, 10)
             
-            # Fill username with human-like typing
-            print("👤 Entering username...")
-            username_field = page.get_by_role("textbox", name="Username/Email")
-            username_field.click()
-            human_delay(1, 2)
-            
-            for char in username:
-                username_field.type(char, delay=random.randint(50, 150))
-            
-            human_delay(5, 8)
-            random_mouse_movement(page)
-            
-            # Fill password
-            print("🔑 Entering password...")
-            password_field = page.get_by_role("textbox", name="Password")
-            password_field.click()
-            human_delay(1, 2)
-            
-            for char in password:
-                password_field.type(char, delay=random.randint(50, 150))
-            
-            human_delay(5, 8)
-            random_mouse_movement(page)
-            
-            # Accept privacy policy
-            print("✅ Accepting privacy policy...")
-            try:
-                page.locator("div").filter(has_text="I have agreedPrivacy Policy").locator("span").nth(1).click()
-            except:
-                print("  Privacy policy already accepted or not found")
-            
-            human_delay(6, 9)
-            random_mouse_movement(page)
-            
-            # Click login
-            print("🔐 Logging in...")
-            page.get_by_role("button", name="Login").click()
-            
-            # Wait for navigation to station page
-            print("⏳ Waiting for redirect to station page...")
-            page.wait_for_url("**/station**", timeout=60000)
-            page.wait_for_load_state("networkidle", timeout=60000)
-            
-            human_delay(7, 10)
-            random_mouse_movement(page)
-            
+            # At this point we should be on the station page
             print(f"📍 Current URL: {page.url}")
+            random_mouse_movement(page)
             
             # Search for plant
             print("🔍 Searching for plant...")
             search_box = page.get_by_role("textbox", name="Search for Plant/Address/ID")
-            
-            # Wait for search box to be visible
             search_box.wait_for(state="visible", timeout=30000)
             search_box.click()
             human_delay(2, 4)
@@ -159,23 +221,12 @@ def scrape_solar_data():
             
             human_delay(7, 10)
             
-            # Move mouse on new page
-            try:
-                page1.mouse.move(random.randint(200, 600), random.randint(200, 400))
-            except:
-                pass
-            
-            human_delay(5, 8)
-            
             print(f"📍 Popup URL: {page1.url}")
             
             # Download export
             print("💾 Clicking export button...")
-            export_button = page1.get_by_role("button", name="Export")
-            export_button.wait_for(state="visible", timeout=30000)
-            
             with page1.expect_download(timeout=30000) as download_info:
-                export_button.click()
+                page1.get_by_role("button", name="Export").click()
             
             download = download_info.value
             
@@ -193,6 +244,22 @@ def scrape_solar_data():
             print(f"✅ Download saved to: {daily_path}")
             print(f"✅ Latest copy saved to: {latest_path}")
             
+            # Save the current auth state for next time
+            if not use_auth_state:
+                try:
+                    import base64
+                    
+                    # Save as encoded text file
+                    auth_json = context.storage_state()
+                    encoded = base64.b64encode(json.dumps(auth_json).encode()).decode()
+                    
+                    with open('data/auth_state_encoded.txt', 'w') as f:
+                        f.write(encoded)
+                    
+                    print("💾 Saved authentication state for next run")
+                except Exception as e:
+                    print(f"⚠️  Could not save auth state: {e}")
+            
             metadata = {
                 "success": True,
                 "timestamp": datetime.now().isoformat(),
@@ -200,7 +267,8 @@ def scrape_solar_data():
                 "daily_path": daily_path,
                 "latest_path": latest_path,
                 "file_extension": file_extension,
-                "scrape_time": datetime.now().strftime("%H:%M:%S")
+                "scrape_time": datetime.now().strftime("%H:%M:%S"),
+                "used_saved_auth": use_auth_state
             }
             
             with open('data/last_scrape.json', 'w') as f:
@@ -212,17 +280,17 @@ def scrape_solar_data():
             print(f"❌ Error occurred: {str(e)}")
             print(f"📍 Last known URL: {page.url if page else 'unknown'}")
             
-            # Try to save screenshot
             try:
                 page.screenshot(path="data/debug_error.png")
-                print("📸 Error screenshot saved: debug_error.png")
+                print("📸 Error screenshot saved")
             except:
-                print("  Could not save screenshot")
+                pass
             
             metadata = {
                 "success": False,
                 "timestamp": datetime.now().isoformat(),
-                "error": str(e)
+                "error": str(e),
+                "last_url": page.url if page else 'unknown'
             }
             
             with open('data/last_scrape.json', 'w') as f:
@@ -231,6 +299,10 @@ def scrape_solar_data():
             raise
             
         finally:
+            # Cleanup temp file
+            if os.path.exists('auth_state_temp.json'):
+                os.remove('auth_state_temp.json')
+            
             human_delay(2, 4)
             context.close()
             browser.close()
