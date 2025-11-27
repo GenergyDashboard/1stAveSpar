@@ -558,10 +558,17 @@
         let dailyChart, monthlyChart;
         let dashboardData = null;
         let isLoggedIn = false;
+        let clientCredentials = null;
         
-        // Login credentials (in production, use backend authentication)
-        const CLIENT_USERNAME = 'spar';
-        const CLIENT_PASSWORD = 'solar2024';
+        // Load credentials from secure file
+        async function loadCredentials() {
+            try {
+                const response = await fetch('data/client_auth.json');
+                clientCredentials = await response.json();
+            } catch (error) {
+                console.error('Could not load credentials');
+            }
+        }
         
         function showLoginModal() {
             document.getElementById('loginModal').classList.add('active');
@@ -577,7 +584,9 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             
-            if (username === CLIENT_USERNAME && password === CLIENT_PASSWORD) {
+            if (clientCredentials && 
+                username === clientCredentials.username && 
+                password === clientCredentials.password) {
                 isLoggedIn = true;
                 hideLoginModal();
                 showClientView();
@@ -808,8 +817,10 @@
         }
         
         // Initialize
-        loadData();
-        setInterval(loadData, 5 * 60 * 1000);
+        loadCredentials().then(() => {
+            loadData();
+            setInterval(loadData, 5 * 60 * 1000);
+        });
     </script>
 </body>
 </html>
