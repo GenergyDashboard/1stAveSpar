@@ -1,14 +1,16 @@
+# .github/workflows/solar-data-update.yml
 name: Update Solar Data
 
 on:
   schedule:
-    # 10:00 AM SAST = 08:00 UTC
+    # Run 3 times a day (all times in UTC, South Africa is UTC+2)
+    # 10:00 SAST = 08:00 UTC (Late morning)
     - cron: '0 8 * * *'
-    # 3:00 PM SAST = 13:00 UTC
+    # 15:00 SAST = 13:00 UTC (Mid afternoon)
     - cron: '0 13 * * *'
-    # 8:00 PM SAST = 18:00 UTC
+    # 20:00 SAST = 18:00 UTC (Evening)
     - cron: '0 18 * * *'
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
   scrape-and-update:
@@ -35,7 +37,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install playwright pandas openpyxl xlrd
+          pip install playwright pandas openpyxl xlrd bcrypt
           playwright install chromium
           playwright install-deps
       
