@@ -34,12 +34,11 @@ def scrape_solar_data():
         raise ValueError("SOLIS_USERNAME and SOLIS_PASSWORD must be set")
     
     os.makedirs('data', exist_ok=True)
-    os.makedirs('data/daily', exist_ok=True)  # Store daily files separately
+    os.makedirs('data/daily', exist_ok=True)
     
     with sync_playwright() as playwright:
         print("🌐 Launching browser...")
         
-        # Use more human-like browser settings
         browser = playwright.chromium.launch(
             headless=True,
             args=[
@@ -49,7 +48,6 @@ def scrape_solar_data():
             ]
         )
         
-        # Create context with realistic settings
         context = browser.new_context(
             user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             viewport={'width': 1920, 'height': 1080},
@@ -60,7 +58,6 @@ def scrape_solar_data():
             }
         )
         
-        # Remove webdriver detection
         context.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {
                 get: () => undefined
@@ -85,7 +82,6 @@ def scrape_solar_data():
             username_field.click()
             human_delay(1, 2)
             
-            # Type with realistic delays
             for char in username:
                 username_field.type(char, delay=random.randint(50, 150))
             
@@ -106,7 +102,10 @@ def scrape_solar_data():
             
             # Accept privacy policy
             print("✅ Accepting privacy policy...")
-            page.locator("div").filter(has_text="I have agreedPrivacy Policy").locator("span").nth(1).click()
+            try:
+                page.locator("div").filter(has_text="I have agreedPrivacy Policy").locator("span").nth(1).click()
+            except:
+                print("  Privacy policy already accepted or not found")
             
             human_delay(6, 9)
             random_mouse_movement(page)
@@ -114,32 +113,48 @@ def scrape_solar_data():
             # Click login
             print("🔐 Logging in...")
             page.get_by_role("button", name="Login").click()
+            
+            # Wait for navigation to station page
+            print("⏳ Waiting for redirect to station page...")
+            page.wait_for_url("**/station**", timeout=60000)
             page.wait_for_load_state("networkidle", timeout=60000)
             
             human_delay(7, 10)
             random_mouse_movement(page)
             
+            print(f"📍 Current URL: {page.url}")
+            
             # Search for plant
             print("🔍 Searching for plant...")
             search_box = page.get_by_role("textbox", name="Search for Plant/Address/ID")
+            
+            # Wait for search box to be visible
+            search_box.wait_for(state="visible", timeout=30000)
             search_box.click()
             human_delay(2, 4)
             
+            # Type search query
             for char in "1st":
                 search_box.type(char, delay=random.randint(100, 200))
             
             human_delay(5, 8)
+            random_mouse_movement(page)
+            
+            # Press Enter
             search_box.press("Enter")
             
             human_delay(6, 10)
             random_mouse_movement(page)
             
-            # Click on first result
+            # Click on first result and wait for popup
             print("📊 Opening plant details...")
             with page.expect_popup(timeout=30000) as page1_info:
                 page.locator("td:nth-child(2) > .cell").first.click()
             
             page1 = page1_info.value
+            
+            # Wait for popup to fully load
+            print("⏳ Waiting for plant details to load...")
             page1.wait_for_load_state("networkidle", timeout=60000)
             
             human_delay(7, 10)
@@ -152,30 +167,32 @@ def scrape_solar_data():
             
             human_delay(5, 8)
             
+            print(f"📍 Popup URL: {page1.url}")
+            
             # Download export
-            print("💾 Downloading export...")
+            print("💾 Clicking export button...")
+            export_button = page1.get_by_role("button", name="Export")
+            export_button.wait_for(state="visible", timeout=30000)
+            
             with page1.expect_download(timeout=30000) as download_info:
-                page1.get_by_role("button", name="Export").click()
+                export_button.click()
             
             download = download_info.value
             
-            # Save with timestamp
+            # Save files
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             date_str = datetime.now().strftime("%Y-%m-%d")
             file_extension = download.suggested_filename.split('.')[-1] if '.' in download.suggested_filename else 'xls'
             
-            # Save to daily folder with date
             daily_path = f"data/daily/{date_str}.{file_extension}"
             download.save_as(daily_path)
             
-            # Also save as "latest" for easy access
             latest_path = f"data/solar_export_latest.{file_extension}"
             download.save_as(latest_path)
             
             print(f"✅ Download saved to: {daily_path}")
             print(f"✅ Latest copy saved to: {latest_path}")
             
-            # Save metadata
             metadata = {
                 "success": True,
                 "timestamp": datetime.now().isoformat(),
@@ -193,6 +210,14 @@ def scrape_solar_data():
             
         except Exception as e:
             print(f"❌ Error occurred: {str(e)}")
+            print(f"📍 Last known URL: {page.url if page else 'unknown'}")
+            
+            # Try to save screenshot
+            try:
+                page.screenshot(path="data/debug_error.png")
+                print("📸 Error screenshot saved: debug_error.png")
+            except:
+                print("  Could not save screenshot")
             
             metadata = {
                 "success": False,
