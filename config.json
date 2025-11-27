@@ -1,0 +1,32 @@
+{
+  "system": {
+    "installed_capacity_kwp": 71.590,
+    "plant_name": "1st AVE Spar",
+    "location": "Johannesburg, South Africa"
+  },
+  "predicted_generation": {
+    "daily_kwh": 315,
+    "monthly_kwh": 9450,
+    "annual_kwh": 114975,
+    "note": "UPDATE THESE VALUES with your actual predicted generation"
+  },
+  "calculation_method": {
+    "sun_hours_per_day": 5.5,
+    "system_efficiency": 0.8,
+    "description": "Daily = Capacity × Sun Hours × Efficiency"
+  },
+  "authentication": {
+    "client_username": "spar",
+    "client_password": "solar2024",
+    "note": "CHANGE THESE CREDENTIALS for security"
+  },
+  "environmental_factors": {
+    "co2_per_kwh": 0.001,
+    "trees_per_kwh": 0.045454545,
+    "households_kwh_per_year": 3546.63,
+    "km_driven_per_kwh": 0.251033,
+    "km_flown_per_kwh": 12.280237,
+    "coal_kg_per_ton_co2": 0.50802304,
+    "water_litres_per_kwh": 1.4
+  }
+}
