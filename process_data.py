@@ -118,7 +118,11 @@ def process_solar_data():
     
     # Get predicted values from config
     expected_daily_kwh = config['predicted_generation']['daily_kwh']
-    expected_monthly_kwh = config['predicted_generation']['monthly_kwh']
+    
+    # Get monthly target based on current month
+    current_month_name = datetime.now().strftime('%B').lower()
+    monthly_targets = config['predicted_generation']['monthly_targets']
+    expected_monthly_kwh = monthly_targets.get(current_month_name, config['predicted_generation']['monthly_kwh'])
     
     # Calculate performance ratios
     daily_performance = (today_generation / expected_daily_kwh * 100) if expected_daily_kwh > 0 else 0
