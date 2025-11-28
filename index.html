@@ -799,8 +799,24 @@
         
         async function loadCredentials() {
             try {
-                const response = await fetch('data/client_auth.json');
-                clientCredentials = await response.json();
+                const paths = [
+                    'data/client_auth.json',
+                    './data/client_auth.json',
+                    '/1stAveSpar/data/client_auth.json'
+                ];
+                
+                for (const path of paths) {
+                    try {
+                        const response = await fetch(path);
+                        if (response.ok) {
+                            clientCredentials = await response.json();
+                            console.log('✓ Loaded credentials');
+                            return;
+                        }
+                    } catch (e) {
+                        // Continue to next path
+                    }
+                }
             } catch (error) {
                 console.error('Could not load credentials');
             }
@@ -916,7 +932,27 @@
         
         async function loadDailyData() {
             try {
-                const response = await fetch('data/today_detailed.json');
+                const paths = [
+                    'data/today_detailed.json',
+                    './data/today_detailed.json',
+                    '/1stAveSpar/data/today_detailed.json'
+                ];
+                
+                let response;
+                for (const path of paths) {
+                    try {
+                        response = await fetch(path);
+                        if (response.ok) break;
+                    } catch (e) {
+                        // Continue to next path
+                    }
+                }
+                
+                if (!response || !response.ok) {
+                    console.error('Could not load daily data');
+                    return;
+                }
+                
                 const data = await response.json();
                 updateDailyView(data);
             } catch (error) {
