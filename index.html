@@ -635,20 +635,31 @@
                 </div>
             </div>
             
-            <div class="section-header">
-                <h2>🌱 Today's Environmental Impact</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 50px;">
+                <!-- Today's Impact -->
+                <div>
+                    <div class="section-header" style="margin-top: 0;">
+                        <h2>🌱 Today's Impact</h2>
+                    </div>
+                    <div class="env-grid" id="pub-env-today" style="grid-template-columns: 1fr;"></div>
+                </div>
+                
+                <!-- This Month's Impact -->
+                <div>
+                    <div class="section-header" style="margin-top: 0;">
+                        <h2>🌍 This Month's Impact</h2>
+                    </div>
+                    <div class="env-grid" id="pub-env-month" style="grid-template-columns: 1fr;"></div>
+                </div>
+                
+                <!-- Lifetime Impact -->
+                <div>
+                    <div class="section-header" style="margin-top: 0;">
+                        <h2>🌟 Lifetime Impact</h2>
+                    </div>
+                    <div class="env-grid" id="pub-env-lifetime" style="grid-template-columns: 1fr;"></div>
+                </div>
             </div>
-            <div class="env-grid" id="pub-env-today"></div>
-            
-            <div class="section-header">
-                <h2>🌍 This Month's Environmental Impact</h2>
-            </div>
-            <div class="env-grid" id="pub-env-month"></div>
-            
-            <div class="section-header">
-                <h2>🌟 Lifetime Environmental Impact</h2>
-            </div>
-            <div class="env-grid" id="pub-env-lifetime"></div>
         </div>
         
         <div id="clientView" class="client-view">
