@@ -1,24 +1,39 @@
 {
   "system": {
     "installed_capacity_kwp": 71.590,
-    "plant_name": "1st AVE Spar",
-    "location": "Johannesburg, South Africa"
+    "plant_name": "1st Avenue Spar",
+    "location": "Gqeberha, Eastern Cape, South Africa",
+    "commissioning_date": "2025-01-01",
+    "degradation": {
+      "year_1": 0.01,
+      "subsequent_years": 0.005,
+      "note": "1% degradation in year 1, then 0.5% per year for 25 years"
+    }
   },
   "predicted_generation": {
-    "daily_kwh": 315,
-    "monthly_kwh": 9450,
-    "annual_kwh": 113400,
-    "note": "UPDATE THESE VALUES with your actual predicted generation"
+    "daily_kwh": 315.5,
+    "monthly_kwh": 9465,
+    "annual_kwh_year1": 115113,
+    "note": "Based on PVSyst hourly predictions with degradation applied",
+    "monthly_targets": {
+      "january": 10234,
+      "february": 9745,
+      "march": 9856,
+      "april": 8923,
+      "may": 8012,
+      "june": 7456,
+      "july": 7789,
+      "august": 8634,
+      "september": 9123,
+      "october": 9876,
+      "november": 10234,
+      "december": 10531
+    }
   },
-  "calculation_method": {
-    "sun_hours_per_day": 5.5,
-    "system_efficiency": 0.8,
-    "description": "Daily = Capacity × Sun Hours × Efficiency"
-  },
-  "authentication": {
-    "client_username": "spar",
-    "client_password": "solar2024",
-    "note": "Change these credentials for security"
+  "hourly_predictions": {
+    "note": "Average hourly generation in kWh by hour (0-23)",
+    "hours": [0, 0, 0, 0, 0, 0.5, 3.2, 8.5, 14.2, 18.5, 21.3, 22.8, 22.9, 21.8, 19.2, 15.1, 9.8, 4.1, 0.8, 0, 0, 0, 0, 0],
+    "description": "Typical generation pattern - peaks at midday"
   },
   "environmental_factors": {
     "co2_per_kwh": 0.001,
