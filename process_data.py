@@ -129,17 +129,18 @@ def process_solar_data():
     monthly_performance = (history['monthly_total'] / expected_monthly_kwh * 100) if expected_monthly_kwh > 0 else 0
     
     # Environmental impact calculations
+    # Environmental impact calculations
     def calculate_env_impact(generation_kwh):
-    factors = config['environmental_factors']
-    return {
-        'co2_offset_tons': generation_kwh * factors['co2_per_kwh'],
-        'trees_equivalent': generation_kwh * factors['trees_per_kwh'],
-        'households_offset': generation_kwh / factors['households_kwh_per_year'],
-        'km_driven_offset': generation_kwh / factors['km_driven_per_kwh'],
-        'km_flown_offset': generation_kwh / factors['km_flown_per_kwh'],
-        'coal_saved_kg': generation_kwh * 0.50802304,
-        'water_saved_litres': generation_kwh / factors['water_litres_per_kwh']
-    }
+        factors = config['environmental_factors']
+        return {
+            'co2_offset_tons': generation_kwh * factors['co2_per_kwh'],
+            'trees_equivalent': generation_kwh * factors['trees_per_kwh'],
+            'households_offset': generation_kwh / factors['households_kwh_per_year'],
+            'km_driven_offset': generation_kwh / factors['km_driven_per_kwh'],
+            'km_flown_offset': generation_kwh / factors['km_flown_per_kwh'],
+            'coal_saved_kg': generation_kwh * 0.50802304,
+            'water_saved_litres': generation_kwh / factors['water_litres_per_kwh']
+        }
     
     env_impact_today = calculate_env_impact(today_generation)
     env_impact_monthly = calculate_env_impact(history['monthly_total'])
