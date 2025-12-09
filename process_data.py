@@ -135,7 +135,7 @@ def process_solar_data():
         return {
             'co2_offset_tons': generation_kwh * factors['co2_per_kwh'],
             'trees_equivalent': generation_kwh * factors['trees_per_kwh'],
-            'households_offset': generation_kwh / factors['households_kwh_per_year'],
+            'households_offset': generation_kwh / 3546.63,
             'km_driven_offset': generation_kwh / factors['km_driven_per_kwh'],
             'km_flown_offset': generation_kwh / factors['km_flown_per_kwh'],
             'coal_saved_kg': generation_kwh * 0.50802304,
