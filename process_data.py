@@ -1,6 +1,7 @@
 import pandas as pd
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
+import calendar
 import os
 import glob
 
@@ -130,21 +131,46 @@ def process_solar_data():
     
     # Environmental impact calculations
     # Environmental impact calculations
-    def calculate_env_impact(generation_kwh):
-        factors = config['environmental_factors']
-        return {
-            'co2_offset_tons': generation_kwh * factors['co2_per_kwh'],
-            'trees_equivalent': generation_kwh * factors['trees_per_kwh'],
-            'households_offset': generation_kwh / 3546.63,
-            'km_driven_offset': generation_kwh / factors['km_driven_per_kwh'],
-            'km_flown_offset': generation_kwh / factors['km_flown_per_kwh'],
-            'coal_saved_kg': generation_kwh * 0.50802304,
-            'water_saved_litres': generation_kwh / factors['water_litres_per_kwh']
-        }
+    def calculate_env_impact(generation_kwh, days=365, year=None):
+    """
+    Calculate environmental impact
+    days: number of days this generation represents (1 for daily, ~30 for monthly, 365+ for lifetime)
+    year: year to check for leap year (defaults to current year)
+    """
+    factors = config['environmental_factors']
+    co2_offset = generation_kwh * factors['co2_per_kwh']
     
-    env_impact_today = calculate_env_impact(today_generation)
-    env_impact_monthly = calculate_env_impact(history['monthly_total'])
-    env_impact_lifetime = calculate_env_impact(history['total_generation'])
+    # Use current year if not specified
+    if year is None:
+        year = datetime.now().year
+    
+    # Adjust annual factors to the time period (accounting for leap years)
+    days_in_year = 366 if calendar.isleap(year) else 365
+    trees_per_day = factors['trees_per_kwh'] / days_in_year
+    households_per_day = factors['households_kwh_per_year'] / days_in_year
+    
+    return {
+        'co2_offset_tons': co2_offset / 1000,
+        'trees_equivalent': co2_offset / (trees_per_day * days),
+        'households_offset': generation_kwh / (households_per_day * days),
+        'km_driven_offset': co2_offset / factors['co2_per_km_driven'],
+        'km_flown_offset': co2_offset / factors['co2_per_km_flown'],
+        'coal_saved_kg': co2_offset * factors['coal_per_kwh'],
+        'water_saved_litres': generation_kwh * factors['water_per_kwh']
+    }
+    
+    # Calculate days in current month
+days_in_month = (datetime.now().replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+days_in_current_month = days_in_month.day
+
+# Calculate environmental impacts with correct time periods
+# Get current year for leap year calculation
+current_year = datetime.now().year
+
+# Calculate environmental impacts with correct time periods (accounting for leap years)
+env_impact_today = calculate_env_impact(today_generation, days=1, year=current_year)
+env_impact_monthly = calculate_env_impact(history['monthly_total'], days=days_in_current_month, year=current_year)
+env_impact_lifetime = calculate_env_impact(history['total_generation'], days=len(history['daily_records']), year=current_year)
     
     # Create dashboard data
     dashboard_data = {
