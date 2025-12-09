@@ -145,21 +145,14 @@ def process_solar_data():
             'water_saved_litres': generation_kwh * factors['water_per_kwh']
         }
     
-    env_impact_today = calculate_env_impact(today_generation)
-    env_impact_monthly = calculate_env_impact(history['monthly_total'])
-    env_impact_lifetime = calculate_env_impact(history['total_generation'])
-    
     # Calculate days in current month
     days_in_month = (datetime.now().replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
     days_in_current_month = days_in_month.day
     
-    # Get current year for leap year calculation
-    current_year = datetime.now().year
-    
-    # Calculate environmental impacts with correct time periods (accounting for leap years)
-    env_impact_today = calculate_env_impact(today_generation, days=1, year=current_year)
-    env_impact_monthly = calculate_env_impact(history['monthly_total'], days=days_in_current_month, year=current_year)
-    env_impact_lifetime = calculate_env_impact(history['total_generation'], days=len(history['daily_records']), year=current_year)
+    # Calculate environmental impacts (removed the days and year parameters)
+    env_impact_today = calculate_env_impact(today_generation)
+    env_impact_monthly = calculate_env_impact(history['monthly_total'])
+    env_impact_lifetime = calculate_env_impact(history['total_generation'])
     
     # Create dashboard data
     dashboard_data = {
