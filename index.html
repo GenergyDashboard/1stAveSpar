@@ -404,7 +404,7 @@
 
 .env-card .env-value {
     font-size: 1.5em;
-    font-weight: 300;
+    font-weight: 700;
     margin: 0;
     color: #4ade80;
 }
@@ -861,51 +861,35 @@
             document.getElementById(tab + '-tab').classList.add('active');
         }
         
-        function formatNumber(num, decimals = 2) {
-            return num.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
+        function formatNumber(num, decimals = 0) {
+    return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
         
         function createEnvCards(data, containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = `
-                <div class="env-card">
-                    <div class="env-icon">🏭</div>
-                    <div class="env-value">${formatNumber(data.co2_offset_tons, 2)}</div>
-                    <div class="env-label">Tons CO₂ Offset</div>
-                </div>
-                <div class="env-card">
-                    <div class="env-icon">🌳</div>
-                    <div class="env-value">${formatNumber(data.trees_equivalent, 0)}</div>
-                    <div class="env-label">Trees Planted Equivalent</div>
-                </div>
-                <div class="env-card">
-                    <div class="env-icon">🏠</div>
-                    <div class="env-value">${formatNumber(data.households_offset, 1)}</div>
-                    <div class="env-label">Homes Powered</div>
-                </div>
-                <div class="env-card">
-                    <div class="env-icon">🚗</div>
-                    <div class="env-value">${formatNumber(data.km_driven_offset, 0)}</div>
-                    <div class="env-label">km Driving Offset</div>
-                </div>
-                <div class="env-card">
-                    <div class="env-icon">✈️</div>
-                    <div class="env-value">${formatNumber(data.km_flown_offset, 0)}</div>
-                    <div class="env-label">km Flying Offset</div>
-                </div>
-                <div class="env-card">
-                    <div class="env-icon">⛏️</div>
-                    <div class="env-value">${formatNumber(data.coal_saved_kg, 0)}</div>
-                    <div class="env-label">kg Coal Saved</div>
-                </div>
-                <div class="env-card">
-                    <div class="env-icon">💧</div>
-                    <div class="env-value">${formatNumber(data.water_saved_litres, 0)}</div>
-                    <div class="env-label">Litres Water Saved</div>
-                </div>
-
-                `;
-        }
+    const container = document.getElementById(containerId);
+    container.innerHTML = `
+        <div class="env-card">
+            <div class="env-icon">🌳</div>
+            <div class="env-value">${formatNumber(data.trees_equivalent)}</div>
+            <div class="env-label">Trees Planted Equivalent</div>
+        </div>
+        <div class="env-card">
+            <div class="env-icon">🏠</div>
+            <div class="env-value">${formatNumber(data.households_offset)}</div>
+            <div class="env-label">Homes Powered</div>
+        </div>
+        <div class="env-card">
+            <div class="env-icon">⛏️</div>
+            <div class="env-value">${formatNumber(data.coal_saved_kg)}</div>
+            <div class="env-label">kg Coal Saved</div>
+        </div>
+        <div class="env-card">
+            <div class="env-icon">💧</div>
+            <div class="env-value">${formatNumber(data.water_saved_litres)}</div>
+            <div class="env-label">Litres Water Saved</div>
+        </div>
+    `;
+}
         
         function loadToday() {
             const today = new Date().toISOString().split('T')[0];
