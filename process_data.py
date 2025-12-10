@@ -78,6 +78,37 @@ def calculate_system_degradation(config):
         print(f"  ⚠️ Could not calculate degradation: {e}")
         return 1.0  # No degradation if error
 
+def load_pvsyst_predictions():
+    """Load daily hourly predictions from PVSyst data file"""
+    try:
+        predictions_file = 'pvsyst_predictions_2025.json'
+        if os.path.exists(predictions_file):
+            with open(predictions_file, 'r') as f:
+                data = json.load(f)
+            print(f"  ✓ Loaded PVSyst predictions for {len(data['daily_predictions'])} days")
+            return data['daily_predictions']
+        else:
+            print(f"  ⚠️ PVSyst predictions file not found, using config defaults")
+            return None
+    except Exception as e:
+        print(f"  ⚠️ Error loading PVSyst predictions: {e}")
+        return None
+
+def get_hourly_predictions_for_date(date_str, pvsyst_data, config, degradation_factor):
+    """Get hourly predictions for a specific date with degradation applied"""
+    # Try to get actual PVSyst data for this date
+    if pvsyst_data and date_str in pvsyst_data:
+        predictions = pvsyst_data[date_str]
+        print(f"  ✓ Using actual PVSyst data for {date_str}")
+    else:
+        # Fallback to config average values
+        predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
+        print(f"  ⚠️ Using average values for {date_str} (no PVSyst data)")
+    
+    # Apply degradation
+    degraded_predictions = [pred * degradation_factor for pred in predictions]
+    return degraded_predictions
+
 def process_solar_data():
     """Process the downloaded solar data and calculate all metrics"""
     
@@ -233,9 +264,11 @@ def process_solar_data():
     # Calculate system degradation
     degradation_factor = calculate_system_degradation(config)
     
-    # Get hourly predictions from config and apply degradation
-    hourly_predictions_year1 = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
-    hourly_predictions = [pred * degradation_factor for pred in hourly_predictions_year1]
+    # Load PVSyst daily predictions
+    pvsyst_data = load_pvsyst_predictions()
+    
+    # Get hourly predictions for today with degradation
+    hourly_predictions = get_hourly_predictions_for_date(today_date, pvsyst_data, config, degradation_factor)
     
     # Prepare hourly data with PV generation, predicted values, and irradiation
     hourly_data = []
