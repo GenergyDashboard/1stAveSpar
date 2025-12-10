@@ -953,21 +953,50 @@
         }
         
         async function loadDailyData() {
-            try {
-                const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-                const dailyPath = `${basePath}data/today_detailed.json`.replace('//', '/');
-                const response = await fetch(dailyPath);
-                if (!response.ok) {
-                    console.error('Could not load daily data');
-                    return;
-                }
-                const data = await response.json();
-                console.log('✓ Daily data loaded');
-                updateDailyView(data);
-            } catch (error) {
-                console.error('Error loading daily data:', error);
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const selectedDate = document.getElementById('dateSelector').value;
+        const today = new Date().toISOString().split('T')[0];
+        
+        let data;
+        
+        if (selectedDate === today) {
+            // Load today's detailed data
+            const dailyPath = `${basePath}data/today_detailed.json`.replace('//', '/');
+            const response = await fetch(dailyPath);
+            if (!response.ok) {
+                console.error('Could not load today\'s data');
+                return;
+            }
+            data = await response.json();
+            console.log('✓ Today\'s data loaded');
+        } else {
+            // Load historical data from generation_history.json
+            const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+            const response = await fetch(historyPath);
+            if (!response.ok) {
+                console.error('Could not load historical data');
+                return;
+            }
+            const historyData = await response.json();
+            
+            // Check if we have hourly data for this date
+            if (historyData.hourly_records && historyData.hourly_records[selectedDate]) {
+                data = historyData.hourly_records[selectedDate];
+                console.log(`✓ Historical data loaded for ${selectedDate}`);
+            } else {
+                alert(`No hourly data available for ${selectedDate}. We only keep the last 7 days of hourly data.`);
+                console.warn(`No hourly data for ${selectedDate}`);
+                return;
             }
         }
+        
+        updateDailyView(data);
+    } catch (error) {
+        console.error('Error loading daily data:', error);
+        alert('Error loading data. Please try again.');
+    }
+}
         
         // This code replaces the updateDailyView function in index.html
 
