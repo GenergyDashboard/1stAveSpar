@@ -627,6 +627,284 @@
         .public-view.active, .client-view.active {
             display: block;
         }
+        
+        .env-sections-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .public-stats-grid {
+            grid-template-columns: repeat(4, 1fr);
+            margin-bottom: 40px;
+        }
+        
+        /* ============================================
+           RESPONSIVE DESIGN - Mobile, Tablet, Desktop
+           ============================================ */
+        
+        /* Tablet and below (< 1024px) */
+        @media (max-width: 1024px) {
+            .header-content h1 {
+                font-size: 3em;
+            }
+            
+            .powered-by {
+                font-size: 1.4em;
+            }
+            
+            .env-impact-title {
+                font-size: 2.8em;
+            }
+            
+            /* Environmental sections - 2 columns on tablet */
+            .env-sections-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            
+            /* Public stats - 2 columns on tablet */
+            .public-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* Mobile devices (< 768px) */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            /* Header adjustments */
+            .header {
+                flex-direction: column;
+                padding: 15px 20px;
+                gap: 15px;
+            }
+            
+            .header-content h1 {
+                font-size: 2em;
+                text-align: center;
+            }
+            
+            .powered-by {
+                font-size: 1em;
+                text-align: center;
+            }
+            
+            .login-section {
+                width: 100%;
+                justify-content: center;
+                opacity: 1;
+            }
+            
+            .info-dropdown {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .info-content {
+                width: calc(100vw - 20px);
+                right: -10px;
+            }
+            
+            /* Stats grid - single column on mobile */
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+                gap: 15px;
+            }
+            
+            /* Public stats grid - single column on mobile */
+            .public-stats-grid {
+                grid-template-columns: 1fr;
+                margin-bottom: 30px;
+            }
+            
+            .stat-card {
+                padding: 20px;
+            }
+            
+            .stat-card .label {
+                font-size: 1em;
+            }
+            
+            .stat-card .value {
+                font-size: 3em;
+            }
+            
+            .stat-card .subvalue {
+                font-size: 1.1em;
+            }
+            
+            /* Section headers */
+            .section-header h2 {
+                font-size: 1.8em;
+            }
+            
+            /* Environmental impact header */
+            .env-impact-header {
+                margin: 20px auto;
+            }
+            
+            .env-impact-title {
+                font-size: 1.8em;
+            }
+            
+            .tree-decoration {
+                font-size: 1em;
+                margin: 0 8px;
+            }
+            
+            .grass-decoration {
+                font-size: 0.6em;
+                margin: 0 5px;
+            }
+            
+            /* Environmental impact grid - single column on mobile */
+            .env-grid {
+                grid-template-columns: 1fr !important;
+                gap: 12px;
+            }
+            
+            /* Environmental sections - single column on mobile */
+            .env-sections-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .env-card {
+                padding: 15px;
+            }
+            
+            .env-card .env-icon {
+                font-size: 1.8em;
+            }
+            
+            .env-card .env-value {
+                font-size: 2em;
+            }
+            
+            .env-card .env-label {
+                font-size: 1.1em;
+            }
+            
+            /* Public view environmental sections - stack vertically */
+            #publicView > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+                gap: 20px !important;
+            }
+            
+            /* Tabs */
+            .tabs {
+                gap: 5px;
+            }
+            
+            .tab {
+                padding: 10px 16px;
+                font-size: 0.9em;
+            }
+            
+            /* Date selector */
+            .date-selector {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .date-selector input {
+                width: 100%;
+                font-size: 1em;
+            }
+            
+            .date-selector label {
+                font-size: 1em;
+            }
+            
+            .btn {
+                width: 100%;
+                font-size: 1em;
+            }
+            
+            /* Chart containers */
+            .chart-container {
+                padding: 15px;
+            }
+            
+            .chart-title {
+                font-size: 1.2em;
+            }
+            
+            /* Update time */
+            .update-time {
+                font-size: 1.2em;
+                margin-top: 20px;
+            }
+            
+            /* Modal */
+            .modal-content {
+                padding: 25px;
+                width: 95%;
+            }
+            
+            /* User info */
+            .user-info {
+                padding: 6px 12px;
+            }
+            
+            .user-avatar {
+                width: 30px;
+                height: 30px;
+                font-size: 0.9em;
+            }
+        }
+        
+        /* Very small mobile devices (< 480px) */
+        @media (max-width: 480px) {
+            .header-content h1 {
+                font-size: 1.6em;
+            }
+            
+            .powered-by {
+                font-size: 0.9em;
+            }
+            
+            .stat-card .value {
+                font-size: 2.5em;
+            }
+            
+            .env-impact-title {
+                font-size: 1.4em;
+            }
+            
+            .env-card .env-value {
+                font-size: 1.6em;
+            }
+            
+            .env-card .env-label {
+                font-size: 1em;
+            }
+            
+            .tab {
+                padding: 8px 12px;
+                font-size: 0.85em;
+            }
+        }
+        
+        /* Large screens (> 1400px) - Make better use of space */
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1600px;
+            }
+            
+            .header-content h1 {
+                font-size: 4.5em;
+            }
+            
+            .stat-card .value {
+                font-size: 5em;
+            }
+        }
     </style>
 </head>
 <body>
@@ -671,7 +949,7 @@
         <div id="loading" class="loading">Loading data...</div>
         
         <div id="publicView" class="public-view">
-            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 40px;">
+            <div class="stats-grid public-stats-grid">
                 <div class="stat-card">
                     <div class="label">Yesterday's Total</div>
                     <div class="value" id="pub-yesterday-gen">--</div>
@@ -700,7 +978,7 @@
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; margin-top: 30px;">
+            <div class="env-sections-grid">
                 <!-- Yesterday -->
                 <div>
                     <div class="section-header" style="margin-top: 0;">
@@ -1478,4 +1756,4 @@ setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active
         });
     </script>
 </body>
-</html>
+    </html>
