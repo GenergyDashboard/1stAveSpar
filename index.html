@@ -26,178 +26,13 @@
             padding: 20px;
         }
         
-        .sun-container {
-            position: absolute;
-            top: 100px;
-            right: 10%;
-            width: 250px;
-            height: 250px;
-            z-index: 1;
-        }
-        
-        .sun {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .sun-core {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, #FFD700, #FFA500);
-            border-radius: 50%;
-            box-shadow: 
-                0 0 40px #FFD700, 
-                0 0 80px #FFA500,
-                0 0 120px rgba(255, 165, 0, 0.5);
-            animation: pulse 2s ease-in-out infinite;
-        }
-        
-        .orbit {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border-radius: 50%;
-            border: 1px solid rgba(255, 215, 0, 0.3);
-        }
-        
-        .orbit-1 {
-            width: 150px;
-            height: 150px;
-            animation: rotate 8s linear infinite;
-        }
-        
-        .orbit-2 {
-            width: 200px;
-            height: 200px;
-            animation: rotate 12s linear infinite;
-        }
-        
-        .orbit-3 {
-            width: 250px;
-            height: 250px;
-            animation: rotate 16s linear infinite;
-        }
-        
-        .clouds-container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        
-        .cloud {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 100px;
-            opacity: 0.6;
-            filter: blur(2px);
-        }
-        
-        .cloud::before,
-        .cloud::after {
-            content: '';
-            position: absolute;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 100px;
-        }
-        
-        .cloud-1 {
-            width: 60px;
-            height: 20px;
-            top: 60%;
-            left: -60px;
-            animation: float-cloud-1 15s linear infinite;
-        }
-        
-        .cloud-1::before {
-            width: 30px;
-            height: 30px;
-            top: -15px;
-            left: 10px;
-        }
-        
-        .cloud-1::after {
-            width: 35px;
-            height: 25px;
-            top: -10px;
-            right: 10px;
-        }
-        
-        .cloud-2 {
-            width: 80px;
-            height: 25px;
-            top: 70%;
-            left: -100px;
-            animation: float-cloud-2 20s linear infinite;
-            animation-delay: 5s;
-        }
-        
-        .cloud-2::before {
-            width: 40px;
-            height: 35px;
-            top: -15px;
-            left: 15px;
-        }
-        
-        .cloud-2::after {
-            width: 45px;
-            height: 30px;
-            top: -12px;
-            right: 15px;
-        }
-        
-        .cloud-3 {
-            width: 70px;
-            height: 22px;
-            top: 65%;
-            left: -80px;
-            animation: float-cloud-3 18s linear infinite;
-            animation-delay: 10s;
-        }
-        
-        .cloud-3::before {
-            width: 35px;
-            height: 32px;
-            top: -14px;
-            left: 12px;
-        }
-        
-        .cloud-3::after {
-            width: 38px;
-            height: 28px;
-            top: -11px;
-            right: 12px;
-        }
-        
-        @keyframes float-cloud-1 {
-            0% { left: -60px; }
-            100% { left: 110%; }
-        }
-        
-        @keyframes float-cloud-2 {
-            0% { left: -100px; }
-            100% { left: 110%; }
-        }
-        
-        @keyframes float-cloud-3 {
-            0% { left: -80px; }
-            100% { left: 110%; }
-        }
-        
-        @keyframes rotate {
-            from { transform: translate(-50%, -50%) rotate(0deg); }
-            to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.05); }
+        @keyframes glow {
+            0%, 100% { 
+                text-shadow: 0 0 10px #4ade80, 0 0 20px #4ade80, 0 0 30px #4ade80;
+            }
+            50% { 
+                text-shadow: 0 0 20px #4ade80, 0 0 40px #4ade80, 0 0 60px #4ade80;
+            }
         }
         
         .header {
@@ -216,25 +51,26 @@
         
         .header-content h1 {
             color: #ffffff;
-            font-size: 3.2em;
+            font-size: 4em;
             margin-bottom: 5px;
             font-weight: 700;
             letter-spacing: 2px;
         }
         
         .powered-by {
-            font-size: 1.2em;
+            font-size: 1.4em;
             color: #888888;
             margin-top: 5px;
             font-weight: 300;
         }
         
         .powered-by .company {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
+            background: linear-gradient(135deg, #4ade80, #22c55e);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             font-weight: 500;
+            animation: glow 2s ease-in-out infinite;
         }
         
         .login-section {
@@ -328,14 +164,14 @@
         
         .stat-card .label {
             color: #aaaaaa;
-            font-size: 0.85em;
+            font-size: 1.3em;
             margin-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         
         .stat-card .value {
-            font-size: 2.5em;
+            font-size: 4.5em;
             font-weight: 300;
             color: #FFD700;
             margin-bottom: 5px;
@@ -343,7 +179,7 @@
         
         .stat-card .subvalue {
             color: #888888;
-            font-size: 0.9em;
+            font-size: 1.4em;
         }
         
         .performance {
@@ -369,7 +205,7 @@
         
         .section-header h2 {
             color: #ffffff;
-            font-size: 1.8em;
+            font-size: 2.6em;
             font-weight: 300;
             margin-bottom: 10px;
             letter-spacing: 1px;
@@ -397,20 +233,20 @@
 }
 
 .env-card .env-icon {
-    font-size: 2em;
+    font-size: 3.2em;
     margin-bottom: 0;
     flex-shrink: 0;
 }
 
 .env-card .env-value {
-    font-size: 1.5em;
+    font-size: 2.4em;
     font-weight: 700;
     margin: 0;
     color: #4ade80;
 }
 
 .env-card .env-label {
-    font-size: 0.85em;
+    font-size: 1.3em;
     color: #aaaaaa;
     margin-left: auto;
     text-align: right;
@@ -594,11 +430,12 @@
         
         .update-time {
             text-align: center;
-            color: #888888;
+            color: #ffffff;
             margin-top: 30px;
-            font-size: 0.9em;
+            font-size: 1.6em;
             position: relative;
             z-index: 10;
+            font-weight: 500;
         }
         
         .public-view, .client-view {
@@ -611,20 +448,7 @@
     </style>
 </head>
 <body>
-    <div class="sun-container">
-        <div class="clouds-container">
-            <div class="cloud cloud-1"></div>
-            <div class="cloud cloud-2"></div>
-            <div class="cloud cloud-3"></div>
-        </div>
-        <div class="sun">
-            <div class="sun-core"></div>
-            <div class="orbit orbit-1"></div>
-            <div class="orbit orbit-2"></div>
-            <div class="orbit orbit-3"></div>
-        </div>
-    </div>
-
+    <body>
     <div class="container">
         <div class="header">
             <div class="header-content">
