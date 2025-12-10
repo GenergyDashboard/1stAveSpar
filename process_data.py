@@ -1,10 +1,17 @@
 import pandas as pd
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import calendar
 import os
 import glob
 import requests
+
+# South African timezone (SAST = UTC+2)
+SAST = timezone(timedelta(hours=2))
+
+def get_sast_now():
+    """Get current time in South African timezone"""
+    return datetime.now(SAST)
 
 def load_config():
     """Load configuration file"""
@@ -58,7 +65,8 @@ def calculate_system_degradation(config):
     """Calculate current system degradation factor based on age"""
     try:
         commissioning_date = datetime.strptime(config['system']['commissioning_date'], '%Y-%m-%d')
-        days_active = (datetime.now() - commissioning_date).days
+        # Use SAST time for consistency
+        days_active = (get_sast_now().replace(tzinfo=None) - commissioning_date).days
         years_active = days_active / 365.25
         
         if years_active < 1:
@@ -171,17 +179,17 @@ def process_solar_data():
             'hourly_records': {},  # Store last 7 days of hourly data
             'monthly_total': 0,
             'total_generation': 0,
-            'current_month': datetime.now().strftime('%Y-%m')
+            'current_month': get_sast_now().strftime('%Y-%m')
         }
     
-    # Check if new month
-    current_month = datetime.now().strftime('%Y-%m')
+    # Check if new month (use SAST time)
+    current_month = get_sast_now().strftime('%Y-%m')
     if history['current_month'] != current_month:
         history['monthly_total'] = 0
         history['current_month'] = current_month
     
     # Update totals
-    today_date = datetime.now().strftime('%Y-%m-%d')
+    today_date = get_sast_now().strftime('%Y-%m-%d')
     
     existing_record = None
     for record in history['daily_records']:
@@ -192,7 +200,7 @@ def process_solar_data():
     if existing_record:
         old_generation = existing_record['generation_kwh']
         existing_record['generation_kwh'] = today_generation
-        existing_record['updated_at'] = datetime.now().isoformat()
+        existing_record['updated_at'] = get_sast_now().isoformat()
         
         history['monthly_total'] += (today_generation - old_generation)
         history['total_generation'] += (today_generation - old_generation)
@@ -200,7 +208,7 @@ def process_solar_data():
         history['daily_records'].append({
             'date': today_date,
             'generation_kwh': today_generation,
-            'updated_at': datetime.now().isoformat()
+            'updated_at': get_sast_now().isoformat()
         })
         history['monthly_total'] += today_generation
         history['total_generation'] += today_generation
@@ -211,8 +219,8 @@ def process_solar_data():
     # Get predicted values from config
     expected_daily_kwh = config['predicted_generation']['daily_kwh']
     
-    # Get monthly target based on current month
-    current_month_name = datetime.now().strftime('%B').lower()
+    # Get monthly target based on current month (use SAST time)
+    current_month_name = get_sast_now().strftime('%B').lower()
     monthly_targets = config['predicted_generation']['monthly_targets']
     expected_monthly_kwh = monthly_targets.get(current_month_name, config['predicted_generation']['monthly_kwh'])
     
@@ -236,8 +244,9 @@ def process_solar_data():
             'water_saved_litres': generation_kwh * factors['water_per_kwh']
         }
     
-    # Calculate days in current month
-    days_in_month = (datetime.now().replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    # Calculate days in current month (use SAST time)
+    sast_now = get_sast_now()
+    days_in_month = (sast_now.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
     days_in_current_month = days_in_month.day
     
     # Calculate environmental impacts
@@ -245,8 +254,8 @@ def process_solar_data():
     env_impact_monthly = calculate_env_impact(history['monthly_total'])
     env_impact_lifetime = calculate_env_impact(history['total_generation'])
     
-    # Get yesterday's data from history
-    yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    # Get yesterday's data from history (use SAST time)
+    yesterday_date = (get_sast_now() - timedelta(days=1)).strftime('%Y-%m-%d')
     yesterday_record = next((r for r in history['daily_records'] if r['date'] == yesterday_date), None)
     
     if yesterday_record:
@@ -304,7 +313,7 @@ def process_solar_data():
     
     # Create dashboard data
     dashboard_data = {
-        'last_updated': datetime.now().isoformat(),
+        'last_updated': get_sast_now().isoformat(),
         'yesterday': {
             'date': yesterday_date,
             'generation_kwh': round(yesterday_generation, 2),
@@ -323,7 +332,7 @@ def process_solar_data():
             'generation_kwh': round(history['monthly_total'], 2),
             'expected_kwh': round(expected_monthly_kwh, 2),
             'performance_percent': round(monthly_performance, 1),
-            'month_name': datetime.now().strftime('%B %Y'),
+            'month_name': get_sast_now().strftime('%B %Y'),
             'env_impact': {k: round(v, 2) for k, v in env_impact_monthly.items()}
         },
         'lifetime': {
