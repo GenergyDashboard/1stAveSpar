@@ -261,7 +261,7 @@
         }
         
         .info-dropdown {
-            position: absolute;
+            position: fixed;
             top: 20px;
             right: 20px;
             z-index: 100;
@@ -407,23 +407,6 @@
             transform: scale(1.05);
             border-color: rgba(74, 222, 128, 0.5);
             box-shadow: 0 10px 30px rgba(74, 222, 128, 0.2);
-        }
-        
-        .env-card .env-icon {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .env-card .env-value {
-            font-size: 2em;
-            font-weight: 300;
-            margin: 10px 0;
-            color: #4ade80;
-        }
-        
-        .env-card .env-label {
-            font-size: 0.9em;
-            color: #aaaaaa;
         }
         
         .chart-container {
@@ -599,7 +582,6 @@
     </style>
 </head>
 <body>
-    <body>
     <div class="container">
         <div class="info-dropdown">
             <div class="info-button" onclick="toggleInfo()">ℹ️</div>
@@ -625,17 +607,8 @@
                     <p>The amount of water saved by using solar instead of conventional power plants, which require significant amounts of water for cooling systems.</p>
                     <code>Water Saved = Energy (kWh) × 1 L water per kWh</code>
                 </div>
-                
-                <h3>📊 Why These Metrics Matter</h3>
-                
-                <div class="info-section">
-                    <p><strong>Real Environmental Impact</strong></p>
-                    <p>Every kilowatt-hour of solar energy we generate directly reduces our dependence on fossil fuels and helps combat climate change. These calculations translate abstract energy numbers into tangible environmental benefits that everyone can understand.</p>
-                    
-                    <p><strong>Data Transparency</strong></p>
-                    <p>All calculations use internationally recognized conversion factors and are updated in real-time based on actual solar production data from our monitoring system.</p>
-                </div>
             </div>
+        </div>
                 
                 <h3>📊 Why These Metrics Matter</h3>
                 
@@ -714,6 +687,8 @@
                     </div>
                     <div class="env-grid" id="pub-env-lifetime"></div>
                 </div>
+            </div>
+        </div>
         
         <div id="clientView" class="client-view">
             <div class="tabs">
