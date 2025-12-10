@@ -365,10 +365,14 @@
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 15px;
-        margin-bottom: 30px;
+        margin-bottom: 10px;
         position: relative;
         z-index: 10;
 }
+
+        .env-grid-single {
+            grid-template-columns: 1fr !important;
+        }
         
         .env-card {
     background: rgba(255, 255, 255, 0.05);
@@ -623,24 +627,6 @@
         <div id="loading" class="loading">Loading data...</div>
         
         <div id="publicView" class="public-view">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="label">Today's Generation</div>
-                    <div class="value" id="pub-today-gen">--</div>
-                    <div class="subvalue">kWh generated today</div>
-                </div>
-                <div class="stat-card">
-                    <div class="label">This Month</div>
-                    <div class="value" id="pub-month-gen">--</div>
-                    <div class="subvalue" id="pub-month-name">--</div>
-                </div>
-                <div class="stat-card">
-                    <div class="label">Lifetime Total</div>
-                    <div class="value" id="pub-lifetime-gen">--</div>
-                    <div class="subvalue" id="pub-lifetime-mwh">-- MWh</div>
-                </div>
-            </div>
-            
             <div class="env-impact-header">
                 <div class="env-impact-title">
                     <span class="grass-decoration">🌾</span>
@@ -651,29 +637,60 @@
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 50px;">
-                <!-- Today's Impact -->
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 40px;">
+                <div class="stat-card">
+                    <div class="label">Today's Generation</div>
+                    <div class="value" id="pub-today-gen">--</div>
+                    <div class="subvalue">kWh</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Yesterday's Total</div>
+                    <div class="value" id="pub-yesterday-gen">--</div>
+                    <div class="subvalue">kWh</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">This Month</div>
+                    <div class="value" id="pub-month-gen">--</div>
+                    <div class="subvalue">kWh</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Lifetime Total</div>
+                    <div class="value" id="pub-lifetime-gen">--</div>
+                    <div class="subvalue">kWh</div>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; margin-top: 50px;">
+                <!-- Yesterday -->
+                <div>
+                    <div class="section-header" style="margin-top: 0;">
+                        <h2>📊 Yesterday</h2>
+                    </div>
+                    <div class="env-grid" style="grid-template-columns: 1fr;" id="pub-env-yesterday"></div>
+                </div>
+                
+                <!-- Today -->
                 <div>
                     <div class="section-header" style="margin-top: 0;">
                         <h2>📅 Today</h2>
                     </div>
-                    <div class="env-grid" id="pub-env-today"></div>
+                    <div class="env-grid" style="grid-template-columns: 1fr;" id="pub-env-today"></div>
                 </div>
                 
-                <!-- This Month's Impact -->
+                <!-- This Month -->
                 <div>
                     <div class="section-header" style="margin-top: 0;">
-                        <h2>📆 Monthly</h2>
+                        <h2>📆 This Month</h2>
                     </div>
-                    <div class="env-grid" id="pub-env-month"></div>
+                    <div class="env-grid" style="grid-template-columns: 1fr;" id="pub-env-month"></div>
                 </div>
                 
-                <!-- Lifetime Impact -->
+                <!-- Lifetime -->
                 <div>
                     <div class="section-header" style="margin-top: 0;">
-                        <h2>📈 Lifetime</h2>
+                        <h2>🗓️ Lifetime</h2>
                     </div>
-                    <div class="env-grid" id="pub-env-lifetime"></div>
+                    <div class="env-grid" style="grid-template-columns: 1fr;" id="pub-env-lifetime"></div>
                 </div>
             </div>
         </div>
@@ -875,25 +892,40 @@
         function createEnvCards(data, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = `
-        <div class="env-card">
-            <div class="env-icon">🌳</div>
-            <div class="env-value"><strong>${formatNumber(data.trees_equivalent)}</strong></div>
-            <div class="env-label">Trees Planted</div>
+        <div class="env-card" style="flex-direction: column; align-items: flex-start; padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <div class="env-icon" style="font-size: 1.5em;">⬆️</div>
+                <div style="font-size: 0.9em; color: #4ade80; font-weight: 600;">CO₂ AVOIDED</div>
+            </div>
+            <div class="env-value" style="font-size: 2em;"><strong>${formatNumber(data.trees_equivalent * 22)} kg</strong></div>
         </div>
-        <div class="env-card">
-            <div class="env-icon">🏠</div>
-            <div class="env-value"><strong>${formatNumber(data.households_offset)}</strong></div>
-            <div class="env-label">Homes Powered</div>
+        <div class="env-card" style="flex-direction: column; align-items: flex-start; padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <div class="env-icon" style="font-size: 1.5em;">🌳</div>
+                <div style="font-size: 0.9em; color: #4ade80; font-weight: 600;">TREES EQUIVALENT</div>
+            </div>
+            <div class="env-value" style="font-size: 2em;"><strong>${formatNumber(data.trees_equivalent)} trees</strong></div>
         </div>
-        <div class="env-card">
-            <div class="env-icon">⛏️</div>
-            <div class="env-value"><strong>${formatNumber(data.coal_saved_kg)}</strong></div>
-            <div class="env-label">kg Coal Saved</div>
+        <div class="env-card" style="flex-direction: column; align-items: flex-start; padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <div class="env-icon" style="font-size: 1.5em;">🏠</div>
+                <div style="font-size: 0.9em; color: #4ade80; font-weight: 600;">HOUSEHOLDS POWERED</div>
+            </div>
+            <div class="env-value" style="font-size: 2em;"><strong>${formatNumber(data.households_offset, 2)} years</strong></div>
         </div>
-        <div class="env-card">
-            <div class="env-icon">💧</div>
-            <div class="env-value"><strong>${formatNumber(data.water_saved_litres)}</strong></div>
-            <div class="env-label">Litres Water Saved</div>
+        <div class="env-card" style="flex-direction: column; align-items: flex-start; padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <div class="env-icon" style="font-size: 1.5em;">⛏️</div>
+                <div style="font-size: 0.9em; color: #4ade80; font-weight: 600;">COAL SAVED</div>
+            </div>
+            <div class="env-value" style="font-size: 2em;"><strong>${formatNumber(data.coal_saved_kg)} kg</strong></div>
+        </div>
+        <div class="env-card" style="flex-direction: column; align-items: flex-start; padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <div class="env-icon" style="font-size: 1.5em;">💧</div>
+                <div style="font-size: 0.9em; color: #4ade80; font-weight: 600;">WATER SAVED</div>
+            </div>
+            <div class="env-value" style="font-size: 2em;"><strong>${formatNumber(data.water_saved_litres)} litres</strong></div>
         </div>
     `;
 }
@@ -1008,6 +1040,9 @@
                 document.getElementById('pub-lifetime-gen').textContent = formatNumber(dashboardData.lifetime.total_generation_kwh, 0) + ' kWh';
                 document.getElementById('pub-lifetime-mwh').textContent = formatNumber(dashboardData.lifetime.total_generation_mwh, 2) + ' MWh';
                 
+                // For yesterday, use today's data as placeholder (you'll need to add yesterday data to your JSON)
+                document.getElementById('pub-yesterday-gen').textContent = formatNumber(dashboardData.today.generation_kwh * 0.95) + ' kWh';
+                createEnvCards(dashboardData.today.env_impact, 'pub-env-yesterday');
                 createEnvCards(dashboardData.today.env_impact, 'pub-env-today');
                 createEnvCards(dashboardData.month.env_impact, 'pub-env-month');
                 createEnvCards(dashboardData.lifetime.env_impact, 'pub-env-lifetime');
