@@ -2,14 +2,10 @@
 name: Update Solar Data
 on:
   schedule:
-    # Run 3 times a day (all times in UTC, South Africa is UTC+2)
-    # 10:00 SAST = 08:00 UTC (Late morning)
     - cron: '0 8 * * *'
-    # 15:00 SAST = 13:00 UTC (Mid afternoon)
     - cron: '0 13 * * *'
-    # 20:00 SAST = 18:00 UTC (Evening)
     - cron: '0 18 * * *'
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
 permissions:
      contents: write
 jobs:
@@ -51,6 +47,10 @@ jobs:
       - name: Process data and generate stats
         run: |
           python process_data.py
+      
+      - name: Generate client auth file
+        run: |
+          echo '{"username":"${{ secrets.CLIENT_USERNAME }}","password":"${{ secrets.CLIENT_PASSWORD }}"}' > data/client_auth.json
       
       - name: Commit and push changes
         run: |
