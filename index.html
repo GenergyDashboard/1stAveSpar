@@ -190,6 +190,7 @@
         .stat-card .subvalue {
             color: #888888;
             font-size: 1.4em;
+            display: block;
         }
         
         .performance {
@@ -1024,6 +1025,12 @@
                 
                 dashboardData = await response.json();
                 console.log('✓ Dashboard data loaded successfully');
+                console.log('Dashboard data structure:', dashboardData);
+                
+                // Validate data structure
+                if (!dashboardData.today || !dashboardData.month || !dashboardData.lifetime) {
+                    throw new Error('Missing required data sections (today, month, or lifetime)');
+                }
                 
                 const lastUpdate = new Date(dashboardData.last_updated);
                 document.getElementById('last-update').textContent = lastUpdate.toLocaleString('en-ZA');
@@ -1032,23 +1039,35 @@
                 const yesterdayGen = dashboardData.yesterday ? dashboardData.yesterday.generation_kwh : (dashboardData.today.generation_kwh * 0.95);
                 const yesterdayEnv = dashboardData.yesterday ? dashboardData.yesterday.env_impact : dashboardData.today.env_impact;
                 
-                document.getElementById('pub-yesterday-gen').textContent = formatNumber(yesterdayGen) + ' kWh';
-                document.getElementById('pub-today-gen').textContent = formatNumber(dashboardData.today.generation_kwh) + ' kWh';
-                document.getElementById('pub-month-gen').textContent = formatNumber(dashboardData.month.generation_kwh) + ' kWh';
-                document.getElementById('pub-lifetime-gen').textContent = formatNumber(dashboardData.lifetime.total_generation_kwh, 0) + ' kWh';
+                // Safely set text content with existence checks
+                const setTextIfExists = (id, text) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = text;
+                    else console.warn(`Element ${id} not found`);
+                };
+                
+                setTextIfExists('pub-yesterday-gen', formatNumber(yesterdayGen) + ' kWh');
+                setTextIfExists('pub-today-gen', formatNumber(dashboardData.today.generation_kwh) + ' kWh');
+                setTextIfExists('pub-month-gen', formatNumber(dashboardData.month.generation_kwh) + ' kWh');
+                
+                // Handle lifetime data with fallback
+                const lifetimeKwh = dashboardData.lifetime.total_generation_kwh || dashboardData.lifetime.generation_kwh || 0;
+                const lifetimeMwh = dashboardData.lifetime.total_generation_mwh || (lifetimeKwh / 1000) || 0;
+                
+                setTextIfExists('pub-lifetime-gen', formatNumber(lifetimeKwh, 0) + ' kWh');
                 
                 createEnvCards(yesterdayEnv, 'pub-env-yesterday');
                 createEnvCards(dashboardData.today.env_impact, 'pub-env-today');
                 createEnvCards(dashboardData.month.env_impact, 'pub-env-month');
                 createEnvCards(dashboardData.lifetime.env_impact, 'pub-env-lifetime');
                 
-                document.getElementById('monthly-gen').textContent = formatNumber(dashboardData.month.generation_kwh) + ' kWh';
-                document.getElementById('monthly-expected').textContent = formatNumber(dashboardData.month.expected_kwh);
-                document.getElementById('monthly-perf').textContent = `${dashboardData.month.performance_percent}% of expected`;
+                setTextIfExists('monthly-gen', formatNumber(dashboardData.month.generation_kwh) + ' kWh');
+                setTextIfExists('monthly-expected', formatNumber(dashboardData.month.expected_kwh || 0));
+                setTextIfExists('monthly-perf', `${dashboardData.month.performance_percent || 0}% of expected`);
                 
-                document.getElementById('lifetime-gen').textContent = formatNumber(dashboardData.lifetime.total_generation_kwh, 0) + ' kWh';
-                document.getElementById('lifetime-mwh').textContent = formatNumber(dashboardData.lifetime.total_generation_mwh, 2) + ' MWh';
-                document.getElementById('lifetime-days').textContent = formatNumber(dashboardData.lifetime.days_active, 0);
+                setTextIfExists('lifetime-gen', formatNumber(lifetimeKwh, 0) + ' kWh');
+                setTextIfExists('lifetime-mwh', formatNumber(lifetimeMwh, 2) + ' MWh');
+                setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active || 0, 0));
                 
                 createEnvCards(dashboardData.lifetime.env_impact, 'client-env-lifetime');
                 
