@@ -54,6 +54,30 @@ def fetch_irradiation_data(date):
         print(f"  ⚠️ Error fetching irradiation data: {e}")
         return {}
 
+def calculate_system_degradation(config):
+    """Calculate current system degradation factor based on age"""
+    try:
+        commissioning_date = datetime.strptime(config['system']['commissioning_date'], '%Y-%m-%d')
+        days_active = (datetime.now() - commissioning_date).days
+        years_active = days_active / 365.25
+        
+        if years_active < 1:
+            # First year: 1% degradation prorated
+            degradation = config['system']['degradation']['year_1'] * years_active
+        else:
+            # After first year: 1% + 0.5% per additional year
+            first_year_deg = config['system']['degradation']['year_1']
+            subsequent_years = years_active - 1
+            subsequent_deg = config['system']['degradation']['subsequent_years'] * subsequent_years
+            degradation = first_year_deg + subsequent_deg
+        
+        degradation_factor = 1 - degradation
+        print(f"  System age: {years_active:.2f} years, Degradation factor: {degradation_factor:.4f}")
+        return degradation_factor
+    except Exception as e:
+        print(f"  ⚠️ Could not calculate degradation: {e}")
+        return 1.0  # No degradation if error
+
 def process_solar_data():
     """Process the downloaded solar data and calculate all metrics"""
     
@@ -206,8 +230,12 @@ def process_solar_data():
     print("Fetching irradiation data...")
     irradiation_data = fetch_irradiation_data(today_date)
     
-    # Get hourly predictions from config
-    hourly_predictions = config.get('hourly_predictions', {}).get('hours', [0] * 24)
+    # Calculate system degradation
+    degradation_factor = calculate_system_degradation(config)
+    
+    # Get hourly predictions from config and apply degradation
+    hourly_predictions_year1 = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
+    hourly_predictions = [pred * degradation_factor for pred in hourly_predictions_year1]
     
     # Prepare hourly data with PV generation, predicted values, and irradiation
     hourly_data = []
