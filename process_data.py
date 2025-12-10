@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import calendar
 import os
 import glob
+import requests
 
 def load_config():
     """Load configuration file"""
@@ -18,6 +19,40 @@ def convert_to_number(value):
         return float(str(value).replace(' ', '').replace(',', ''))
     except:
         return 0
+
+def fetch_irradiation_data(date):
+    """Fetch hourly irradiation data from open-meteo API"""
+    try:
+        base_url = "https://archive-api.open-meteo.com/v1/archive"
+        params = {
+            "latitude": -33.97422273793887,
+            "longitude": 25.61212584301634,
+            "start_date": date,
+            "end_date": date,
+            "hourly": "direct_radiation"
+        }
+        
+        response = requests.get(base_url, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            timestamps = data["hourly"]["time"]
+            direct_radiation = data["hourly"]["direct_radiation"]
+            
+            # Create hourly data with just hour and radiation
+            hourly_data = {}
+            for timestamp, radiation in zip(timestamps, direct_radiation):
+                hour = int(timestamp.split('T')[1].split(':')[0])
+                hourly_data[hour] = radiation if radiation is not None else 0
+            
+            print(f"  ✓ Fetched irradiation data for {date}")
+            return hourly_data
+        else:
+            print(f"  ⚠️ Failed to fetch irradiation data: Status {response.status_code}")
+            return {}
+    except Exception as e:
+        print(f"  ⚠️ Error fetching irradiation data: {e}")
+        return {}
 
 def process_solar_data():
     """Process the downloaded solar data and calculate all metrics"""
@@ -78,6 +113,7 @@ def process_solar_data():
     else:
         history = {
             'daily_records': [],
+            'hourly_records': {},  # Store last 7 days of hourly data
             'monthly_total': 0,
             'total_generation': 0,
             'current_month': datetime.now().strftime('%Y-%m')
@@ -166,6 +202,45 @@ def process_solar_data():
         yesterday_generation = 0
         env_impact_yesterday = calculate_env_impact(0)
     
+    # Fetch today's irradiation data
+    print("Fetching irradiation data...")
+    irradiation_data = fetch_irradiation_data(today_date)
+    
+    # Get hourly predictions from config
+    hourly_predictions = config.get('hourly_predictions', {}).get('hours', [0] * 24)
+    
+    # Prepare hourly data with PV generation, predicted values, and irradiation
+    hourly_data = []
+    
+    # Group PV data by hour
+    df['hour'] = pd.to_datetime(df['time']).dt.hour
+    hourly_pv = df.groupby('hour')['pv_kw'].mean().to_dict()
+    
+    for hour in range(24):
+        hourly_data.append({
+            'hour': hour,
+            'time': f"{hour:02d}:00",
+            'pv_kw': round(hourly_pv.get(hour, 0), 2),
+            'predicted_kw': round(hourly_predictions[hour], 2) if hour < len(hourly_predictions) else 0,
+            'irradiation_wm2': irradiation_data.get(hour, 0)
+        })
+    
+    # Store hourly data for last 7 days
+    if 'hourly_records' not in history:
+        history['hourly_records'] = {}
+    
+    history['hourly_records'][today_date] = hourly_data
+    
+    # Keep only last 7 days of hourly data
+    all_dates = sorted(history['hourly_records'].keys())
+    if len(all_dates) > 7:
+        dates_to_remove = all_dates[:-7]
+        for old_date in dates_to_remove:
+            del history['hourly_records'][old_date]
+    
+    print(f"  ✓ Stored hourly data (keeping last 7 days, current: {len(history['hourly_records'])} days)")
+
+    
     # Create dashboard data
     dashboard_data = {
         'last_updated': datetime.now().isoformat(),
@@ -210,10 +285,9 @@ def process_solar_data():
     with open('data/dashboard_data.json', 'w') as f:
         json.dump(dashboard_data, f, indent=2)
     
-    # Save detailed data
-    chart_data = df[['time', 'pv_kw', 'grid_kw', 'load_kw']].to_dict('records')
+    # Save today's detailed hourly data (with irradiation and predictions)
     with open('data/today_detailed.json', 'w') as f:
-        json.dump(chart_data, f, indent=2)
+        json.dump(hourly_data, f, indent=2)
     
     print("✅ Data processing completed!")
     print(f"  - Today: {today_generation:.2f} kWh ({daily_performance:.1f}% of expected)")
