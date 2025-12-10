@@ -1040,10 +1040,10 @@
                 document.getElementById('pub-lifetime-gen').textContent = formatNumber(dashboardData.lifetime.total_generation_kwh, 0) + ' kWh';
                 document.getElementById('pub-lifetime-mwh').textContent = formatNumber(dashboardData.lifetime.total_generation_mwh, 2) + ' MWh';
                 
+                createEnvCards(dashboardData.today.env_impact, 'pub-env-today');
                 // For yesterday, use today's data as placeholder (you'll need to add yesterday data to your JSON)
                 document.getElementById('pub-yesterday-gen').textContent = formatNumber(dashboardData.today.generation_kwh * 0.95) + ' kWh';
                 createEnvCards(dashboardData.today.env_impact, 'pub-env-yesterday');
-                createEnvCards(dashboardData.today.env_impact, 'pub-env-today');
                 createEnvCards(dashboardData.month.env_impact, 'pub-env-month');
                 createEnvCards(dashboardData.lifetime.env_impact, 'pub-env-lifetime');
                 
