@@ -157,6 +157,26 @@ def process_solar_data():
     # Create dashboard data
     dashboard_data = {
         'last_updated': datetime.now().isoformat(),
+        # Get yesterday's data from history
+    yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    yesterday_record = next((r for r in history['daily_records'] if r['date'] == yesterday_date), None)
+    
+    if yesterday_record:
+        yesterday_generation = yesterday_record['generation_kwh']
+        env_impact_yesterday = calculate_env_impact(yesterday_generation)
+    else:
+        # Fallback if no yesterday data exists
+        yesterday_generation = 0
+        env_impact_yesterday = calculate_env_impact(0)
+    
+    dashboard_data = {
+        'last_updated': datetime.now().isoformat(),
+        'yesterday': {
+            'date': yesterday_date,
+            'generation_kwh': round(yesterday_generation, 2),
+            'env_impact': {k: round(v, 2) for k, v in env_impact_yesterday.items()}
+        },
+        'today': {
         'today': {
             'date': today_date,
             'generation_kwh': round(today_generation, 2),
