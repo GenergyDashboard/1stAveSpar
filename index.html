@@ -951,65 +951,171 @@
             }
         }
         
-        function updateDailyView(data) {
-            if (!dashboardData) return;
-            
-            const todayData = dashboardData.today;
-            document.getElementById('daily-gen').textContent = formatNumber(todayData.generation_kwh) + ' kWh';
-            document.getElementById('daily-expected').textContent = formatNumber(todayData.expected_kwh);
-            document.getElementById('daily-peak').textContent = formatNumber(todayData.peak_power_kw);
-            document.getElementById('daily-avg').textContent = formatNumber(todayData.avg_power_kw);
-            
-            const perf = document.getElementById('daily-perf');
-            perf.textContent = `${todayData.performance_percent}% of expected`;
-            perf.className = 'performance ' + (todayData.performance_percent >= 100 ? 'positive' : 'negative');
-            
-            const ctx = document.getElementById('dailyChart').getContext('2d');
-            if (dailyChart) dailyChart.destroy();
-            
-            dailyChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.map(d => d.time),
-                    datasets: [{
-                        label: 'Solar Generation (kW)',
-                        data: data.map(d => d.pv_kw),
-                        borderColor: '#FFD700',
-                        backgroundColor: 'rgba(255, 215, 0, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
+        // This code replaces the updateDailyView function in index.html
+
+function updateDailyView(data) {
+    if (!dashboardData) return;
+    
+    const todayData = dashboardData.today;
+    document.getElementById('daily-gen').textContent = formatNumber(todayData.generation_kwh);
+    document.getElementById('daily-expected').textContent = formatNumber(todayData.expected_kwh);
+    document.getElementById('daily-peak').textContent = formatNumber(todayData.peak_power_kw);
+    document.getElementById('daily-avg').textContent = formatNumber(todayData.avg_power_kw);
+    
+    const perf = document.getElementById('daily-perf');
+    perf.textContent = `${todayData.performance_percent}% of expected`;
+    perf.className = 'performance ' + (todayData.performance_percent >= 100 ? 'positive' : 'negative');
+    
+    const ctx = document.getElementById('dailyChart').getContext('2d');
+    if (dailyChart) dailyChart.destroy();
+    
+    // Prepare data arrays
+    const labels = data.map(d => d.time);
+    const pvData = data.map(d => d.pv_kw);
+    const predictedData = data.map(d => d.predicted_kw);
+    const irradiationData = data.map(d => d.irradiation_wm2);
+    
+    dailyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'PV Generation (kW)',
+                    data: pvData,
+                    type: 'bar',
+                    backgroundColor: '#4ade80',
+                    borderColor: '#22c55e',
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                    order: 3
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { 
-                            position: 'top',
-                            labels: { color: '#ffffff' }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { 
-                                maxTicksLimit: 12,
-                                color: '#888888'
-                            },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Power (kW)',
-                                color: '#ffffff'
-                            },
-                            ticks: { color: '#888888' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                {
+                    label: 'Predicted Generation (kW)',
+                    data: predictedData,
+                    type: 'line',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    label: 'Irradiation (W/m²)',
+                    data: irradiationData,
+                    type: 'line',
+                    borderColor: '#FFD700',
+                    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y1',
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: { 
+                    position: 'top',
+                    labels: { 
+                        color: '#ffffff',
+                        font: { size: 12 },
+                        usePointStyle: true,
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: '#4ade80',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(1);
+                                if (context.datasetIndex === 2) {
+                                    label += ' W/m²';
+                                } else {
+                                    label += ' kW';
+                                }
+                            }
+                            return label;
                         }
                     }
                 }
-            });
+            },
+            scales: {
+                x: {
+                    ticks: { 
+                        color: '#888888',
+                        font: { size: 11 }
+                    },
+                    grid: { 
+                        color: 'rgba(255, 255, 255, 0.1)',
+                        drawBorder: false
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Power (kW)',
+                        color: '#ffffff',
+                        font: { size: 13, weight: 'bold' }
+                    },
+                    ticks: { 
+                        color: '#888888',
+                        font: { size: 11 }
+                    },
+                    grid: { 
+                        color: 'rgba(255, 255, 255, 0.1)',
+                        drawBorder: false
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Irradiation (W/m²)',
+                        color: '#FFD700',
+                        font: { size: 13, weight: 'bold' }
+                    },
+                    ticks: { 
+                        color: '#888888',
+                        font: { size: 11 }
+                    },
+                    grid: { 
+                        drawOnChartArea: false,
+                        drawBorder: false
+                    }
+                }
+            }
         }
+    });
+}
         
         async function loadData() {
             try {
