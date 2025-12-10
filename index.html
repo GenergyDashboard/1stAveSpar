@@ -28,10 +28,10 @@
         
         @keyframes glow {
             0%, 100% { 
-                text-shadow: 0 0 10px #4ade80, 0 0 20px #4ade80, 0 0 30px #4ade80;
+                text-shadow: 0 0 5px #4ade80, 0 0 10px #4ade80;
             }
             50% { 
-                text-shadow: 0 0 20px #4ade80, 0 0 40px #4ade80, 0 0 60px #4ade80;
+                text-shadow: 0 0 10px #4ade80, 0 0 15px #4ade80;
             }
         }
         
@@ -82,6 +82,11 @@
             font-weight: 500;
             animation: glow 2s ease-in-out infinite;
             font-size: 1.2em;
+        }
+        
+        .powered-by .spar {
+            color: #ffffff;
+            font-weight: 700;
         }
         
         .login-section {
@@ -191,7 +196,7 @@
         .stat-card .value::after {
             content: ' kWh';
             font-size: 0.4em;
-            color: #888888;
+            color: #FFD700;
             font-weight: 400;
         }
         
@@ -382,7 +387,7 @@
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 20px;
+            padding: 25px;
             border-radius: 12px;
             display: flex;
             flex-direction: column;
@@ -391,23 +396,24 @@
         }
 
         .env-card .env-icon {
-            font-size: 2em;
+            font-size: 2.2em;
             margin-bottom: 0;
             flex-shrink: 0;
         }
 
         .env-card .env-value {
-            font-size: 2.5em;
-            font-weight: 900;
+            font-size: 2.8em;
+            font-weight: 600;
             margin: 0;
             color: #4ade80;
         }
 
         .env-card .env-label {
-            font-size: 1.1em;
+            font-size: 1.4em;
             color: #4ade80;
             font-weight: 600;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
         }
         
         .env-card:hover {
@@ -620,7 +626,7 @@
         <div class="header">
             <div class="header-content">
                 <h1>1st Avenue Spar: Solar Generation</h1>
-                <p class="powered-by">Powered by <span class="company">Genergy</span> & Spar</p>
+                <p class="powered-by">Powered by <span class="company">Genergy</span> & <span class="spar">Spar</span></p>
             </div>
             <div class="login-section" id="loginSection">
                 <button class="btn btn-primary" onclick="showLoginModal()">Client Login</button>
@@ -896,28 +902,28 @@
                         <div class="env-icon">🌳</div>
                         <div class="env-label">TREES PLANTED</div>
                     </div>
-                    <div class="env-value"><strong>${formatNumber(data.trees_equivalent)} trees</strong></div>
+                    <div class="env-value">${formatNumber(data.trees_equivalent)} <span style="font-weight: 500;">trees</span></div>
                 </div>
                 <div class="env-card">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                         <div class="env-icon">🏠</div>
                         <div class="env-label">HOUSEHOLDS POWERED</div>
                     </div>
-                    <div class="env-value"><strong>${formatNumber(data.households_offset, 2)} years</strong></div>
+                    <div class="env-value">${formatNumber(data.households_offset, 2)} <span style="font-weight: 500;">homes</span></div>
                 </div>
                 <div class="env-card">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                         <div class="env-icon">⛏️</div>
                         <div class="env-label">COAL SAVED</div>
                     </div>
-                    <div class="env-value"><strong>${formatNumber(data.coal_saved_kg)} kg</strong></div>
+                    <div class="env-value">${formatNumber(data.coal_saved_kg)} <span style="font-weight: 500;">kg</span></div>
                 </div>
                 <div class="env-card">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                         <div class="env-icon">💧</div>
                         <div class="env-label">WATER SAVED</div>
                     </div>
-                    <div class="env-value"><strong>${formatNumber(data.water_saved_litres)} litres</strong></div>
+                    <div class="env-value">${formatNumber(data.water_saved_litres)} <span style="font-weight: 500;">litres</span></div>
                 </div>
             `;
         }
