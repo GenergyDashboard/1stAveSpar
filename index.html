@@ -68,7 +68,7 @@
         }
         
         .powered-by {
-            font-size: 1.4em;
+            font-size: 1.8em;
             color: #888888;
             margin-top: 5px;
             font-weight: 300;
@@ -81,6 +81,7 @@
             background-clip: text;
             font-weight: 500;
             animation: glow 2s ease-in-out infinite;
+            font-size: 1.2em;
         }
         
         .login-section {
@@ -185,6 +186,13 @@
             font-weight: 300;
             color: #FFD700;
             margin-bottom: 5px;
+        }
+        
+        .stat-card .value::after {
+            content: ' kWh';
+            font-size: 0.4em;
+            color: #888888;
+            font-weight: 400;
         }
         
         .stat-card .subvalue {
@@ -383,20 +391,20 @@
         }
 
         .env-card .env-icon {
-            font-size: 1.5em;
+            font-size: 2em;
             margin-bottom: 0;
             flex-shrink: 0;
         }
 
         .env-card .env-value {
-            font-size: 2em;
+            font-size: 2.5em;
             font-weight: 900;
             margin: 0;
             color: #4ade80;
         }
 
         .env-card .env-label {
-            font-size: 0.9em;
+            font-size: 1.1em;
             color: #4ade80;
             font-weight: 600;
             margin-bottom: 5px;
@@ -612,7 +620,7 @@
         <div class="header">
             <div class="header-content">
                 <h1>1st Avenue Spar: Solar Generation</h1>
-                <p class="powered-by">Powered by <span class="company">Genergy</span></p>
+                <p class="powered-by">Powered by <span class="company">Genergy</span> & Spar</p>
             </div>
             <div class="login-section" id="loginSection">
                 <button class="btn btn-primary" onclick="showLoginModal()">Client Login</button>
@@ -626,22 +634,18 @@
                 <div class="stat-card">
                     <div class="label">Yesterday's Total</div>
                     <div class="value" id="pub-yesterday-gen">--</div>
-                    <div class="subvalue">kWh</div>
                 </div>
                 <div class="stat-card">
                     <div class="label">Today's Total</div>
                     <div class="value" id="pub-today-gen">--</div>
-                    <div class="subvalue">kWh</div>
                 </div>
                 <div class="stat-card">
                     <div class="label">This Month</div>
                     <div class="value" id="pub-month-gen">--</div>
-                    <div class="subvalue">kWh</div>
                 </div>
                 <div class="stat-card">
                     <div class="label">Lifetime Total</div>
                     <div class="value" id="pub-lifetime-gen">--</div>
-                    <div class="subvalue">kWh</div>
                 </div>
             </div>
             
@@ -889,15 +893,8 @@
             container.innerHTML = `
                 <div class="env-card">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                        <div class="env-icon">⬆️</div>
-                        <div class="env-label">CO₂ AVOIDED</div>
-                    </div>
-                    <div class="env-value"><strong>${formatNumber(data.trees_equivalent * 22)} kg</strong></div>
-                </div>
-                <div class="env-card">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                         <div class="env-icon">🌳</div>
-                        <div class="env-label">TREES EQUIVALENT</div>
+                        <div class="env-label">TREES PLANTED</div>
                     </div>
                     <div class="env-value"><strong>${formatNumber(data.trees_equivalent)} trees</strong></div>
                 </div>
@@ -1046,15 +1043,15 @@
                     else console.warn(`Element ${id} not found`);
                 };
                 
-                setTextIfExists('pub-yesterday-gen', formatNumber(yesterdayGen) + ' kWh');
-                setTextIfExists('pub-today-gen', formatNumber(dashboardData.today.generation_kwh) + ' kWh');
-                setTextIfExists('pub-month-gen', formatNumber(dashboardData.month.generation_kwh) + ' kWh');
+                setTextIfExists('pub-yesterday-gen', formatNumber(yesterdayGen));
+                setTextIfExists('pub-today-gen', formatNumber(dashboardData.today.generation_kwh));
+                setTextIfExists('pub-month-gen', formatNumber(dashboardData.month.generation_kwh));
                 
                 // Handle lifetime data with fallback
                 const lifetimeKwh = dashboardData.lifetime.total_generation_kwh || dashboardData.lifetime.generation_kwh || 0;
                 const lifetimeMwh = dashboardData.lifetime.total_generation_mwh || (lifetimeKwh / 1000) || 0;
                 
-                setTextIfExists('pub-lifetime-gen', formatNumber(lifetimeKwh, 0) + ' kWh');
+                setTextIfExists('pub-lifetime-gen', formatNumber(lifetimeKwh, 0));
                 
                 createEnvCards(yesterdayEnv, 'pub-env-yesterday');
                 createEnvCards(dashboardData.today.env_impact, 'pub-env-today');
