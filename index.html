@@ -889,17 +889,18 @@
         }
         
         function showClientView() {
-            document.getElementById('publicView').classList.remove('active');
-            document.getElementById('clientView').classList.add('active');
-            document.getElementById('loginSection').innerHTML = `
-                <div class="user-info">
-                    <div class="user-avatar">C</div>
-                    <span>Client</span>
-                </div>
-                <button class="btn btn-secondary" onclick="logout()">Logout</button>
-            `;
-            loadToday();
-        }
+    document.getElementById('publicView').classList.remove('active');
+    document.getElementById('clientView').classList.add('active');
+    document.getElementById('loginSection').innerHTML = `
+        <div class="user-info">
+            <div class="user-avatar">C</div>
+            <span>Client</span>
+        </div>
+        <button class="btn btn-secondary" onclick="logout()">Logout</button>
+    `;
+    updateDatePickerRange();  // Add this line
+    loadToday();
+}
         
         function switchClientTab(tab) {
             document.querySelectorAll('#clientView .tab').forEach(t => t.classList.remove('active'));
@@ -947,10 +948,37 @@
         }
         
         function loadToday() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('dateSelector').value = today;
-            loadDailyData();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dateSelector').value = today;
+    document.getElementById('dateSelector').max = today;
+    loadDailyData();
+}
+
+async function updateDatePickerRange() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+        const response = await fetch(historyPath);
+        
+        if (response.ok) {
+            const historyData = await response.json();
+            
+            if (historyData.hourly_records && Object.keys(historyData.hourly_records).length > 0) {
+                const availableDates = Object.keys(historyData.hourly_records).sort();
+                const minDate = availableDates[0];
+                const maxDate = availableDates[availableDates.length - 1];
+                
+                const dateInput = document.getElementById('dateSelector');
+                dateInput.min = minDate;
+                dateInput.max = maxDate;
+                
+                console.log(`✓ Date picker range: ${minDate} to ${maxDate} (${availableDates.length} days available)`);
+            }
         }
+    } catch (error) {
+        console.error('Could not update date picker range:', error);
+    }
+}
         
         async function loadDailyData() {
     try {
