@@ -35,6 +35,26 @@
             }
         }
         
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        @keyframes float-flower {
+            0% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateX(100px) translateY(-20px) rotate(360deg); opacity: 0; }
+        }
+        
+        @keyframes flow-water {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        
+        @keyframes grass-sway {
+            0%, 100% { transform: rotate(-1deg); }
+            50% { transform: rotate(1deg); }
+        }
+        
         .header {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
@@ -211,9 +231,145 @@
             letter-spacing: 1px;
         }
         
+        .env-impact-header {
+            text-align: center;
+            margin: 60px 0 40px 0;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .env-impact-title {
+            font-size: 3.5em;
+            color: #ffffff;
+            font-weight: 300;
+            letter-spacing: 2px;
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        
+        .tree-decoration {
+            display: inline-block;
+            font-size: 1.2em;
+            margin: 0 15px;
+            animation: sway 3s ease-in-out infinite;
+            transform-origin: bottom center;
+        }
+        
+        .flower {
+            position: absolute;
+            font-size: 0.4em;
+            animation: float-flower 8s ease-in-out infinite;
+        }
+        
+        .flower:nth-child(1) { top: -10px; left: -30px; animation-delay: 0s; }
+        .flower:nth-child(2) { top: 10px; left: -20px; animation-delay: 2s; }
+        .flower:nth-child(3) { top: -5px; right: -30px; animation-delay: 4s; }
+        .flower:nth-child(4) { top: 15px; right: -20px; animation-delay: 6s; }
+        
+        .water-line {
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(56, 189, 248, 0.3) 10%, 
+                rgba(56, 189, 248, 0.5) 20%,
+                rgba(56, 189, 248, 0.3) 30%,
+                transparent 40%,
+                transparent 60%,
+                rgba(56, 189, 248, 0.3) 70%,
+                rgba(56, 189, 248, 0.5) 80%,
+                rgba(56, 189, 248, 0.3) 90%,
+                transparent);
+            background-size: 200% 100%;
+            animation: flow-water 6s linear infinite;
+            margin-top: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.3);
+        }
+        
+        .grass-decoration {
+            display: inline-block;
+            font-size: 0.8em;
+            margin: 0 8px;
+            animation: grass-sway 2s ease-in-out infinite;
+            transform-origin: bottom center;
+            opacity: 0.7;
+        }
+        
+        .info-dropdown {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        
+        .info-button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            opacity: 0.3;
+            color: #888;
+            font-size: 1.2em;
+        }
+        
+        .info-button:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(74, 222, 128, 0.5);
+            color: #4ade80;
+        }
+        
+        .info-content {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: rgba(26, 26, 26, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            width: 350px;
+            display: none;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .info-content.show {
+            display: block;
+        }
+        
+        .info-content h3 {
+            color: #4ade80;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .info-content p {
+            color: #ccc;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            font-size: 1em;
+        }
+        
+        .info-content ul {
+            color: #aaa;
+            margin-left: 20px;
+            font-size: 0.95em;
+        }
+        
+        .info-content li {
+            margin-bottom: 8px;
+        }
+        
          .env-grid {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 15px;
         margin-bottom: 30px;
         position: relative;
@@ -239,8 +395,8 @@
 }
 
 .env-card .env-value {
-    font-size: 2.4em;
-    font-weight: 700;
+    font-size: 3em;
+    font-weight: 900;
     margin: 0;
     color: #4ade80;
 }
@@ -450,6 +606,20 @@
 <body>
     <body>
     <div class="container">
+        <div class="info-dropdown">
+            <div class="info-button" onclick="toggleInfo()">ℹ️</div>
+            <div class="info-content" id="infoContent">
+                <h3>Environmental Impact Calculations</h3>
+                <p>Our impact metrics are based on:</p>
+                <ul>
+                    <li><strong>Trees:</strong> 1 tree absorbs ~21kg CO₂/year. We calculate equivalent trees needed to offset your solar generation.</li>
+                    <li><strong>Homes:</strong> Average SA home uses ~900 kWh/month. Your solar power could run this many homes.</li>
+                    <li><strong>Coal:</strong> ~1kg coal = 1 kWh electricity. Your solar directly replaces this coal consumption.</li>
+                    <li><strong>Water:</strong> Coal power uses ~2L water per kWh. Solar saves all this water.</li>
+                </ul>
+            </div>
+        </div>
+        
         <div class="header">
             <div class="header-content">
                 <h1>1st Avenue Spar: Solar Generation</h1>
@@ -481,32 +651,45 @@
                 </div>
             </div>
             
+            <div class="env-impact-header">
+                <div class="env-impact-title">
+                    <span class="grass-decoration">🌾</span>
+                    <span class="tree-decoration">🌳</span>
+                    Environmental Impact
+                    <span class="tree-decoration">🌲</span>
+                    <span class="grass-decoration">🌿</span>
+                    <span class="flower">🌸</span>
+                    <span class="flower">🌺</span>
+                    <span class="flower">🌼</span>
+                    <span class="flower">🌻</span>
+                </div>
+                <div class="water-line"></div>
+            </div>
+            
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 50px;">
                 <!-- Today's Impact -->
                 <div>
                     <div class="section-header" style="margin-top: 0;">
-                        <h2>🌱 Today's Impact</h2>
+                        <h2>🌱 Today</h2>
                     </div>
-                    <div class="env-grid" id="pub-env-today" style="grid-template-columns: 1fr;"></div>
+                    <div class="env-grid" id="pub-env-today"></div>
                 </div>
                 
                 <!-- This Month's Impact -->
                 <div>
                     <div class="section-header" style="margin-top: 0;">
-                        <h2>🌍 This Month's Impact</h2>
+                        <h2>🌍 Monthly</h2>
                     </div>
-                    <div class="env-grid" id="pub-env-month" style="grid-template-columns: 1fr;"></div>
+                    <div class="env-grid" id="pub-env-month"></div>
                 </div>
                 
                 <!-- Lifetime Impact -->
                 <div>
                     <div class="section-header" style="margin-top: 0;">
-                        <h2>🌟 Lifetime Impact</h2>
+                        <h2>🌟 Lifetime</h2>
                     </div>
-                    <div class="env-grid" id="pub-env-lifetime" style="grid-template-columns: 1fr;"></div>
+                    <div class="env-grid" id="pub-env-lifetime"></div>
                 </div>
-            </div>
-        </div>
         
         <div id="clientView" class="client-view">
             <div class="tabs">
@@ -616,6 +799,19 @@
         let dashboardData = null;
         let isLoggedIn = false;
         let clientCredentials = null;
+        
+        function toggleInfo() {
+            const infoContent = document.getElementById('infoContent');
+            infoContent.classList.toggle('show');
+        }
+        
+        // Close info dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.querySelector('.info-dropdown');
+            if (dropdown && !dropdown.contains(event.target)) {
+                document.getElementById('infoContent').classList.remove('show');
+            }
+        });
         
         async function loadCredentials() {
             try {
