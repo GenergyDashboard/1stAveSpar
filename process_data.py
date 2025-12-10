@@ -149,15 +149,12 @@ def process_solar_data():
     days_in_month = (datetime.now().replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
     days_in_current_month = days_in_month.day
     
-    # Calculate environmental impacts (removed the days and year parameters)
+    # Calculate environmental impacts
     env_impact_today = calculate_env_impact(today_generation)
     env_impact_monthly = calculate_env_impact(history['monthly_total'])
     env_impact_lifetime = calculate_env_impact(history['total_generation'])
     
-    # Create dashboard data
-    dashboard_data = {
-        'last_updated': datetime.now().isoformat(),
-        # Get yesterday's data from history
+    # Get yesterday's data from history
     yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     yesterday_record = next((r for r in history['daily_records'] if r['date'] == yesterday_date), None)
     
@@ -169,6 +166,7 @@ def process_solar_data():
         yesterday_generation = 0
         env_impact_yesterday = calculate_env_impact(0)
     
+    # Create dashboard data
     dashboard_data = {
         'last_updated': datetime.now().isoformat(),
         'yesterday': {
@@ -176,7 +174,6 @@ def process_solar_data():
             'generation_kwh': round(yesterday_generation, 2),
             'env_impact': {k: round(v, 2) for k, v in env_impact_yesterday.items()}
         },
-        'today': {
         'today': {
             'date': today_date,
             'generation_kwh': round(today_generation, 2),
