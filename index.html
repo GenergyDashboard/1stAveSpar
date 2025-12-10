@@ -164,13 +164,15 @@
         }
         
         .stat-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 30px;
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
         
         .stat-card:hover {
             transform: translateY(-5px);
@@ -187,11 +189,14 @@
         }
         
         .stat-card .value {
-            font-size: 4.5em;
-            font-weight: 300;
-            color: #FFD700;
-            margin-bottom: 5px;
-        }
+    font-size: 4.5em;
+    font-weight: 300;
+    color: #FFD700;
+    margin-bottom: 5px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
         
         .stat-card .value::after {
             content: ' kWh';
@@ -199,7 +204,18 @@
             color: #FFD700;
             font-weight: 400;
         }
-        
+        #daily-peak::after,
+#daily-avg::after {
+    content: ' kW';
+}
+
+#system-cap::after {
+    content: ' kWp';
+}
+
+#lifetime-days::after {
+    content: ' days';
+}
         .stat-card .subvalue {
             color: #888888;
             font-size: 1.4em;
@@ -740,15 +756,13 @@
                         <div class="performance" id="daily-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Peak Power</div>
-                        <div class="value" id="daily-peak">--</div>
-                        <div class="subvalue">kW</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label">Average Power</div>
-                        <div class="value" id="daily-avg">--</div>
-                        <div class="subvalue">kW</div>
-                    </div>
+    <div class="label">Peak Power</div>
+    <div class="value" id="daily-peak">--</div>
+</div>
+<div class="stat-card">
+    <div class="label">Average Power</div>
+    <div class="value" id="daily-avg">--</div>
+</div>
                 </div>
                 <div class="chart-container">
                     <h3 class="chart-title">Hourly Generation Pattern</h3>
