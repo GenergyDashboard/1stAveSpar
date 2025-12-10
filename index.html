@@ -488,14 +488,33 @@
             flex-wrap: wrap;
         }
         
-        .date-selector input {
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            font-size: 1em;
-            color: white;
-        }
+        ..date-selector input {
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    border-radius: 8px;
+    font-size: 1.1em;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.date-selector input:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #FFD700;
+}
+
+.date-selector input:focus {
+    outline: none;
+    border-color: #FFD700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.date-selector input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.5);
+    cursor: pointer;
+    font-size: 1.2em;
+}
         
         .date-selector label {
             color: #aaaaaa;
@@ -755,10 +774,9 @@
             <div id="lifetime-tab" class="tab-content">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="label">Total Generation</div>
-                        <div class="value" id="lifetime-gen">--</div>
-                        <div class="subvalue" id="lifetime-mwh">-- MWh</div>
-                    </div>
+    <div class="label">Total Generation</div>
+    <div class="value" id="lifetime-gen">--</div>
+</div>
                     <div class="stat-card">
                         <div class="label">System Capacity</div>
                         <div class="value" id="system-cap">71.59</div>
@@ -1025,22 +1043,24 @@ function updateDailyView(data) {
                 intersect: false,
             },
             plugins: {
-                legend: { 
-                    position: 'top',
-                    labels: { 
-                        color: '#ffffff',
-                        font: { size: 12 },
-                        usePointStyle: true,
-                        padding: 15
-                    }
-                },
+    legend: { 
+        position: 'top',
+        labels: { 
+            color: '#ffffff',
+            font: { size: 14, weight: 'bold' },
+            usePointStyle: true,
+            padding: 15
+        }
+    },
                 tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: '#ffffff',
-                    bodyColor: '#ffffff',
-                    borderColor: '#4ade80',
-                    borderWidth: 1,
-                    padding: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    titleColor: '#ffffff',
+    titleFont: { size: 14, weight: 'bold' },
+    bodyColor: '#ffffff',
+    bodyFont: { size: 13 },
+    borderColor: '#4ade80',
+    borderWidth: 2,
+    padding: 15,
                     displayColors: true,
                     callbacks: {
                         label: function(context) {
@@ -1063,46 +1083,50 @@ function updateDailyView(data) {
             },
             scales: {
                 x: {
-                    ticks: { 
-                        color: '#888888',
-                        font: { size: 11 }
-                    },
+    ticks: { 
+        color: '#ffffff',
+        font: { size: 13, weight: '500' }
+    },
                     grid: { 
                         color: 'rgba(255, 255, 255, 0.1)',
                         drawBorder: false
                     }
                 },
                 y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Power (kW)',
-                        color: '#ffffff',
-                        font: { size: 13, weight: 'bold' }
-                    },
-                    ticks: { 
-                        color: '#888888',
-                        font: { size: 11 }
-                    },
+    type: 'linear',
+    display: true,
+    position: 'left',
+    beginAtZero: true,
+    title: {
+        display: true,
+        text: 'Power (kW)',
+        color: '#ffffff',
+        font: { size: 15, weight: 'bold' }
+    },
+    ticks: { 
+        color: '#ffffff',
+        font: { size: 13, weight: '500' }
+    },
                     grid: { 
                         color: 'rgba(255, 255, 255, 0.1)',
                         drawBorder: false
                     }
                 },
                 y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Irradiation (W/m²)',
-                        color: '#FFD700',
-                        font: { size: 13, weight: 'bold' }
-                    },
+    type: 'linear',
+    display: true,
+    position: 'right',
+    beginAtZero: true,
+    title: {
+        display: true,
+        text: 'Irradiation (W/m²)',
+        color: '#FFD700',
+        font: { size: 15, weight: 'bold' }
+    },
+    ticks: { 
+        color: '#ffffff',
+        font: { size: 13, weight: '500' }
+    },
                     ticks: { 
                         color: '#888888',
                         font: { size: 11 }
@@ -1174,9 +1198,8 @@ function updateDailyView(data) {
                 setTextIfExists('monthly-expected', formatNumber(dashboardData.month.expected_kwh || 0));
                 setTextIfExists('monthly-perf', `${dashboardData.month.performance_percent || 0}% of expected`);
                 
-                setTextIfExists('lifetime-gen', formatNumber(lifetimeKwh, 0) + ' kWh');
-                setTextIfExists('lifetime-mwh', formatNumber(lifetimeMwh, 2) + ' MWh');
-                setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active || 0, 0));
+                setTextIfExists('lifetime-gen', formatNumber(lifetimeKwh, 0));
+setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active || 0, 0));
                 
                 createEnvCards(dashboardData.lifetime.env_impact, 'client-env-lifetime');
                 
