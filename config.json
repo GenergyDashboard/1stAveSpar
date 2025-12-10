@@ -1,6 +1,6 @@
 {
   "system": {
-    "installed_capacity_kwp": 71.590,
+    "installed_capacity_kwp": 71.59,
     "plant_name": "1st Avenue Spar",
     "location": "Gqeberha, Eastern Cape, South Africa",
     "commissioning_date": "2025-01-01",
@@ -31,17 +31,23 @@
     }
   },
   "hourly_predictions": {
-    "note": "Average hourly generation in kWh by hour (0-23)",
-    "hours": [0, 0, 0, 0, 0, 0.5, 3.2, 8.5, 14.2, 18.5, 21.3, 22.8, 22.9, 21.8, 19.2, 15.1, 9.8, 4.1, 0.8, 0, 0, 0, 0, 0],
-    "description": "Typical generation pattern - peaks at midday"
+    "note": "Average hourly generation in kW by hour (0-23) - Based on PVSyst data",
+    "hours": [
+      0, 0, 0, 0, 0,
+      0.5, 3.5, 8.2, 14.5, 20.3,
+      26.8, 31.2, 32.5, 31.8, 28.4,
+      22.6, 15.2, 8.1, 2.8, 0.3,
+      0, 0, 0, 0
+    ],
+    "description": "Peak generation around noon (12-13h), typical solar curve"
   },
   "environmental_factors": {
     "co2_per_kwh": 1,
     "trees_per_kwh": 22,
-    "households_kwh_per_year": 9.8,
+    "households_kwh_per_year": 3546.63,
     "co2_per_km_driven": 0.251033,
     "co2_per_km_flown": 12.280237,
-    "coal_per_kwh": 0.50802304,
-    "water_per_kwh": 1.4
+    "coal_per_kwh": 0.548,
+    "water_per_kwh": 1
   }
 }
