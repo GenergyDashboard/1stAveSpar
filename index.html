@@ -1584,9 +1584,23 @@ async function loadMonthlyData() {
         
         const monthlyGen = monthRecords.reduce((sum, day) => sum + day.generation_kwh, 0);
         const daysInMonth = monthRecords.length;
-        const expectedDaily = 316;
-        const expectedMonthly = expectedDaily * daysInMonth;
-        const performance = ((monthlyGen / expectedMonthly) * 100).toFixed(1);
+        
+        // Get current month in YYYY-MM format
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Use actual expected value from dashboardData for current month
+        let expectedMonthly;
+        if (selectedMonth === currentMonth && dashboardData.month.expected_kwh) {
+            // Current month - use PVSyst predictions from dashboardData
+            expectedMonthly = dashboardData.month.expected_kwh;
+        } else {
+            // Historical month - calculate from average (fallback)
+            // TODO: Add PVSyst predictions for all months
+            expectedMonthly = 316 * daysInMonth;
+        }
+        
+        const performance = expectedMonthly > 0 ? ((monthlyGen / expectedMonthly) * 100).toFixed(1) : 0;
         
         document.getElementById('monthly-gen').textContent = formatNumber(monthlyGen);
         document.getElementById('monthly-expected').textContent = formatNumber(expectedMonthly);
