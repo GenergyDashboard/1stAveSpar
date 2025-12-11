@@ -220,9 +220,9 @@ def process_solar_data():
     pvsyst_predictions = load_pvsyst_predictions()
     degradation_factor = calculate_system_degradation(config)
     
-    # Get today's expected from sum of hourly predictions
-    today_hourly_predictions = get_hourly_predictions_for_date(today_date, pvsyst_predictions, config)
-    expected_daily_kwh = sum(today_hourly_predictions) * degradation_factor
+    # Get today's expected from sum of hourly predictions (already includes degradation)
+    today_hourly_predictions = get_hourly_predictions_for_date(today_date, pvsyst_predictions, config, degradation_factor)
+    expected_daily_kwh = sum(today_hourly_predictions)
     
     # Calculate monthly expected by summing all days in current month
     sast_now = get_sast_now()
@@ -233,8 +233,8 @@ def process_solar_data():
     expected_monthly_kwh = 0
     for day in range(1, days_in_month_calc + 1):
         date_str = f"{year}-{month:02d}-{day:02d}"
-        day_predictions = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config)
-        expected_monthly_kwh += sum(day_predictions) * degradation_factor
+        day_predictions = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config, degradation_factor)
+        expected_monthly_kwh += sum(day_predictions)
     
     # Calculate performance ratios
     daily_performance = (today_generation / expected_daily_kwh * 100) if expected_daily_kwh > 0 else 0
