@@ -376,8 +376,8 @@ def process_solar_data():
             'installed_capacity_kwp': config['system']['installed_capacity_kwp'],
             'plant_name': config['system']['plant_name'],
             'commissioning_date': config['system']['commissioning_date'],
-            'degradation_year_1_percent': config['degradation']['year_1_percent'],
-            'degradation_yearly_percent': config['degradation']['yearly_percent']
+            'degradation_year_1': config['system']['degradation']['year_1'],
+            'degradation_subsequent_years': config['system']['degradation']['subsequent_years']
         },
         'monthly_predictions_base': monthly_predictions_base,
         'recent_days': history['daily_records'][-30:]
