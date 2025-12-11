@@ -319,6 +319,39 @@
             color: #4ade80;
         }
         
+        .refresh-button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            opacity: 0.5;
+            color: #888;
+            font-size: 1.3em;
+            margin-right: 10px;
+        }
+        
+        .refresh-button:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 215, 0, 0.5);
+            color: #FFD700;
+        }
+        
+        .refresh-button.spinning {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
         .info-content {
             position: absolute;
             top: 50px;
@@ -910,7 +943,12 @@
 <body>
     <div class="container">
         <div class="info-dropdown">
-            <div class="info-button" onclick="toggleInfo()">ℹ️</div>
+            <div style="display: flex; gap: 10px;">
+                <div class="refresh-button" onclick="manualRefresh()" title="Refresh data">
+                    🔄
+                </div>
+                <div class="info-button" onclick="toggleInfo()" title="Information">ℹ️</div>
+            </div>
             <div class="info-content" id="infoContent">
                 <h3>🌍 How Environmental Benefits Are Calculated</h3>
                 
@@ -1127,6 +1165,23 @@
             infoContent.classList.toggle('show');
         }
         
+        async function manualRefresh() {
+            const button = document.querySelector('.refresh-button');
+            button.classList.add('spinning');
+            console.log('🔄 Manual refresh triggered');
+            
+            try {
+                await loadData();
+                console.log('✅ Manual refresh complete');
+            } catch (error) {
+                console.error('❌ Manual refresh failed:', error);
+            } finally {
+                setTimeout(() => {
+                    button.classList.remove('spinning');
+                }, 1000);
+            }
+        }
+        
         // Close info dropdown when clicking outside
         document.addEventListener('click', function(event) {
             const dropdown = document.querySelector('.info-dropdown');
@@ -1325,17 +1380,26 @@ async function updateDatePickerRange() {
         // This code replaces the updateDailyView function in index.html
 
 function updateDailyView(data) {
-    if (!dashboardData) return;
+    if (!data || !Array.isArray(data) || data.length === 0) return;
     
-    const todayData = dashboardData.today;
-    document.getElementById('daily-gen').textContent = formatNumber(todayData.generation_kwh);
-    document.getElementById('daily-expected').textContent = formatNumber(todayData.expected_kwh);
-    document.getElementById('daily-peak').textContent = formatNumber(todayData.peak_power_kw);
-    document.getElementById('daily-avg').textContent = formatNumber(todayData.avg_power_kw);
+    // Calculate stats from the hourly data provided
+    const pvData = data.map(d => d.pv_kw || 0);
+    const predictedData = data.map(d => d.predicted_kw || 0);
+    
+    const totalGeneration = pvData.reduce((sum, val) => sum + val, 0);
+    const totalPredicted = predictedData.reduce((sum, val) => sum + val, 0);
+    const peakPower = Math.max(...pvData);
+    const avgPower = totalGeneration / pvData.filter(v => v > 0).length || 0;
+    const performance = totalPredicted > 0 ? (totalGeneration / totalPredicted * 100) : 0;
+    
+    document.getElementById('daily-gen').textContent = formatNumber(totalGeneration);
+    document.getElementById('daily-expected').textContent = formatNumber(totalPredicted);
+    document.getElementById('daily-peak').textContent = formatNumber(peakPower);
+    document.getElementById('daily-avg').textContent = formatNumber(avgPower);
     
     const perf = document.getElementById('daily-perf');
-    perf.textContent = `${todayData.performance_percent}% of expected`;
-    perf.className = 'performance ' + (todayData.performance_percent >= 100 ? 'positive' : 'negative');
+    perf.textContent = `${performance.toFixed(1)}% of expected`;
+    perf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
     
     const ctx = document.getElementById('dailyChart').getContext('2d');
     if (dailyChart) dailyChart.destroy();
@@ -1752,8 +1816,26 @@ setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active
         
         loadCredentials().then(() => {
             loadData();
-            setInterval(loadData, 5 * 60 * 1000);
+            
+            // Auto-refresh every 2 minutes (more frequent for TV display)
+            setInterval(loadData, 2 * 60 * 1000);
+            
+            // Also refresh when page becomes visible (for background tabs)
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    console.log('Page became visible - refreshing data');
+                    loadData();
+                }
+            });
+            
+            // Refresh when window regains focus
+            window.addEventListener('focus', () => {
+                console.log('Window focused - refreshing data');
+                loadData();
+            });
+            
+            console.log('✓ Auto-refresh enabled: Every 2 minutes + on visibility change');
         });
     </script>
 </body>
-    </html>
+</html>
