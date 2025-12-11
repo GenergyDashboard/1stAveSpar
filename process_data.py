@@ -317,26 +317,30 @@ def process_solar_data():
     
     print(f"  ✓ Stored hourly data (keeping last 7 days, current: {len(history['hourly_records'])} days)")
 
-    # Calculate expected values for all 12 months of 2025
-    print("  Calculating monthly predictions for all 12 months...")
-    monthly_predictions = {}
+    # Calculate BASE monthly predictions (without year-specific degradation)
+    # These are reusable for any year - just apply the year's degradation factor
+    print("  Calculating base monthly predictions (2025 pattern)...")
+    monthly_predictions_base = {}
+    
     for month_num in range(1, 13):
         days_in_month = calendar.monthrange(2025, month_num)[1]
-        month_expected = 0
+        month_expected_raw = 0  # Without degradation
         
         for day in range(1, days_in_month + 1):
             date_str = f"2025-{month_num:02d}-{day:02d}"
-            day_predictions = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config, degradation_factor)
-            month_expected += sum(day_predictions)
+            if pvsyst_predictions and date_str in pvsyst_predictions:
+                # Sum raw PVSyst data WITHOUT degradation
+                month_expected_raw += sum(pvsyst_predictions[date_str])
         
-        month_name = calendar.month_name[month_num].lower()
-        monthly_predictions[f"2025-{month_num:02d}"] = {
-            'month_name': f"{calendar.month_name[month_num]} 2025",
-            'expected_kwh': round(month_expected, 2),
+        month_key = f"{month_num:02d}"  # Just "01", "02", etc. - works for any year
+        monthly_predictions_base[month_key] = {
+            'month_name': calendar.month_name[month_num],
+            'base_kwh': round(month_expected_raw, 2),  # Raw PVSyst prediction
             'days': days_in_month
         }
     
-    print(f"  ✓ Calculated predictions for all 12 months (total: {sum(m['expected_kwh'] for m in monthly_predictions.values()):.2f} kWh)")
+    annual_base = sum(m['base_kwh'] for m in monthly_predictions_base.values())
+    print(f"  ✓ Calculated base predictions for 12 months (annual base: {annual_base:.2f} kWh)")
     
     # Create dashboard data
     dashboard_data = {
@@ -370,9 +374,12 @@ def process_solar_data():
         },
         'system': {
             'installed_capacity_kwp': config['system']['installed_capacity_kwp'],
-            'plant_name': config['system']['plant_name']
+            'plant_name': config['system']['plant_name'],
+            'commissioning_date': config['system']['commissioning_date'],
+            'degradation_year_1_percent': config['degradation']['year_1_percent'],
+            'degradation_yearly_percent': config['degradation']['yearly_percent']
         },
-        'monthly_predictions': monthly_predictions,
+        'monthly_predictions_base': monthly_predictions_base,
         'recent_days': history['daily_records'][-30:]
     }
     
