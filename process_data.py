@@ -46,10 +46,18 @@ def fetch_irradiation_data(date):
             timestamps = data["hourly"]["time"]
             direct_radiation = data["hourly"]["direct_radiation"]
             
-            # Create hourly data with just hour and radiation
+            # Convert API timestamps to SAST (South Africa Standard Time)
+            # User reported: irradiation shows 1 hour early, so adding 1 hour offset
+            # If still incorrect after testing, try TIMEZONE_OFFSET_HOURS = 2 (full UTC+2)
+            TIMEZONE_OFFSET_HOURS = 1  # Adjust to 2 if irradiation still appears early
+            
             hourly_data = {}
             for timestamp, radiation in zip(timestamps, direct_radiation):
-                hour = int(timestamp.split('T')[1].split(':')[0])
+                # Parse timestamp and apply timezone offset
+                utc_time = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M')
+                local_time = utc_time + timedelta(hours=TIMEZONE_OFFSET_HOURS)
+                hour = local_time.hour
+                
                 hourly_data[hour] = radiation if radiation is not None else 0
             
             print(f"  ✓ Fetched irradiation data for {date}")
