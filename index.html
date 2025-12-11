@@ -1585,16 +1585,39 @@ async function loadMonthlyData() {
         const monthlyGen = monthRecords.reduce((sum, day) => sum + day.generation_kwh, 0);
         const daysInMonth = monthRecords.length;
         
-        // Use actual PVSyst predictions for all months
+        // Calculate expected value for ANY year using base predictions + degradation
         let expectedMonthly;
         
-        if (dashboardData.monthly_predictions && dashboardData.monthly_predictions[selectedMonth]) {
-            // Use PVSyst predictions from dashboardData
-            expectedMonthly = dashboardData.monthly_predictions[selectedMonth].expected_kwh;
-            console.log(`Using PVSyst prediction for ${selectedMonth}: ${expectedMonthly} kWh`);
+        // Parse selected month (format: "YYYY-MM")
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const monthKey = month.toString().padStart(2, '0');  // "01", "02", etc.
+        
+        if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+            // Calculate degradation factor for this specific year
+            const commissioningDate = new Date(dashboardData.system.commissioning_date);
+            const targetDate = new Date(year, month - 1, 15);  // Middle of target month
+            
+            const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+            const yearsActive = daysActive / 365.25;
+            
+            let degradationPercent;
+            if (yearsActive < 1) {
+                degradationPercent = dashboardData.system.degradation_year_1_percent * yearsActive;
+            } else {
+                degradationPercent = dashboardData.system.degradation_year_1_percent + 
+                    (dashboardData.system.degradation_yearly_percent * (yearsActive - 1));
+            }
+            
+            const degradationFactor = 1 - (degradationPercent / 100);
+            
+            // Apply degradation to base prediction
+            const baseKwh = dashboardData.monthly_predictions_base[monthKey].base_kwh;
+            expectedMonthly = baseKwh * degradationFactor;
+            
+            console.log(`${selectedMonth}: Base=${baseKwh.toFixed(2)} kWh, Years=${yearsActive.toFixed(2)}, Degradation=${degradationPercent.toFixed(2)}%, Factor=${degradationFactor.toFixed(4)}, Expected=${expectedMonthly.toFixed(2)} kWh`);
         } else {
-            // Fallback if monthly predictions not available
-            console.warn(`No PVSyst prediction for ${selectedMonth}, using average`);
+            // Fallback if base predictions not available
+            console.warn(`No base prediction for month ${monthKey}, using average`);
             expectedMonthly = 316 * daysInMonth;
         }
         
