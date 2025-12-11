@@ -1404,10 +1404,8 @@ function updateDailyView(data) {
     const ctx = document.getElementById('dailyChart').getContext('2d');
     if (dailyChart) dailyChart.destroy();
     
-    // Prepare data arrays
+    // Prepare data arrays (already extracted above, just get labels and irradiation)
     const labels = data.map(d => d.time);
-    const pvData = data.map(d => d.pv_kw);
-    const predictedData = data.map(d => d.predicted_kw);
     const irradiationData = data.map(d => d.irradiation_wm2);
     
     dailyChart = new Chart(ctx, {
