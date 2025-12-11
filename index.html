@@ -1602,10 +1602,10 @@ async function loadMonthlyData() {
             
             let degradationPercent;
             if (yearsActive < 1) {
-                degradationPercent = dashboardData.system.degradation_year_1_percent * yearsActive;
+                degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
             } else {
-                degradationPercent = dashboardData.system.degradation_year_1_percent + 
-                    (dashboardData.system.degradation_yearly_percent * (yearsActive - 1));
+                degradationPercent = (dashboardData.system.degradation_year_1 + 
+                    (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
             }
             
             const degradationFactor = 1 - (degradationPercent / 100);
