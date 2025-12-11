@@ -216,13 +216,25 @@ def process_solar_data():
     # Keep only last 365 days
     history['daily_records'] = sorted(history['daily_records'], key=lambda x: x['date'])[-365:]
     
-    # Get predicted values from config
-    expected_daily_kwh = config['predicted_generation']['daily_kwh']
+    # Calculate expected values from actual PVSyst predictions
+    pvsyst_predictions = load_pvsyst_predictions()
+    degradation_factor = calculate_system_degradation(config)
     
-    # Get monthly target based on current month (use SAST time)
-    current_month_name = get_sast_now().strftime('%B').lower()
-    monthly_targets = config['predicted_generation']['monthly_targets']
-    expected_monthly_kwh = monthly_targets.get(current_month_name, config['predicted_generation']['monthly_kwh'])
+    # Get today's expected from sum of hourly predictions
+    today_hourly_predictions = get_hourly_predictions_for_date(today_date, pvsyst_predictions, config)
+    expected_daily_kwh = sum(today_hourly_predictions) * degradation_factor
+    
+    # Calculate monthly expected by summing all days in current month
+    sast_now = get_sast_now()
+    year = sast_now.year
+    month = sast_now.month
+    days_in_month_calc = calendar.monthrange(year, month)[1]
+    
+    expected_monthly_kwh = 0
+    for day in range(1, days_in_month_calc + 1):
+        date_str = f"{year}-{month:02d}-{day:02d}"
+        day_predictions = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config)
+        expected_monthly_kwh += sum(day_predictions) * degradation_factor
     
     # Calculate performance ratios
     daily_performance = (today_generation / expected_daily_kwh * 100) if expected_daily_kwh > 0 else 0
@@ -243,11 +255,6 @@ def process_solar_data():
             'coal_saved_kg': co2_offset * factors['coal_per_kwh'],
             'water_saved_litres': generation_kwh * factors['water_per_kwh']
         }
-    
-    # Calculate days in current month (use SAST time)
-    sast_now = get_sast_now()
-    days_in_month = (sast_now.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
-    days_in_current_month = days_in_month.day
     
     # Calculate environmental impacts
     env_impact_today = calculate_env_impact(today_generation)
