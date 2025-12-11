@@ -1036,7 +1036,7 @@
                 <!-- This Month -->
                 <div>
                     <div class="section-header" style="margin-top: 0;">
-                        <h2>📆 This Month</h2>
+                        <h2>🗓️ This Month</h2>
                     </div>
                     <div class="env-grid" id="pub-env-month"></div>
                 </div>
@@ -1160,6 +1160,31 @@
         let isLoggedIn = false;
         let clientCredentials = null;
         
+        // Check for persisted login state on page load
+        function checkPersistedAuth() {
+            const authState = localStorage.getItem('clientAuthState');
+            const authTimestamp = localStorage.getItem('clientAuthTimestamp');
+            
+            if (authState === 'logged_in' && authTimestamp) {
+                // Check if session is still valid (24 hour timeout)
+                const now = Date.now();
+                const sessionAge = now - parseInt(authTimestamp);
+                const twentyFourHours = 24 * 60 * 60 * 1000;
+                
+                if (sessionAge < twentyFourHours) {
+                    isLoggedIn = true;
+                    console.log('✓ Restored login session');
+                    return true;
+                } else {
+                    // Session expired, clear it
+                    localStorage.removeItem('clientAuthState');
+                    localStorage.removeItem('clientAuthTimestamp');
+                    console.log('ℹ️ Login session expired (24h timeout)');
+                }
+            }
+            return false;
+        }
+        
         function toggleInfo() {
             const infoContent = document.getElementById('infoContent');
             infoContent.classList.toggle('show');
@@ -1220,6 +1245,12 @@
             
             if (clientCredentials && username === clientCredentials.username && password === clientCredentials.password) {
                 isLoggedIn = true;
+                
+                // Persist login state to localStorage
+                localStorage.setItem('clientAuthState', 'logged_in');
+                localStorage.setItem('clientAuthTimestamp', Date.now().toString());
+                console.log('✓ Login state saved to localStorage');
+                
                 hideLoginModal();
                 showClientView();
             } else {
@@ -1229,6 +1260,12 @@
         
         function logout() {
             isLoggedIn = false;
+            
+            // Clear login state from localStorage
+            localStorage.removeItem('clientAuthState');
+            localStorage.removeItem('clientAuthTimestamp');
+            console.log('✓ Logged out and cleared localStorage');
+            
             showPublicView();
         }
         
@@ -1865,7 +1902,16 @@ setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active
         }
         
         loadCredentials().then(() => {
+            // Check for persisted authentication
+            const wasLoggedIn = checkPersistedAuth();
+            
+            // Load data first
             loadData();
+            
+            // If user was logged in, restore client view
+            if (wasLoggedIn) {
+                showClientView();
+            }
             
             // Auto-refresh every 2 minutes (more frequent for TV display)
             setInterval(loadData, 2 * 60 * 1000);
