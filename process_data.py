@@ -317,6 +317,26 @@ def process_solar_data():
     
     print(f"  ✓ Stored hourly data (keeping last 7 days, current: {len(history['hourly_records'])} days)")
 
+    # Calculate expected values for all 12 months of 2025
+    print("  Calculating monthly predictions for all 12 months...")
+    monthly_predictions = {}
+    for month_num in range(1, 13):
+        days_in_month = calendar.monthrange(2025, month_num)[1]
+        month_expected = 0
+        
+        for day in range(1, days_in_month + 1):
+            date_str = f"2025-{month_num:02d}-{day:02d}"
+            day_predictions = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config, degradation_factor)
+            month_expected += sum(day_predictions)
+        
+        month_name = calendar.month_name[month_num].lower()
+        monthly_predictions[f"2025-{month_num:02d}"] = {
+            'month_name': f"{calendar.month_name[month_num]} 2025",
+            'expected_kwh': round(month_expected, 2),
+            'days': days_in_month
+        }
+    
+    print(f"  ✓ Calculated predictions for all 12 months (total: {sum(m['expected_kwh'] for m in monthly_predictions.values()):.2f} kWh)")
     
     # Create dashboard data
     dashboard_data = {
@@ -352,6 +372,7 @@ def process_solar_data():
             'installed_capacity_kwp': config['system']['installed_capacity_kwp'],
             'plant_name': config['system']['plant_name']
         },
+        'monthly_predictions': monthly_predictions,
         'recent_days': history['daily_records'][-30:]
     }
     
