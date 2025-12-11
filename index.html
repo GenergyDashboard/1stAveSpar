@@ -1044,7 +1044,7 @@
                 <!-- Lifetime -->
                 <div>
                     <div class="section-header" style="margin-top: 0;">
-                        <h2>📈 Lifetime</h2>
+                        <h2>🗓️ Lifetime</h2>
                     </div>
                     <div class="env-grid" id="pub-env-lifetime"></div>
                 </div>
@@ -1386,10 +1386,27 @@ function updateDailyView(data) {
     const pvData = data.map(d => d.pv_kw || 0);
     const predictedData = data.map(d => d.predicted_kw || 0);
     
-    const totalGeneration = pvData.reduce((sum, val) => sum + val, 0);
-    const totalPredicted = predictedData.reduce((sum, val) => sum + val, 0);
-    const peakPower = Math.max(...pvData);
-    const avgPower = totalGeneration / pvData.filter(v => v > 0).length || 0;
+    // Check if we're viewing today by comparing with dashboardData
+    const viewingToday = dashboardData && dashboardData.today && 
+                         data[0] && data[0].time && 
+                         data.length === 24; // Today's data has all 24 hours
+    
+    let totalGeneration, totalPredicted, peakPower, avgPower;
+    
+    if (viewingToday) {
+        // Use accurate values from dashboardData (calculated from 5-minute data)
+        totalGeneration = dashboardData.today.generation_kwh;
+        totalPredicted = dashboardData.today.expected_kwh;
+        peakPower = dashboardData.today.peak_power_kw;
+        avgPower = dashboardData.today.avg_power_kw;
+    } else {
+        // For historical dates, calculate from hourly averages (approximation)
+        totalGeneration = pvData.reduce((sum, val) => sum + val, 0);
+        totalPredicted = predictedData.reduce((sum, val) => sum + val, 0);
+        peakPower = Math.max(...pvData);
+        avgPower = totalGeneration / pvData.filter(v => v > 0).length || 0;
+    }
+    
     const performance = totalPredicted > 0 ? (totalGeneration / totalPredicted * 100) : 0;
     
     document.getElementById('daily-gen').textContent = formatNumber(totalGeneration);
