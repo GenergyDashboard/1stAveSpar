@@ -224,25 +224,66 @@ def process_solar_data():
     # Keep only last 365 days
     history['daily_records'] = sorted(history['daily_records'], key=lambda x: x['date'])[-365:]
     
-    # Calculate expected values from actual PVSyst predictions
+    # Load PVSyst predictions and calculate degradation
     pvsyst_predictions = load_pvsyst_predictions()
     degradation_factor = calculate_system_degradation(config)
     
-    # Get today's expected from sum of hourly predictions (already includes degradation)
-    today_hourly_predictions = get_hourly_predictions_for_date(today_date, pvsyst_predictions, config, degradation_factor)
-    expected_daily_kwh = sum(today_hourly_predictions)
+    # Calculate BASE monthly predictions FIRST (without year-specific degradation)
+    # These are reusable for any year - just apply the year's degradation factor
+    print("  Calculating base monthly predictions (2025 pattern)...")
+    monthly_predictions_base = {}
     
-    # Calculate monthly expected by summing all days in current month
+    for month_num in range(1, 13):
+        days_in_month = calendar.monthrange(2025, month_num)[1]
+        month_expected_raw = 0  # Without degradation
+        
+        for day in range(1, days_in_month + 1):
+            date_str = f"2025-{month_num:02d}-{day:02d}"
+            if pvsyst_predictions and date_str in pvsyst_predictions:
+                # Sum raw PVSyst data WITHOUT degradation
+                month_expected_raw += sum(pvsyst_predictions[date_str])
+        
+        month_key = f"{month_num:02d}"  # Just "01", "02", etc. - works for any year
+        monthly_predictions_base[month_key] = {
+            'month_name': calendar.month_name[month_num],
+            'base_kwh': round(month_expected_raw, 2),  # Raw PVSyst prediction
+            'avg_daily_kwh': round(month_expected_raw / days_in_month, 2),  # Average daily for this month
+            'days': days_in_month
+        }
+    
+    annual_base = sum(m['base_kwh'] for m in monthly_predictions_base.values())
+    print(f"  ✓ Calculated base predictions for 12 months (annual base: {annual_base:.2f} kWh)")
+    
+    # Calculate expected values from actual PVSyst predictions OR monthly averages
     sast_now = get_sast_now()
     year = sast_now.year
     month = sast_now.month
+    today_month_key = f"{month:02d}"
+    
+    # Get today's expected using monthly average with degradation
+    if today_month_key in monthly_predictions_base:
+        expected_daily_kwh = monthly_predictions_base[today_month_key]['avg_daily_kwh'] * degradation_factor
+        print(f"  ✓ Using monthly average for today's expected: {expected_daily_kwh:.2f} kWh")
+    else:
+        # Fallback if no prediction data
+        today_hourly_predictions = get_hourly_predictions_for_date(today_date, pvsyst_predictions, config, degradation_factor)
+        expected_daily_kwh = sum(today_hourly_predictions)
+        print(f"  ⚠️ Using hourly fallback for today's expected: {expected_daily_kwh:.2f} kWh")
+    
+    # Calculate monthly expected by using monthly base prediction with degradation
     days_in_month_calc = calendar.monthrange(year, month)[1]
     
-    expected_monthly_kwh = 0
-    for day in range(1, days_in_month_calc + 1):
-        date_str = f"{year}-{month:02d}-{day:02d}"
-        day_predictions = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config, degradation_factor)
-        expected_monthly_kwh += sum(day_predictions)
+    if today_month_key in monthly_predictions_base:
+        expected_monthly_kwh = monthly_predictions_base[today_month_key]['base_kwh'] * degradation_factor
+        print(f"  ✓ Using monthly base for expected: {expected_monthly_kwh:.2f} kWh")
+    else:
+        # Fallback: sum daily predictions
+        expected_monthly_kwh = 0
+        for day in range(1, days_in_month_calc + 1):
+            date_str = f"{year}-{month:02d}-{day:02d}"
+            day_predictions = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config, degradation_factor)
+            expected_monthly_kwh += sum(day_predictions)
+        print(f"  ⚠️ Using daily sum fallback for monthly expected: {expected_monthly_kwh:.2f} kWh")
     
     # Calculate performance ratios
     daily_performance = (today_generation / expected_daily_kwh * 100) if expected_daily_kwh > 0 else 0
@@ -325,32 +366,6 @@ def process_solar_data():
     
     print(f"  ✓ Stored hourly data (keeping last 7 days, current: {len(history['hourly_records'])} days)")
 
-    # Calculate BASE monthly predictions (without year-specific degradation)
-    # These are reusable for any year - just apply the year's degradation factor
-    print("  Calculating base monthly predictions (2025 pattern)...")
-    monthly_predictions_base = {}
-    
-    for month_num in range(1, 13):
-        days_in_month = calendar.monthrange(2025, month_num)[1]
-        month_expected_raw = 0  # Without degradation
-        
-        for day in range(1, days_in_month + 1):
-            date_str = f"2025-{month_num:02d}-{day:02d}"
-            if pvsyst_predictions and date_str in pvsyst_predictions:
-                # Sum raw PVSyst data WITHOUT degradation
-                month_expected_raw += sum(pvsyst_predictions[date_str])
-        
-        month_key = f"{month_num:02d}"  # Just "01", "02", etc. - works for any year
-        monthly_predictions_base[month_key] = {
-            'month_name': calendar.month_name[month_num],
-            'base_kwh': round(month_expected_raw, 2),  # Raw PVSyst prediction
-            'avg_daily_kwh': round(month_expected_raw / days_in_month, 2),  # Average daily for this month
-            'days': days_in_month
-        }
-    
-    annual_base = sum(m['base_kwh'] for m in monthly_predictions_base.values())
-    print(f"  ✓ Calculated base predictions for 12 months (annual base: {annual_base:.2f} kWh)")
-    
     # Create dashboard data
     dashboard_data = {
         'last_updated': get_sast_now().isoformat(),
