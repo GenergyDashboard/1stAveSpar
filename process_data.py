@@ -221,6 +221,7 @@ def process_solar_data():
     if existing_record:
         old_generation = existing_record['generation_kwh']
         existing_record['generation_kwh'] = today_generation
+        existing_record['irradiation_wh_m2'] = daily_irradiation_total
         existing_record['updated_at'] = get_sast_now().isoformat()
         
         history['monthly_total'] += (today_generation - old_generation)
@@ -229,6 +230,7 @@ def process_solar_data():
         history['daily_records'].append({
             'date': today_date,
             'generation_kwh': today_generation,
+            'irradiation_wh_m2': daily_irradiation_total,
             'updated_at': get_sast_now().isoformat()
         })
         history['monthly_total'] += today_generation
@@ -338,6 +340,10 @@ def process_solar_data():
     # Fetch today's irradiation data
     print("Fetching irradiation data...")
     irradiation_data = fetch_irradiation_data(today_date)
+    
+    # Calculate daily irradiation total (Wh/m²)
+    daily_irradiation_total = sum(irradiation_data.values())
+    print(f"  Daily irradiation total: {daily_irradiation_total:.0f} Wh/m²")
     
     # Calculate system degradation
     degradation_factor = calculate_system_degradation(config)
