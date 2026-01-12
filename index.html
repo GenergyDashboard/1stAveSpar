@@ -1127,7 +1127,7 @@
             <div id="monthly-tab" class="tab-content">
                 <div class="date-selector">
                     <label>Select Month:</label>
-                    <select id="monthSelector" onchange="loadMonthlyData()">
+                    <select id="monthSelector">
                         <option value="01">January</option>
                         <option value="02">February</option>
                         <option value="03">March</option>
@@ -1142,8 +1142,10 @@
                         <option value="12">December</option>
                     </select>
                     <label>Year:</label>
-                    <select id="yearSelector" onchange="loadMonthlyData()"></select>
+                    <select id="yearSelector"></select>
+                    <button class="btn btn-primary" onclick="loadMonthlyData()">Search</button>
                     <button class="btn btn-secondary" onclick="loadCurrentMonth()">This Month</button>
+                    <button class="btn btn-secondary" onclick="loadPast30Days()">Past 30 Days</button>
                 </div>
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -1155,6 +1157,9 @@
                     <div class="stat-card">
                         <div class="label">Target Progress</div>
                         <div class="value" id="monthly-target-perf">--</div>
+                        <div class="subvalue">
+                            <span id="monthly-actual-gen">--</span> kWh of <span id="monthly-target-gen">--</span> kWh
+                        </div>
                         <div class="subvalue">Days with data: <span id="monthly-days-count">--</span></div>
                     </div>
                 </div>
@@ -1181,7 +1186,7 @@
 <div class="stat-card">
     <div class="label">Lifetime Performance</div>
     <div class="value" id="lifetime-perf">--</div>
-    <div class="subvalue">vs Expected</div>
+    <div class="subvalue"><span id="lifetime-perf-diff">--</span> kWh <span id="lifetime-perf-status">--</span></div>
 </div>
                 </div>
                 <div class="chart-container">
@@ -1819,6 +1824,8 @@ async function loadMonthlyData() {
         document.getElementById('monthly-expected').textContent = formatNumber(expectedMonthly);
         document.getElementById('monthly-days-count').textContent = daysWithData;
         document.getElementById('monthly-target-perf').textContent = formatNumber(targetProgress);
+        document.getElementById('monthly-actual-gen').textContent = formatNumber(monthlyGen);
+        document.getElementById('monthly-target-gen').textContent = formatNumber(expectedForDaysWithData);
         
         const perfEl = document.getElementById('monthly-perf');
         perfEl.textContent = `${performanceFull}% of expected (full month)`;
@@ -1829,10 +1836,10 @@ async function loadMonthlyData() {
             const targetCard = document.querySelector('#monthly-target-perf').closest('.stat-card');
             const newPerf = document.createElement('div');
             newPerf.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
-            newPerf.textContent = `${targetProgress >= 100 ? 'Ahead' : 'Behind'} target`;
+            newPerf.textContent = `${targetProgress >= 100 ? 'Ahead of' : 'Behind'} target`;
             targetCard.appendChild(newPerf);
         } else {
-            targetPerfEl.textContent = `${targetProgress >= 100 ? 'Ahead' : 'Behind'} target`;
+            targetPerfEl.textContent = `${targetProgress >= 100 ? 'Ahead of' : 'Behind'} target`;
             targetPerfEl.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
         }
         
@@ -1887,7 +1894,8 @@ function updateMonthlyChart(records, selectedMonthYear) {
                     data: records.map(d => d.generation_kwh),
                     backgroundColor: '#4ade80',
                     borderRadius: 5,
-                    yAxisID: 'y'
+                    yAxisID: 'y',
+                    order: 2
                 },
                 {
                     label: 'Performance (%)',
@@ -1899,7 +1907,8 @@ function updateMonthlyChart(records, selectedMonthYear) {
                     pointRadius: 4,
                     pointBackgroundColor: '#FFD700',
                     tension: 0.4,
-                    yAxisID: 'y1'
+                    yAxisID: 'y1',
+                    order: 1
                 }
             ]
         },
@@ -2082,7 +2091,12 @@ async function loadLifetimeMonthlyBreakdown() {
         });
         
         const lifetimePerformance = totalExpected > 0 ? ((totalGeneration / totalExpected) * 100).toFixed(1) : 0;
+        const lifetimeDifference = totalGeneration - totalExpected;
+        const lifetimeStatus = lifetimeDifference >= 0 ? 'ahead' : 'behind';
+        
         document.getElementById('lifetime-perf').textContent = formatNumber(lifetimePerformance);
+        document.getElementById('lifetime-perf-diff').textContent = formatNumber(Math.abs(lifetimeDifference));
+        document.getElementById('lifetime-perf-status').textContent = lifetimeStatus;
         
         // Update lifetime performance card styling
         const lifetimePerfCard = document.querySelector('#lifetime-perf').closest('.stat-card');
@@ -2090,10 +2104,10 @@ async function loadLifetimeMonthlyBreakdown() {
         if (!lifetimePerfEl) {
             const newPerf = document.createElement('div');
             newPerf.className = 'performance ' + (lifetimePerformance >= 100 ? 'positive' : 'negative');
-            newPerf.textContent = `${lifetimePerformance >= 100 ? 'Ahead' : 'Behind'} target`;
+            newPerf.textContent = `${lifetimePerformance >= 100 ? 'Ahead of' : 'Behind'} target`;
             lifetimePerfCard.appendChild(newPerf);
         } else {
-            lifetimePerfEl.textContent = `${lifetimePerformance >= 100 ? 'Ahead' : 'Behind'} target`;
+            lifetimePerfEl.textContent = `${lifetimePerformance >= 100 ? 'Ahead of' : 'Behind'} target`;
             lifetimePerfEl.className = 'performance ' + (lifetimePerformance >= 100 ? 'positive' : 'negative');
         }
         
@@ -2111,7 +2125,8 @@ async function loadLifetimeMonthlyBreakdown() {
                         data: monthGeneration,
                         backgroundColor: '#4ade80',
                         borderRadius: 5,
-                        yAxisID: 'y'
+                        yAxisID: 'y',
+                        order: 2
                     },
                     {
                         label: 'Performance (%)',
@@ -2123,7 +2138,8 @@ async function loadLifetimeMonthlyBreakdown() {
                         pointRadius: 5,
                         pointBackgroundColor: '#FFD700',
                         tension: 0.4,
-                        yAxisID: 'y1'
+                        yAxisID: 'y1',
+                        order: 1
                     }
                 ]
             },
@@ -2215,6 +2231,120 @@ async function loadLifetimeMonthlyBreakdown() {
     }
 }
 
+async function loadPast30Days() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+        const response = await fetch(historyPath);
+        
+        if (!response.ok) {
+            console.error('Could not load historical data');
+            return;
+        }
+        
+        const historyData = await response.json();
+        
+        // Get last 30 days
+        const recentRecords = historyData.daily_records.slice(-30);
+        
+        if (recentRecords.length === 0) {
+            alert('No recent data available');
+            return;
+        }
+        
+        const totalGen = recentRecords.reduce((sum, day) => sum + day.generation_kwh, 0);
+        
+        // Clear the monthly stats cards
+        document.getElementById('monthly-gen').textContent = formatNumber(totalGen);
+        document.getElementById('monthly-expected').textContent = '--';
+        document.getElementById('monthly-days-count').textContent = recentRecords.length;
+        document.getElementById('monthly-target-perf').textContent = '--';
+        document.getElementById('monthly-actual-gen').textContent = '--';
+        document.getElementById('monthly-target-gen').textContent = '--';
+        
+        const perfEl = document.getElementById('monthly-perf');
+        perfEl.textContent = `Past 30 days (no performance calculation)`;
+        perfEl.className = 'performance';
+        
+        // Update chart with past 30 days (no performance line)
+        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        if (monthlyChart) monthlyChart.destroy();
+        
+        monthlyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: recentRecords.map(d => {
+                    const date = new Date(d.date);
+                    return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+                }),
+                datasets: [
+                    {
+                        label: 'Daily Generation (kWh)',
+                        data: recentRecords.map(d => d.generation_kwh),
+                        backgroundColor: '#4ade80',
+                        borderRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { 
+                        labels: { 
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleFont: { size: 18, weight: 'bold' },
+                        bodyFont: { size: 16 },
+                        padding: 20,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Generation: ' + context.parsed.y.toFixed(1) + ' kWh';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Generation (kWh)',
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading past 30 days:', error);
+    }
+}
+
         async function loadData() {
             try {
                 const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
@@ -2276,70 +2406,6 @@ async function loadLifetimeMonthlyBreakdown() {
                 setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active || 0, 0));
                 
                 createEnvCards(dashboardData.lifetime.env_impact, 'client-env-lifetime');
-                
-                const ctx = document.getElementById('monthlyChart').getContext('2d');
-                if (monthlyChart) monthlyChart.destroy();
-                
-                monthlyChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: dashboardData.recent_days.map(d => {
-                            const date = new Date(d.date);
-                            return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
-                        }),
-                        datasets: [{
-                            label: 'Daily Generation (kWh)',
-                            data: dashboardData.recent_days.map(d => d.generation_kwh),
-                            backgroundColor: '#4ade80',
-                            borderRadius: 5
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { 
-                                labels: { 
-                                    color: '#ffffff',
-                                    font: { size: 16, weight: 'bold' }
-                                }
-                            },
-                            tooltip: {
-                                backgroundColor: 'rgba(0, 0, 0, 0.95)',
-                                titleFont: { size: 18, weight: 'bold' },
-                                bodyFont: { size: 16 },
-                                padding: 20,
-                                callbacks: {
-                                    label: function(context) {
-                                        return 'Generation: ' + context.parsed.y.toFixed(1) + ' kWh';
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                ticks: { 
-                                    color: '#ffffff',
-                                    font: { size: 14, weight: '500' }
-                                },
-                                grid: { color: 'rgba(255, 255, 255, 0.15)' }
-                            },
-                            y: {
-                                beginAtZero: true,
-                                title: { 
-                                    display: true, 
-                                    text: 'Generation (kWh)',
-                                    color: '#ffffff',
-                                    font: { size: 16, weight: 'bold' }
-                                },
-                                ticks: { 
-                                    color: '#ffffff',
-                                    font: { size: 14, weight: '500' }
-                                },
-                                grid: { color: 'rgba(255, 255, 255, 0.15)' }
-                            }
-                        }
-                    }
-                });
                 
                 document.getElementById('loading').style.display = 'none';
                 
