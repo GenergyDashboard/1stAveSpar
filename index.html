@@ -1916,8 +1916,10 @@ function updateMonthlyChart(records, selectedMonthYear) {
     // Create array of avg prediction for line
     const avgPredictionLine = new Array(records.length).fill(avgDailyPrediction);
     
-    // Get irradiation data for each day (placeholder - will be 0 until implemented)
-    const irradiationData = new Array(records.length).fill(0);
+    // Get irradiation data for each day from records
+    const irradiationData = records.map(record => {
+        return record.irradiation_wh_m2 || 0;
+    });
     
     monthlyChart = new Chart(ctx, {
         type: 'bar',
@@ -2062,10 +2064,12 @@ async function loadLifetimeMonthlyBreakdown() {
                 monthlyData[monthKey] = {
                     generation: 0,
                     expected: 0,
+                    irradiation: 0,
                     days: 0
                 };
             }
             monthlyData[monthKey].generation += record.generation_kwh;
+            monthlyData[monthKey].irradiation += (record.irradiation_wh_m2 || 0);
             monthlyData[monthKey].days += 1;
         });
         
@@ -2073,6 +2077,7 @@ async function loadLifetimeMonthlyBreakdown() {
         const monthKeys = Object.keys(monthlyData).sort();
         const monthLabels = [];
         const monthGeneration = [];
+        const monthIrradiation = [];
         const monthPerformance = [];
         
         monthKeys.forEach(monthKey => {
@@ -2080,6 +2085,7 @@ async function loadLifetimeMonthlyBreakdown() {
             const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
             monthLabels.push(monthName);
             monthGeneration.push(monthlyData[monthKey].generation);
+            monthIrradiation.push(monthlyData[monthKey].irradiation);
             
             // Calculate expected value with degradation
             const monthPadded = month.toString().padStart(2, '0');
@@ -2167,6 +2173,16 @@ async function loadLifetimeMonthlyBreakdown() {
                 labels: monthLabels,
                 datasets: [
                     {
+                        label: 'Irradiation (kWh/m²)',
+                        data: monthIrradiation.map(val => val / 1000), // Convert Wh to kWh
+                        backgroundColor: 'rgba(255, 215, 0, 0.3)',
+                        borderColor: '#FFD700',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        yAxisID: 'y',
+                        order: 3
+                    },
+                    {
                         label: 'Monthly Generation (kWh)',
                         data: monthGeneration,
                         backgroundColor: '#4ade80',
@@ -2211,6 +2227,8 @@ async function loadLifetimeMonthlyBreakdown() {
                         callbacks: {
                             label: function(context) {
                                 if (context.datasetIndex === 0) {
+                                    return 'Irradiation: ' + context.parsed.y.toFixed(1) + ' kWh/m²';
+                                } else if (context.datasetIndex === 1) {
                                     return 'Generation: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else {
                                     return 'Performance: ' + context.parsed.y.toFixed(1) + '%';
@@ -2234,7 +2252,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         beginAtZero: true,
                         title: { 
                             display: true, 
-                            text: 'Generation (kWh)',
+                            text: 'Generation / Irradiation (kWh)',
                             color: '#ffffff',
                             font: { size: 16, weight: 'bold' }
                         },
