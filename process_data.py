@@ -117,9 +117,22 @@ def get_hourly_predictions_for_date(date_str, pvsyst_data, config, degradation_f
         predictions = pvsyst_data[date_str]
         print(f"  ✓ Using actual PVSyst data for {date_str}")
     else:
-        # Fallback to config average values
-        predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
-        print(f"  ⚠️ Using average values for {date_str} (no PVSyst data)")
+        # If not found, use the same month/day from 2025 as the pattern
+        # Extract month and day from date_str (YYYY-MM-DD)
+        parts = date_str.split('-')
+        if len(parts) == 3:
+            pattern_date = f"2025-{parts[1]}-{parts[2]}"
+            if pvsyst_data and pattern_date in pvsyst_data:
+                predictions = pvsyst_data[pattern_date]
+                print(f"  ✓ Using 2025 pattern ({pattern_date}) for {date_str}")
+            else:
+                # Final fallback to config average values
+                predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
+                print(f"  ⚠️ Using config defaults for {date_str} (no pattern data)")
+        else:
+            # Fallback to config average values
+            predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
+            print(f"  ⚠️ Using config defaults for {date_str} (invalid date format)")
     
     # Apply degradation
     degraded_predictions = [pred * degradation_factor for pred in predictions]
