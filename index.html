@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1st Avenue Spar: Solar Generation</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -1201,6 +1202,14 @@
                         </div>
                     </div>
                 </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Performance % vs Expected Generation</h3>
+                    <div class="scrollable-chart">
+                        <div style="min-width: 1200px;">
+                            <canvas id="lifetimePerformanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -1231,7 +1240,7 @@
     </div>
 
     <script>
-        let dailyChart, monthlyChart, lifetimeMonthlyChart;
+        let dailyChart, monthlyChart, lifetimeMonthlyChart, lifetimePerformanceChart;
         let dashboardData = null;
         let isLoggedIn = false;
         let clientCredentials = null;
@@ -1364,8 +1373,16 @@
     populateYearSelector();
     updateDatePickerRange();
     loadToday();
-    loadCurrentMonth();
+    
+    // Check if there's a saved monthly selection, otherwise load current month
+    if (restoreMonthSelection()) {
+        loadMonthlyData();
+    } else {
+        loadCurrentMonth();
+    }
+    
     loadLifetimeMonthlyBreakdown();
+    loadLifetimePerformanceChart();
 }
         
         function switchClientTab(tab) {
@@ -1376,6 +1393,14 @@
             
             if (tab === 'lifetime') {
                 loadLifetimeMonthlyBreakdown();
+                loadLifetimePerformanceChart();
+            } else if (tab === 'monthly') {
+                // Restore saved selection or default to current month
+                if (restoreMonthSelection()) {
+                    loadMonthlyData();
+                } else {
+                    loadCurrentMonth();
+                }
             }
         }
         
@@ -1590,6 +1615,14 @@ function updateDailyView(data, selectedDate) {
     const labels = data.map(d => d.time);
     const irradiationData = data.map(d => d.irradiation_wm2);
     
+    // Calculate performance % for each hour
+    const performanceData = data.map((d, idx) => {
+        if (predictedData[idx] > 0) {
+            return ((pvData[idx] / predictedData[idx]) * 100).toFixed(0);
+        }
+        return 0;
+    });
+    
     dailyChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1603,7 +1636,34 @@ function updateDailyView(data, selectedDate) {
                     borderColor: '#22c55e',
                     borderWidth: 1,
                     yAxisID: 'y',
-                    order: 3
+                    order: 3,
+                    datalabels: {
+                        display: true,
+                        color: '#FFD700',
+                        font: {
+                            weight: 'bold',
+                            size: 11
+                        },
+                        formatter: function(value, context) {
+                            const perf = performanceData[context.dataIndex];
+                            return perf > 0 ? perf + '%' : '';
+                        },
+                        anchor: 'center',
+                        align: 'center'
+                    }
+                },
+                {
+                    label: 'Irradiation (W/m²)',
+                    data: irradiationData,
+                    type: 'bar',
+                    backgroundColor: 'rgba(255, 215, 0, 0.3)',
+                    borderColor: '#FFD700',
+                    borderWidth: 1,
+                    yAxisID: 'y1',
+                    order: 2,
+                    datalabels: {
+                        display: false
+                    }
                 },
                 {
                     label: 'Predicted Generation (kW)',
@@ -1615,23 +1675,14 @@ function updateDailyView(data, selectedDate) {
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y',
-                    order: 2
-                },
-                {
-                    label: 'Irradiation (W/m²)',
-                    data: irradiationData,
-                    type: 'line',
-                    borderColor: '#FFD700',
-                    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-                    borderWidth: 2,
-                    fill: true,
-                    pointRadius: 0,
-                    tension: 0.4,
-                    yAxisID: 'y1',
-                    order: 1
+                    order: 1,
+                    datalabels: {
+                        display: false
+                    }
                 }
             ]
         },
+        plugins: [ChartDataLabels],
         options: {
             responsive: true,
             maintainAspectRatio: true,
@@ -1667,7 +1718,7 @@ function updateDailyView(data, selectedDate) {
                             }
                             if (context.parsed.y !== null) {
                                 label += context.parsed.y.toFixed(1);
-                                if (context.datasetIndex === 2) {
+                                if (context.datasetIndex === 1) {
                                     label += ' W/m²';
                                 } else {
                                     label += ' kW';
@@ -1734,18 +1785,45 @@ function updateDailyView(data, selectedDate) {
     });
 }
 
-async function loadCurrentMonth() {
+        function loadCurrentMonth() {
     const now = new Date();
     const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
     const currentYear = now.getFullYear();
     
     document.getElementById('monthSelector').value = currentMonth;
     document.getElementById('yearSelector').value = currentYear;
+    
+    // Clear localStorage when explicitly selecting current month
+    localStorage.removeItem('selectedMonth');
+    localStorage.removeItem('selectedYear');
+    
     loadMonthlyData();
+}
+
+function saveMonthSelection() {
+    const selectedMonth = document.getElementById('monthSelector').value;
+    const selectedYear = document.getElementById('yearSelector').value;
+    localStorage.setItem('selectedMonth', selectedMonth);
+    localStorage.setItem('selectedYear', selectedYear);
+}
+
+function restoreMonthSelection() {
+    const savedMonth = localStorage.getItem('selectedMonth');
+    const savedYear = localStorage.getItem('selectedYear');
+    
+    if (savedMonth && savedYear) {
+        document.getElementById('monthSelector').value = savedMonth;
+        document.getElementById('yearSelector').value = savedYear;
+        return true;
+    }
+    return false;
 }
 
 async function loadMonthlyData() {
     try {
+        // Save the current selection to localStorage
+        saveMonthSelection();
+        
         const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
         const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
         const response = await fetch(historyPath);
@@ -1881,6 +1959,9 @@ function updateMonthlyChart(records, selectedMonthYear) {
         return avgDailyPrediction > 0 ? (d.generation_kwh / avgDailyPrediction * 100) : 0;
     });
     
+    // Create array of avg prediction for line
+    const avgPredictionLine = new Array(records.length).fill(avgDailyPrediction);
+    
     monthlyChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1896,6 +1977,19 @@ function updateMonthlyChart(records, selectedMonthYear) {
                     borderRadius: 5,
                     yAxisID: 'y',
                     order: 2
+                },
+                {
+                    label: 'Avg Predicted (kWh)',
+                    data: avgPredictionLine,
+                    type: 'line',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 3
                 },
                 {
                     label: 'Performance (%)',
@@ -2228,6 +2322,197 @@ async function loadLifetimeMonthlyBreakdown() {
         
     } catch (error) {
         console.error('Error loading lifetime monthly breakdown:', error);
+    }
+}
+
+async function loadLifetimePerformanceChart() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+        const response = await fetch(historyPath);
+        
+        if (!response.ok) {
+            console.error('Could not load historical data');
+            return;
+        }
+        
+        const historyData = await response.json();
+        
+        // Group daily records by month
+        const monthlyData = {};
+        historyData.daily_records.forEach(record => {
+            const monthKey = record.date.substring(0, 7); // "YYYY-MM"
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {
+                    generation: 0,
+                    expected: 0,
+                    days: 0
+                };
+            }
+            monthlyData[monthKey].generation += record.generation_kwh;
+            monthlyData[monthKey].days += 1;
+        });
+        
+        // Calculate expected values and performance for each month
+        const monthKeys = Object.keys(monthlyData).sort();
+        const monthLabels = [];
+        const monthExpected = [];
+        const monthPerformance = [];
+        
+        monthKeys.forEach(monthKey => {
+            const [year, month] = monthKey.split('-').map(Number);
+            const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
+            monthLabels.push(monthName);
+            
+            // Calculate expected value with degradation
+            const monthPadded = month.toString().padStart(2, '0');
+            if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthPadded]) {
+                const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                const targetDate = new Date(year, month - 1, 15);
+                const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                const yearsActive = daysActive / 365.25;
+                
+                let degradationPercent;
+                if (yearsActive < 1) {
+                    degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                } else {
+                    degradationPercent = (dashboardData.system.degradation_year_1 + 
+                        (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                }
+                
+                const degradationFactor = 1 - (degradationPercent / 100);
+                const avgDailyPrediction = dashboardData.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
+                const expectedForDays = avgDailyPrediction * monthlyData[monthKey].days;
+                
+                monthExpected.push(expectedForDays);
+                
+                const performance = expectedForDays > 0 ? (monthlyData[monthKey].generation / expectedForDays * 100) : 0;
+                monthPerformance.push(performance);
+            } else {
+                monthExpected.push(0);
+                monthPerformance.push(0);
+            }
+        });
+        
+        // Create chart
+        const ctx = document.getElementById('lifetimePerformanceChart').getContext('2d');
+        if (lifetimePerformanceChart) lifetimePerformanceChart.destroy();
+        
+        lifetimePerformanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        label: 'Expected Generation (kWh)',
+                        data: monthExpected,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        yAxisID: 'y',
+                        order: 2
+                    },
+                    {
+                        label: 'Performance (%)',
+                        data: monthPerformance,
+                        type: 'line',
+                        borderColor: '#FFD700',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#FFD700',
+                        tension: 0.4,
+                        yAxisID: 'y1',
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { 
+                        labels: { 
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleFont: { size: 18, weight: 'bold' },
+                        bodyFont: { size: 16 },
+                        padding: 20,
+                        callbacks: {
+                            label: function(context) {
+                                if (context.datasetIndex === 0) {
+                                    return 'Expected: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else {
+                                    return 'Performance: ' + context.parsed.y.toFixed(1) + '%';
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Expected Generation (kWh)',
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        max: 150,
+                        title: {
+                            display: true,
+                            text: 'Performance (%)',
+                            color: '#FFD700',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: {
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' },
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                            drawBorder: false
+                        }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading lifetime performance chart:', error);
     }
 }
 
