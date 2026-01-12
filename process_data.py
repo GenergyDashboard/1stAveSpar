@@ -344,6 +344,7 @@ def process_solar_data():
         monthly_predictions_base[month_key] = {
             'month_name': calendar.month_name[month_num],
             'base_kwh': round(month_expected_raw, 2),  # Raw PVSyst prediction
+            'avg_daily_kwh': round(month_expected_raw / days_in_month, 2),  # Average daily for this month
             'days': days_in_month
         }
     
