@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1st Avenue Spar: Solar Generation</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -1615,14 +1614,6 @@ function updateDailyView(data, selectedDate) {
     const labels = data.map(d => d.time);
     const irradiationData = data.map(d => d.irradiation_wm2);
     
-    // Calculate performance % for each hour
-    const performanceData = data.map((d, idx) => {
-        if (predictedData[idx] > 0) {
-            return ((pvData[idx] / predictedData[idx]) * 100).toFixed(0);
-        }
-        return 0;
-    });
-    
     dailyChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1636,21 +1627,7 @@ function updateDailyView(data, selectedDate) {
                     borderColor: '#22c55e',
                     borderWidth: 1,
                     yAxisID: 'y',
-                    order: 3,
-                    datalabels: {
-                        display: true,
-                        color: '#FFD700',
-                        font: {
-                            weight: 'bold',
-                            size: 11
-                        },
-                        formatter: function(value, context) {
-                            const perf = performanceData[context.dataIndex];
-                            return perf > 0 ? perf + '%' : '';
-                        },
-                        anchor: 'center',
-                        align: 'center'
-                    }
+                    order: 2
                 },
                 {
                     label: 'Irradiation (W/m²)',
@@ -1660,29 +1637,10 @@ function updateDailyView(data, selectedDate) {
                     borderColor: '#FFD700',
                     borderWidth: 1,
                     yAxisID: 'y1',
-                    order: 2,
-                    datalabels: {
-                        display: false
-                    }
-                },
-                {
-                    label: 'Predicted Generation (kW)',
-                    data: predictedData,
-                    type: 'line',
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    tension: 0.4,
-                    yAxisID: 'y',
-                    order: 1,
-                    datalabels: {
-                        display: false
-                    }
+                    order: 1
                 }
             ]
         },
-        plugins: [ChartDataLabels],
         options: {
             responsive: true,
             maintainAspectRatio: true,
@@ -1955,12 +1913,11 @@ function updateMonthlyChart(records, selectedMonthYear) {
         avgDailyPrediction = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
     }
     
-    const performanceData = records.map(d => {
-        return avgDailyPrediction > 0 ? (d.generation_kwh / avgDailyPrediction * 100) : 0;
-    });
-    
     // Create array of avg prediction for line
     const avgPredictionLine = new Array(records.length).fill(avgDailyPrediction);
+    
+    // Get irradiation data for each day (placeholder - will be 0 until implemented)
+    const irradiationData = new Array(records.length).fill(0);
     
     monthlyChart = new Chart(ctx, {
         type: 'bar',
@@ -1970,6 +1927,16 @@ function updateMonthlyChart(records, selectedMonthYear) {
                 return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
             }),
             datasets: [
+                {
+                    label: 'Irradiation (Wh/m²)',
+                    data: irradiationData,
+                    backgroundColor: 'rgba(255, 215, 0, 0.3)',
+                    borderColor: '#FFD700',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                    yAxisID: 'y1',
+                    order: 3
+                },
                 {
                     label: 'Daily Generation (kWh)',
                     data: records.map(d => d.generation_kwh),
@@ -1989,19 +1956,6 @@ function updateMonthlyChart(records, selectedMonthYear) {
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
-                    order: 3
-                },
-                {
-                    label: 'Performance (%)',
-                    data: performanceData,
-                    type: 'line',
-                    borderColor: '#FFD700',
-                    backgroundColor: 'transparent',
-                    borderWidth: 3,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#FFD700',
-                    tension: 0.4,
-                    yAxisID: 'y1',
                     order: 1
                 }
             ]
@@ -2027,9 +1981,11 @@ function updateMonthlyChart(records, selectedMonthYear) {
                     callbacks: {
                         label: function(context) {
                             if (context.datasetIndex === 0) {
+                                return 'Irradiation: ' + context.parsed.y.toFixed(0) + ' Wh/m²';
+                            } else if (context.datasetIndex === 1) {
                                 return 'Generation: ' + context.parsed.y.toFixed(1) + ' kWh';
                             } else {
-                                return 'Performance: ' + context.parsed.y.toFixed(1) + '%';
+                                return 'Avg Predicted: ' + context.parsed.y.toFixed(1) + ' kWh';
                             }
                         }
                     }
@@ -2065,19 +2021,15 @@ function updateMonthlyChart(records, selectedMonthYear) {
                     display: true,
                     position: 'right',
                     beginAtZero: true,
-                    max: 150,
                     title: {
                         display: true,
-                        text: 'Performance (%)',
+                        text: 'Irradiation (Wh/m²)',
                         color: '#FFD700',
                         font: { size: 16, weight: 'bold' }
                     },
                     ticks: {
                         color: '#ffffff',
-                        font: { size: 14, weight: '500' },
-                        callback: function(value) {
-                            return value + '%';
-                        }
+                        font: { size: 14, weight: '500' }
                     },
                     grid: {
                         drawOnChartArea: false,
