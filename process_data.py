@@ -189,6 +189,15 @@ def process_solar_data():
     
     print(f"Today's Generation: {today_generation:.2f} kWh")
     
+    # Fetch today's irradiation data EARLY (needed for daily records)
+    today_date = get_sast_now().strftime('%Y-%m-%d')
+    print("Fetching irradiation data...")
+    irradiation_data = fetch_irradiation_data(today_date)
+    
+    # Calculate daily irradiation total (Wh/m²)
+    daily_irradiation_total = sum(irradiation_data.values())
+    print(f"  Daily irradiation total: {daily_irradiation_total:.0f} Wh/m²")
+    
     # Load historical data
     history_file = 'data/generation_history.json'
     if os.path.exists(history_file):
@@ -209,9 +218,7 @@ def process_solar_data():
         history['monthly_total'] = 0
         history['current_month'] = current_month
     
-    # Update totals
-    today_date = get_sast_now().strftime('%Y-%m-%d')
-    
+    # Find and update today's record
     existing_record = None
     for record in history['daily_records']:
         if record['date'] == today_date:
@@ -336,14 +343,6 @@ def process_solar_data():
         # Fallback if no yesterday data exists
         yesterday_generation = 0
         env_impact_yesterday = calculate_env_impact(0)
-    
-    # Fetch today's irradiation data
-    print("Fetching irradiation data...")
-    irradiation_data = fetch_irradiation_data(today_date)
-    
-    # Calculate daily irradiation total (Wh/m²)
-    daily_irradiation_total = sum(irradiation_data.values())
-    print(f"  Daily irradiation total: {daily_irradiation_total:.0f} Wh/m²")
     
     # Calculate system degradation
     degradation_factor = calculate_system_degradation(config)
