@@ -95,48 +95,97 @@ def calculate_system_degradation(config):
         return 1.0  # No degradation if error
 
 def load_pvsyst_predictions():
-    """Load daily hourly predictions from PVSyst data file"""
+    """Load daily hourly predictions from PVSyst data file (2025-2044 with Load, Grid, PV)"""
     try:
-        predictions_file = 'pvsyst_predictions_2025.json'
+        predictions_file = 'predictions_2025_2044.json'
         if os.path.exists(predictions_file):
             with open(predictions_file, 'r') as f:
                 data = json.load(f)
-            print(f"  ✓ Loaded PVSyst predictions for {len(data['daily_predictions'])} days")
+            print(f"  ✓ Loaded predictions for {len(data['daily_predictions'])} days ({data['years'][0]}-{data['years'][-1]})")
             return data['daily_predictions']
         else:
-            print(f"  ⚠️ PVSyst predictions file not found, using config defaults")
-            return None
+            # Fallback to old format
+            predictions_file = 'pvsyst_predictions_2025.json'
+            if os.path.exists(predictions_file):
+                with open(predictions_file, 'r') as f:
+                    data = json.load(f)
+                print(f"  ✓ Loaded PVSyst predictions for {len(data['daily_predictions'])} days (legacy format)")
+                return data['daily_predictions']
+            else:
+                print(f"  ⚠️ PVSyst predictions file not found, using config defaults")
+                return None
     except Exception as e:
         print(f"  ⚠️ Error loading PVSyst predictions: {e}")
         return None
 
-def get_hourly_predictions_for_date(date_str, pvsyst_data, config, degradation_factor):
-    """Get hourly predictions for a specific date with degradation applied"""
-    # Try to get actual PVSyst data for this date
+def get_hourly_predictions_for_date(date_str, pvsyst_data, config, degradation_factor=None):
+    """Get hourly predictions for a specific date
+    Returns dict with pv_kw, load_kw, grid_kw (if available)
+    """
+    # Try to get actual data for this date
     if pvsyst_data and date_str in pvsyst_data:
-        predictions = pvsyst_data[date_str]
-        print(f"  ✓ Using actual PVSyst data for {date_str}")
-    else:
-        # If not found, use the same month/day from 2025 as the pattern
-        # Extract month and day from date_str (YYYY-MM-DD)
-        parts = date_str.split('-')
-        if len(parts) == 3:
-            pattern_date = f"2025-{parts[1]}-{parts[2]}"
-            if pvsyst_data and pattern_date in pvsyst_data:
-                predictions = pvsyst_data[pattern_date]
-                print(f"  ✓ Using 2025 pattern ({pattern_date}) for {date_str}")
-            else:
-                # Final fallback to config average values
-                predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
-                print(f"  ⚠️ Using config defaults for {date_str} (no pattern data)")
-        else:
-            # Fallback to config average values
-            predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
-            print(f"  ⚠️ Using config defaults for {date_str} (invalid date format)")
+        data = pvsyst_data[date_str]
+        
+        # Check if it's the new format (dict with pv_kw, load_kw, grid_kw)
+        if isinstance(data, dict) and 'pv_kw' in data:
+            print(f"  ✓ Using predictions data for {date_str} (includes Load/Grid)")
+            return {
+                'pv_kw': data['pv_kw'],
+                'load_kw': data.get('load_kw', [0]*24),
+                'grid_kw': data.get('grid_kw', [0]*24)
+            }
+        # Old format (just PV array)
+        elif isinstance(data, list):
+            predictions = [p * (degradation_factor or 1.0) for p in data]
+            print(f"  ✓ Using PVSyst data for {date_str} (legacy format)")
+            return {
+                'pv_kw': predictions,
+                'load_kw': [0]*24,
+                'grid_kw': [0]*24
+            }
     
-    # Apply degradation
-    degraded_predictions = [pred * degradation_factor for pred in predictions]
-    return degraded_predictions
+    # If not found, use the same month/day from 2025 as the pattern
+    # Extract month and day from date_str (YYYY-MM-DD)
+    parts = date_str.split('-')
+    if len(parts) == 3:
+        pattern_date = f"2025-{parts[1]}-{parts[2]}"
+        if pvsyst_data and pattern_date in pvsyst_data:
+            data = pvsyst_data[pattern_date]
+            print(f"  ✓ Using 2025 pattern ({pattern_date}) for {date_str}")
+            
+            # Check format
+            if isinstance(data, dict) and 'pv_kw' in data:
+                predictions = data['pv_kw']
+                load_predictions = data.get('load_kw', [0]*24)
+                grid_predictions = data.get('grid_kw', [0]*24)
+            else:
+                predictions = data
+                load_predictions = [0]*24
+                grid_predictions = [0]*24
+        else:
+            # Final fallback to config average values
+            predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
+            load_predictions = [0]*24
+            grid_predictions = [0]*24
+            print(f"  ⚠️ Using config defaults for {date_str} (no pattern data)")
+    else:
+        # Fallback to config average values
+        predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
+        load_predictions = [0]*24
+        grid_predictions = [0]*24
+        print(f"  ⚠️ Using config defaults for {date_str} (invalid date format)")
+    
+    # Apply degradation if needed (for old format or pattern-based predictions)
+    if degradation_factor:
+        degraded_predictions = [pred * degradation_factor for pred in predictions]
+    else:
+        degraded_predictions = predictions
+        
+    return {
+        'pv_kw': degraded_predictions,
+        'load_kw': load_predictions,
+        'grid_kw': grid_predictions
+    }
 
 def process_solar_data():
     """Process the downloaded solar data and calculate all metrics"""
@@ -288,8 +337,8 @@ def process_solar_data():
         print(f"  ✓ Using monthly average for today's expected: {expected_daily_kwh:.2f} kWh")
     else:
         # Fallback if no prediction data
-        today_hourly_predictions = get_hourly_predictions_for_date(today_date, pvsyst_predictions, config, degradation_factor)
-        expected_daily_kwh = sum(today_hourly_predictions)
+        today_hourly_predictions_data = get_hourly_predictions_for_date(today_date, pvsyst_predictions, config, degradation_factor)
+        expected_daily_kwh = sum(today_hourly_predictions_data['pv_kw'])
         print(f"  ⚠️ Using hourly fallback for today's expected: {expected_daily_kwh:.2f} kWh")
     
     # Calculate monthly expected by using monthly base prediction with degradation
@@ -303,8 +352,8 @@ def process_solar_data():
         expected_monthly_kwh = 0
         for day in range(1, days_in_month_calc + 1):
             date_str = f"{year}-{month:02d}-{day:02d}"
-            day_predictions = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config, degradation_factor)
-            expected_monthly_kwh += sum(day_predictions)
+            day_predictions_data = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config, degradation_factor)
+            expected_monthly_kwh += sum(day_predictions_data['pv_kw'])
         print(f"  ⚠️ Using daily sum fallback for monthly expected: {expected_monthly_kwh:.2f} kWh")
     
     # Calculate performance ratios
@@ -350,10 +399,10 @@ def process_solar_data():
     # Load PVSyst daily predictions
     pvsyst_data = load_pvsyst_predictions()
     
-    # Get hourly predictions for today with degradation
-    hourly_predictions = get_hourly_predictions_for_date(today_date, pvsyst_data, config, degradation_factor)
+    # Get hourly predictions for today (includes PV, Load, Grid)
+    predictions_data = get_hourly_predictions_for_date(today_date, pvsyst_data, config, degradation_factor)
     
-    # Prepare hourly data with PV generation, predicted values, and irradiation
+    # Prepare hourly data with PV generation, predicted values, irradiation, load, and grid
     hourly_data = []
     
     # Group PV data by hour
@@ -365,7 +414,9 @@ def process_solar_data():
             'hour': hour,
             'time': f"{hour:02d}:00",
             'pv_kw': round(hourly_pv.get(hour, 0), 2),
-            'predicted_kw': round(hourly_predictions[hour], 2) if hour < len(hourly_predictions) else 0,
+            'predicted_kw': round(predictions_data['pv_kw'][hour], 2) if hour < len(predictions_data['pv_kw']) else 0,
+            'predicted_load_kw': round(predictions_data['load_kw'][hour], 2) if hour < len(predictions_data['load_kw']) else 0,
+            'predicted_grid_kw': round(predictions_data['grid_kw'][hour], 2) if hour < len(predictions_data['grid_kw']) else 0,
             'irradiation_wm2': irradiation_data.get(hour, 0)
         })
     
