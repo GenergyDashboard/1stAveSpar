@@ -1129,9 +1129,9 @@
                         <div class="performance" id="coverage-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Grid Usage</div>
+                        <div class="label">Grid Coverage</div>
                         <div class="value" id="daily-grid">--</div>
-                        <div class="subvalue">Expected: <span id="daily-grid-expected">--</span> kWh</div>
+                        <div class="subvalue"><span id="grid-coverage-pct">--</span> of Load</div>
                     </div>
                 </div>
                 <div class="chart-container">
@@ -1190,9 +1190,9 @@
                         <div class="performance" id="monthly-coverage-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Grid Usage</div>
+                        <div class="label">Grid Coverage</div>
                         <div class="value" id="monthly-grid">--</div>
-                        <div class="subvalue">Expected: <span id="monthly-grid-expected">--</span> kWh</div>
+                        <div class="subvalue"><span id="monthly-grid-pct">--</span> of Load</div>
                     </div>
                 </div>
                 <div class="chart-container">
@@ -1231,9 +1231,9 @@
                         <div class="subvalue">% of Load covered by PV</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Total Grid Usage</div>
+                        <div class="label">Grid Coverage</div>
                         <div class="value" id="lifetime-grid">--</div>
-                        <div class="subvalue">Total grid power needed</div>
+                        <div class="subvalue"><span id="lifetime-grid-pct">--</span> of Load</div>
                     </div>
                 </div>
                 <div class="chart-container">
@@ -1671,12 +1671,23 @@ function updateDailyView(data, selectedDate) {
     const totalLoad = loadData.reduce((sum, val) => sum + val, 0);
     const totalGrid = gridData.reduce((sum, val) => sum + val, 0);
     const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
+    const gridCoverage = 100 - pvCoverage;  // Grid coverage is the inverse of PV coverage
+    
+    // Calculate averages for display on chart (to match scale of generation)
+    const avgLoad = totalLoad / 24;
+    const avgGrid = totalGrid / 24;
     
     document.getElementById('daily-load').textContent = formatNumber(totalLoad);
     document.getElementById('daily-load-expected').textContent = formatNumber(totalLoad);
     document.getElementById('daily-grid').textContent = formatNumber(totalGrid);
-    document.getElementById('daily-grid-expected').textContent = formatNumber(totalGrid);
     document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
+    
+    // Update Grid Coverage card (it's the same element as Grid Usage)
+    const gridCoverageEl = document.getElementById('daily-grid');
+    const gridCoveragePctEl = document.getElementById('grid-coverage-pct');
+    if (gridCoveragePctEl) {
+        gridCoveragePctEl.textContent = gridCoverage.toFixed(1) + '%';
+    }
     
     const coveragePerf = document.getElementById('coverage-perf');
     if (pvCoverage >= 30) {
@@ -1700,6 +1711,10 @@ function updateDailyView(data, selectedDate) {
     // Calculate average hourly predicted for the month
     // Use the predicted_kw from data (which comes from PVSyst pattern for this date)
     const avgPredictedData = data.map(d => d.predicted_kw);
+    
+    // Create arrays with average values for Load and Grid (to match generation scale)
+    const avgLoadData = loadData.map(() => avgLoad);
+    const avgGridData = gridData.map(() => avgGrid);
     
     dailyChart = new Chart(ctx, {
         type: 'bar',
@@ -1743,27 +1758,27 @@ function updateDailyView(data, selectedDate) {
                     order: 1
                 },
                 {
-                    label: 'Expected Load (kW)',
-                    data: loadData,
+                    label: 'Avg Load (kW)',
+                    data: avgLoadData,
                     type: 'line',
                     borderColor: '#ef4444',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     pointRadius: 0,
-                    tension: 0.4,
+                    tension: 0,
                     yAxisID: 'y',
                     order: 0
                 },
                 {
-                    label: 'Expected Grid (kW)',
-                    data: gridData,
+                    label: 'Avg Grid (kW)',
+                    data: avgGridData,
                     type: 'line',
                     borderColor: '#f97316',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     borderDash: [3, 3],
                     pointRadius: 0,
-                    tension: 0.4,
+                    tension: 0,
                     yAxisID: 'y',
                     order: 0
                 }
@@ -2037,12 +2052,13 @@ async function loadMonthlyData() {
         
         // Calculate PV Coverage
         const pvCoverage = monthlyLoad > 0 ? ((monthlyGen / monthlyLoad) * 100) : 0;
+        const gridCoverage = 100 - pvCoverage;
         
         // Update Load/Grid/Coverage displays
         document.getElementById('monthly-load').textContent = formatNumber(monthlyLoad);
         document.getElementById('monthly-load-expected').textContent = formatNumber(monthlyLoad);
         document.getElementById('monthly-grid').textContent = formatNumber(monthlyGrid);
-        document.getElementById('monthly-grid-expected').textContent = formatNumber(monthlyGrid);
+        document.getElementById('monthly-grid-pct').textContent = gridCoverage.toFixed(1) + '%';
         document.getElementById('monthly-coverage').textContent = pvCoverage.toFixed(1) + '%';
         
         const coveragePerfEl = document.getElementById('monthly-coverage-perf');
@@ -2134,6 +2150,12 @@ function updateMonthlyChart(records, selectedMonthYear) {
 }
 
 function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, loadData, gridData) {
+    // Scale irradiation to be closer to generation levels (divide by ~15 to get reasonable scale)
+    const maxLoad = Math.max(...loadData);
+    const maxIrr = Math.max(...irradiationData);
+    const irrScaleFactor = maxLoad > 0 && maxIrr > 0 ? (maxLoad * 0.12) / maxIrr : 0.1;
+    const scaledIrradiation = irradiationData.map(val => val * irrScaleFactor);
+    
     monthlyChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -2143,68 +2165,49 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
             }),
             datasets: [
                 {
-                    label: 'Irradiation (Wh/m²)',
-                    data: irradiationData,
+                    label: 'Irradiation (scaled)',
+                    data: scaledIrradiation,
                     type: 'line',
-                    borderColor: '#FFD700',
+                    borderColor: 'rgba(255, 215, 0, 0.3)',
                     backgroundColor: 'rgba(255, 215, 0, 0.1)',
-                    borderWidth: 2,
+                    borderWidth: 1,
                     fill: true,
                     pointRadius: 0,
                     tension: 0.4,
-                    yAxisID: 'y1',
-                    order: 3
+                    yAxisID: 'y',
+                    order: 4
                 },
                 {
-                    label: 'Daily Generation (kWh)',
+                    label: 'PV Generation (kWh)',
                     data: records.map(d => d.generation_kwh),
                     backgroundColor: '#4ade80',
                     borderRadius: 5,
                     yAxisID: 'y',
+                    stack: 'energy',
                     order: 2
                 },
                 {
-                    label: 'Avg Predicted (kWh)',
-                    data: avgPredictionLine,
+                    label: 'Grid (kWh)',
+                    data: gridData.length > 0 ? gridData : records.map(() => 0),
+                    backgroundColor: '#f97316',
+                    borderRadius: 5,
+                    yAxisID: 'y',
+                    stack: 'energy',
+                    order: 2
+                },
+                {
+                    label: 'Load (kWh)',
+                    data: loadData.length > 0 ? loadData : records.map(() => 0),
                     type: 'line',
-                    borderColor: '#3b82f6',
+                    borderColor: '#ef4444',
                     backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
+                    borderWidth: 3,
                     pointRadius: 0,
-                    tension: 0,
+                    tension: 0.4,
                     yAxisID: 'y',
                     order: 1
                 }
-            ].concat(
-                loadData.length > 0 ? [
-                    {
-                        label: 'Expected Load (kWh)',
-                        data: loadData,
-                        type: 'line',
-                        borderColor: '#ef4444',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        yAxisID: 'y',
-                        order: 0
-                    },
-                    {
-                        label: 'Expected Grid (kWh)',
-                        data: gridData,
-                        type: 'line',
-                        borderColor: '#f97316',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        borderDash: [3, 3],
-                        pointRadius: 0,
-                        tension: 0.4,
-                        yAxisID: 'y',
-                        order: 0
-                    }
-                ] : []
-            )
+            ]
         },
         options: {
             responsive: true,
@@ -2226,19 +2229,22 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     padding: 20,
                     callbacks: {
                         label: function(context) {
-                            if (context.datasetIndex === 0) {
-                                return 'Irradiation: ' + context.parsed.y.toFixed(0) + ' Wh/m²';
-                            } else if (context.datasetIndex === 1) {
-                                return 'Generation: ' + context.parsed.y.toFixed(1) + ' kWh';
-                            } else {
-                                return 'Avg Predicted: ' + context.parsed.y.toFixed(1) + ' kWh';
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
                             }
+                            if (label.includes('Irradiation')) {
+                                return label + '(scaled)';
+                            }
+                            label += context.parsed.y.toFixed(1) + ' kWh';
+                            return label;
                         }
                     }
                 }
             },
             scales: {
                 x: {
+                    stacked: true,
                     ticks: { 
                         color: '#ffffff',
                         font: { size: 14, weight: '500' }
@@ -2249,10 +2255,11 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     type: 'linear',
                     display: true,
                     position: 'left',
+                    stacked: true,
                     beginAtZero: true,
                     title: { 
                         display: true, 
-                        text: 'Generation (kWh)',
+                        text: 'Energy (kWh)',
                         color: '#ffffff',
                         font: { size: 16, weight: 'bold' }
                     },
@@ -2261,26 +2268,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                         font: { size: 14, weight: '500' }
                     },
                     grid: { color: 'rgba(255, 255, 255, 0.15)' }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Irradiation (Wh/m²)',
-                        color: '#FFD700',
-                        font: { size: 16, weight: 'bold' }
-                    },
-                    ticks: {
-                        color: '#ffffff',
-                        font: { size: 14, weight: '500' }
-                    },
-                    grid: {
-                        drawOnChartArea: false,
-                        drawBorder: false
-                    }
                 }
             }
         }
@@ -2431,9 +2418,11 @@ async function loadLifetimeMonthlyBreakdown() {
         const totalLoad = Object.values(monthlyData).reduce((sum, month) => sum + month.load, 0);
         const totalGrid = Object.values(monthlyData).reduce((sum, month) => sum + month.grid, 0);
         const lifetimeCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100).toFixed(1) : 0;
+        const lifetimeGridCoverage = (100 - parseFloat(lifetimeCoverage)).toFixed(1);
         
         document.getElementById('lifetime-load').textContent = formatNumber(totalLoad);
         document.getElementById('lifetime-grid').textContent = formatNumber(totalGrid);
+        document.getElementById('lifetime-grid-pct').textContent = lifetimeGridCoverage + '%';
         document.getElementById('lifetime-coverage').textContent = lifetimeCoverage + '%';
         
         document.getElementById('lifetime-perf').textContent = formatNumber(lifetimePerformance);
@@ -2504,8 +2493,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         pointBackgroundColor: '#ef4444',
                         tension: 0.4,
                         yAxisID: 'y',
-                        order: 0,
-                        hidden: true  // Hidden by default to avoid clutter
+                        order: 0
                     },
                     {
                         label: 'Expected Grid (kWh)',
@@ -2519,8 +2507,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         pointBackgroundColor: '#f97316',
                         tension: 0.4,
                         yAxisID: 'y',
-                        order: 0,
-                        hidden: true  // Hidden by default to avoid clutter
+                        order: 0
                     }
                 ]
             },
