@@ -1178,6 +1178,22 @@
                         </div>
                         <div class="subvalue">Days with data: <span id="monthly-days-count">--</span></div>
                     </div>
+                    <div class="stat-card">
+                        <div class="label">Total Load</div>
+                        <div class="value" id="monthly-load">--</div>
+                        <div class="subvalue">Expected: <span id="monthly-load-expected">--</span> kWh</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">PV Coverage</div>
+                        <div class="value" id="monthly-coverage">--</div>
+                        <div class="subvalue">% of Load covered by PV</div>
+                        <div class="performance" id="monthly-coverage-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Grid Usage</div>
+                        <div class="value" id="monthly-grid">--</div>
+                        <div class="subvalue">Expected: <span id="monthly-grid-expected">--</span> kWh</div>
+                    </div>
                 </div>
                 <div class="chart-container">
                     <h3 class="chart-title">Daily Generation for Selected Month</h3>
@@ -1204,6 +1220,21 @@
     <div class="value" id="lifetime-perf">--</div>
     <div class="subvalue"><span id="lifetime-perf-diff">--</span> kWh <span id="lifetime-perf-status">--</span></div>
 </div>
+                    <div class="stat-card">
+                        <div class="label">Total Load</div>
+                        <div class="value" id="lifetime-load">--</div>
+                        <div class="subvalue">Total power consumption</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Lifetime PV Coverage</div>
+                        <div class="value" id="lifetime-coverage">--</div>
+                        <div class="subvalue">% of Load covered by PV</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Total Grid Usage</div>
+                        <div class="value" id="lifetime-grid">--</div>
+                        <div class="subvalue">Total grid power needed</div>
+                    </div>
                 </div>
                 <div class="chart-container">
                     <h3 class="chart-title">Environmental Impact</h3>
@@ -1976,6 +2007,56 @@ async function loadMonthlyData() {
             targetPerfEl.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
         }
         
+        // Calculate Load and Grid for the month
+        // Load predictions from predictions_2025_2044.json
+        let monthlyLoad = 0;
+        let monthlyGrid = 0;
+        
+        try {
+            const predictionsPath = `${basePath}predictions_2025_2044.json`.replace('//', '/');
+            const predictionsResponse = await fetch(predictionsPath);
+            
+            if (predictionsResponse.ok) {
+                const predictionsData = await predictionsResponse.json();
+                
+                // Sum Load and Grid for each day in the month
+                monthRecords.forEach(record => {
+                    const dateKey = record.date;
+                    if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                        const dayData = predictionsData.daily_predictions[dateKey];
+                        const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                        monthlyLoad += dailyLoad;
+                        monthlyGrid += dailyGrid;
+                    }
+                });
+            }
+        } catch (error) {
+            console.warn('Could not load predictions for Load/Grid:', error);
+        }
+        
+        // Calculate PV Coverage
+        const pvCoverage = monthlyLoad > 0 ? ((monthlyGen / monthlyLoad) * 100) : 0;
+        
+        // Update Load/Grid/Coverage displays
+        document.getElementById('monthly-load').textContent = formatNumber(monthlyLoad);
+        document.getElementById('monthly-load-expected').textContent = formatNumber(monthlyLoad);
+        document.getElementById('monthly-grid').textContent = formatNumber(monthlyGrid);
+        document.getElementById('monthly-grid-expected').textContent = formatNumber(monthlyGrid);
+        document.getElementById('monthly-coverage').textContent = pvCoverage.toFixed(1) + '%';
+        
+        const coveragePerfEl = document.getElementById('monthly-coverage-perf');
+        if (pvCoverage >= 30) {
+            coveragePerfEl.textContent = 'Excellent coverage';
+            coveragePerfEl.className = 'performance positive';
+        } else if (pvCoverage >= 15) {
+            coveragePerfEl.textContent = 'Good coverage';
+            coveragePerfEl.className = 'performance positive';
+        } else {
+            coveragePerfEl.textContent = 'Low coverage';
+            coveragePerfEl.className = 'performance negative';
+        }
+        
         updateMonthlyChart(monthRecords, selectedMonthYear);
         
     } catch (error) {
@@ -2018,6 +2099,41 @@ function updateMonthlyChart(records, selectedMonthYear) {
         return record.irradiation_wh_m2 || 0;
     });
     
+    // Fetch Load and Grid data for each day
+    const loadData = [];
+    const gridData = [];
+    
+    // Load predictions synchronously (will use cached data if already loaded)
+    const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+    fetch(`${basePath}predictions_2025_2044.json`.replace('//', '/'))
+        .then(response => response.json())
+        .then(predictionsData => {
+            records.forEach(record => {
+                const dateKey = record.date;
+                if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                    const dayData = predictionsData.daily_predictions[dateKey];
+                    const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                    const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                    loadData.push(dailyLoad);
+                    gridData.push(dailyGrid);
+                } else {
+                    loadData.push(0);
+                    gridData.push(0);
+                }
+            });
+            
+            // Recreate chart with Load and Grid data
+            if (monthlyChart) monthlyChart.destroy();
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, loadData, gridData);
+        })
+        .catch(error => {
+            console.warn('Could not load Load/Grid data for chart:', error);
+            // Create chart without Load/Grid
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, [], []);
+        });
+}
+
+function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, loadData, gridData) {
     monthlyChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -2060,7 +2176,35 @@ function updateMonthlyChart(records, selectedMonthYear) {
                     yAxisID: 'y',
                     order: 1
                 }
-            ]
+            ].concat(
+                loadData.length > 0 ? [
+                    {
+                        label: 'Expected Load (kWh)',
+                        data: loadData,
+                        type: 'line',
+                        borderColor: '#ef4444',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        order: 0
+                    },
+                    {
+                        label: 'Expected Grid (kWh)',
+                        data: gridData,
+                        type: 'line',
+                        borderColor: '#f97316',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [3, 3],
+                        pointRadius: 0,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        order: 0
+                    }
+                ] : []
+            )
         },
         options: {
             responsive: true,
@@ -2165,6 +2309,8 @@ async function loadLifetimeMonthlyBreakdown() {
                     generation: 0,
                     expected: 0,
                     irradiation: 0,
+                    load: 0,
+                    grid: 0,
                     days: 0
                 };
             }
@@ -2173,12 +2319,41 @@ async function loadLifetimeMonthlyBreakdown() {
             monthlyData[monthKey].days += 1;
         });
         
+        // Load predictions to calculate Load and Grid
+        let predictionsData = null;
+        try {
+            const predictionsPath = `${basePath}predictions_2025_2044.json`.replace('//', '/');
+            const predictionsResponse = await fetch(predictionsPath);
+            if (predictionsResponse.ok) {
+                predictionsData = await predictionsResponse.json();
+                
+                // Calculate Load and Grid for each month
+                historyData.daily_records.forEach(record => {
+                    const monthKey = record.date.substring(0, 7);
+                    const dateKey = record.date;
+                    if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                        const dayData = predictionsData.daily_predictions[dateKey];
+                        const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                        if (monthlyData[monthKey]) {
+                            monthlyData[monthKey].load += dailyLoad;
+                            monthlyData[monthKey].grid += dailyGrid;
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.warn('Could not load predictions for Load/Grid:', error);
+        }
+        
         // Calculate expected values and performance for each month
         const monthKeys = Object.keys(monthlyData).sort();
         const monthLabels = [];
         const monthGeneration = [];
         const monthExpected = [];
         const monthIrradiation = [];
+        const monthLoad = [];
+        const monthGrid = [];
         const monthPerformance = [];
         
         monthKeys.forEach(monthKey => {
@@ -2187,6 +2362,8 @@ async function loadLifetimeMonthlyBreakdown() {
             monthLabels.push(monthName);
             monthGeneration.push(monthlyData[monthKey].generation);
             monthIrradiation.push(monthlyData[monthKey].irradiation);
+            monthLoad.push(monthlyData[monthKey].load);
+            monthGrid.push(monthlyData[monthKey].grid);
             
             // Calculate expected value with degradation
             const monthPadded = month.toString().padStart(2, '0');
@@ -2250,6 +2427,15 @@ async function loadLifetimeMonthlyBreakdown() {
         const lifetimeDifference = totalGeneration - totalExpected;
         const lifetimeStatus = lifetimeDifference >= 0 ? 'ahead' : 'behind';
         
+        // Calculate lifetime Load and Grid totals
+        const totalLoad = Object.values(monthlyData).reduce((sum, month) => sum + month.load, 0);
+        const totalGrid = Object.values(monthlyData).reduce((sum, month) => sum + month.grid, 0);
+        const lifetimeCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100).toFixed(1) : 0;
+        
+        document.getElementById('lifetime-load').textContent = formatNumber(totalLoad);
+        document.getElementById('lifetime-grid').textContent = formatNumber(totalGrid);
+        document.getElementById('lifetime-coverage').textContent = lifetimeCoverage + '%';
+        
         document.getElementById('lifetime-perf').textContent = formatNumber(lifetimePerformance);
         document.getElementById('lifetime-perf-diff').textContent = formatNumber(Math.abs(lifetimeDifference));
         document.getElementById('lifetime-perf-status').textContent = lifetimeStatus;
@@ -2306,6 +2492,35 @@ async function loadLifetimeMonthlyBreakdown() {
                         tension: 0.4,
                         yAxisID: 'y1',
                         order: 1
+                    },
+                    {
+                        label: 'Expected Load (kWh)',
+                        data: monthLoad,
+                        type: 'line',
+                        borderColor: '#ef4444',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#ef4444',
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        order: 0,
+                        hidden: true  // Hidden by default to avoid clutter
+                    },
+                    {
+                        label: 'Expected Grid (kWh)',
+                        data: monthGrid,
+                        type: 'line',
+                        borderColor: '#f97316',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [3, 3],
+                        pointRadius: 3,
+                        pointBackgroundColor: '#f97316',
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        order: 0,
+                        hidden: true  // Hidden by default to avoid clutter
                     }
                 ]
             },
@@ -2334,8 +2549,12 @@ async function loadLifetimeMonthlyBreakdown() {
                                     return 'Expected: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else if (context.datasetIndex === 1) {
                                     return 'Actual: ' + context.parsed.y.toFixed(0) + ' kWh';
-                                } else {
+                                } else if (context.datasetIndex === 2) {
                                     return 'Performance: ' + context.parsed.y.toFixed(1) + '%';
+                                } else if (context.datasetIndex === 3) {
+                                    return 'Load: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else {
+                                    return 'Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 }
                             }
                         }
