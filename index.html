@@ -1117,6 +1117,22 @@
     <div class="label">Average Power</div>
     <div class="value" id="daily-avg">--</div>
 </div>
+                    <div class="stat-card">
+                        <div class="label">Load</div>
+                        <div class="value" id="daily-load">--</div>
+                        <div class="subvalue">Expected: <span id="daily-load-expected">--</span> kWh</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">PV Coverage</div>
+                        <div class="value" id="pv-coverage">--</div>
+                        <div class="subvalue">% of Load covered by PV</div>
+                        <div class="performance" id="coverage-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Grid Usage</div>
+                        <div class="value" id="daily-grid">--</div>
+                        <div class="subvalue">Expected: <span id="daily-grid-expected">--</span> kWh</div>
+                    </div>
                 </div>
                 <div class="chart-container">
                     <h3 class="chart-title">Hourly Generation Pattern</h3>
@@ -1617,6 +1633,32 @@ function updateDailyView(data, selectedDate) {
     perf.textContent = `${performance.toFixed(1)}% of expected`;
     perf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
     
+    // Calculate Load, Grid, and PV Coverage
+    const loadData = data.map(d => d.predicted_load_kw || 0);
+    const gridData = data.map(d => d.predicted_grid_kw || 0);
+    
+    const totalLoad = loadData.reduce((sum, val) => sum + val, 0);
+    const totalGrid = gridData.reduce((sum, val) => sum + val, 0);
+    const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
+    
+    document.getElementById('daily-load').textContent = formatNumber(totalLoad);
+    document.getElementById('daily-load-expected').textContent = formatNumber(totalLoad);
+    document.getElementById('daily-grid').textContent = formatNumber(totalGrid);
+    document.getElementById('daily-grid-expected').textContent = formatNumber(totalGrid);
+    document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
+    
+    const coveragePerf = document.getElementById('coverage-perf');
+    if (pvCoverage >= 30) {
+        coveragePerf.textContent = 'Excellent solar coverage';
+        coveragePerf.className = 'performance positive';
+    } else if (pvCoverage >= 15) {
+        coveragePerf.textContent = 'Good solar coverage';
+        coveragePerf.className = 'performance positive';
+    } else {
+        coveragePerf.textContent = 'Low solar coverage';
+        coveragePerf.className = 'performance negative';
+    }
+    
     const ctx = document.getElementById('dailyChart').getContext('2d');
     if (dailyChart) dailyChart.destroy();
     
@@ -1668,6 +1710,31 @@ function updateDailyView(data, selectedDate) {
                     tension: 0.4,
                     yAxisID: 'y',
                     order: 1
+                },
+                {
+                    label: 'Expected Load (kW)',
+                    data: loadData,
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 0
+                },
+                {
+                    label: 'Expected Grid (kW)',
+                    data: gridData,
+                    type: 'line',
+                    borderColor: '#f97316',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [3, 3],
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 0
                 }
             ]
         },
