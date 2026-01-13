@@ -1202,10 +1202,18 @@
                     </div>
                 </div>
                 <div class="chart-container">
-                    <h3 class="chart-title">Performance % vs Expected Generation</h3>
+                    <h3 class="chart-title">Actual vs Expected Generation</h3>
                     <div class="scrollable-chart">
                         <div style="min-width: 1200px;">
-                            <canvas id="lifetimePerformanceChart"></canvas>
+                            <canvas id="lifetimeActualVsExpectedChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Monthly Performance %</h3>
+                    <div class="scrollable-chart">
+                        <div style="min-width: 1200px;">
+                            <canvas id="lifetimePerformanceLineChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -1239,7 +1247,7 @@
     </div>
 
     <script>
-        let dailyChart, monthlyChart, lifetimeMonthlyChart, lifetimePerformanceChart;
+        let dailyChart, monthlyChart, lifetimeMonthlyChart, lifetimeActualVsExpectedChart, lifetimePerformanceLineChart;
         let dashboardData = null;
         let isLoggedIn = false;
         let clientCredentials = null;
@@ -1381,7 +1389,8 @@
     }
     
     loadLifetimeMonthlyBreakdown();
-    loadLifetimePerformanceChart();
+    loadLifetimeActualVsExpectedChart();
+    loadLifetimePerformanceLineChart();
 }
         
         function switchClientTab(tab) {
@@ -1392,7 +1401,8 @@
             
             if (tab === 'lifetime') {
                 loadLifetimeMonthlyBreakdown();
-                loadLifetimePerformanceChart();
+                loadLifetimeActualVsExpectedChart();
+                loadLifetimePerformanceLineChart();
             } else if (tab === 'monthly') {
                 // Restore saved selection or default to current month
                 if (restoreMonthSelection()) {
@@ -1952,10 +1962,13 @@ function updateMonthlyChart(records, selectedMonthYear) {
                 {
                     label: 'Irradiation (Wh/m²)',
                     data: irradiationData,
-                    backgroundColor: 'rgba(255, 215, 0, 0.3)',
+                    type: 'line',
                     borderColor: '#FFD700',
-                    borderWidth: 1,
-                    borderRadius: 5,
+                    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 0,
+                    tension: 0.4,
                     yAxisID: 'y1',
                     order: 3
                 },
@@ -2097,6 +2110,7 @@ async function loadLifetimeMonthlyBreakdown() {
         const monthKeys = Object.keys(monthlyData).sort();
         const monthLabels = [];
         const monthGeneration = [];
+        const monthExpected = [];
         const monthIrradiation = [];
         const monthPerformance = [];
         
@@ -2127,9 +2141,12 @@ async function loadLifetimeMonthlyBreakdown() {
                 const avgDailyPrediction = dashboardData.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
                 const expectedForDays = avgDailyPrediction * monthlyData[monthKey].days;
                 
+                monthExpected.push(expectedForDays);
+                
                 const performance = expectedForDays > 0 ? (monthlyData[monthKey].generation / expectedForDays * 100) : 0;
                 monthPerformance.push(performance);
             } else {
+                monthExpected.push(0);
                 monthPerformance.push(0);
             }
         });
@@ -2193,17 +2210,17 @@ async function loadLifetimeMonthlyBreakdown() {
                 labels: monthLabels,
                 datasets: [
                     {
-                        label: 'Irradiation (kWh/m²)',
-                        data: monthIrradiation.map(val => val / 1000), // Convert Wh to kWh
-                        backgroundColor: 'rgba(255, 215, 0, 0.3)',
-                        borderColor: '#FFD700',
+                        label: 'Expected Generation (kWh)',
+                        data: monthExpected,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: '#3b82f6',
                         borderWidth: 1,
                         borderRadius: 5,
                         yAxisID: 'y',
                         order: 3
                     },
                     {
-                        label: 'Monthly Generation (kWh)',
+                        label: 'Actual Generation (kWh)',
                         data: monthGeneration,
                         backgroundColor: '#4ade80',
                         borderRadius: 5,
@@ -2247,9 +2264,9 @@ async function loadLifetimeMonthlyBreakdown() {
                         callbacks: {
                             label: function(context) {
                                 if (context.datasetIndex === 0) {
-                                    return 'Irradiation: ' + context.parsed.y.toFixed(1) + ' kWh/m²';
+                                    return 'Expected: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else if (context.datasetIndex === 1) {
-                                    return 'Generation: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                    return 'Actual: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else {
                                     return 'Performance: ' + context.parsed.y.toFixed(1) + '%';
                                 }
@@ -2272,7 +2289,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         beginAtZero: true,
                         title: { 
                             display: true, 
-                            text: 'Generation / Irradiation (kWh)',
+                            text: 'Generation (kWh)',
                             color: '#ffffff',
                             font: { size: 16, weight: 'bold' }
                         },
@@ -2315,7 +2332,7 @@ async function loadLifetimeMonthlyBreakdown() {
     }
 }
 
-async function loadLifetimePerformanceChart() {
+async function loadLifetimeActualVsExpectedChart() {
     try {
         const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
         const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
@@ -2343,10 +2360,162 @@ async function loadLifetimePerformanceChart() {
             monthlyData[monthKey].days += 1;
         });
         
-        // Calculate expected values and performance for each month
+        // Calculate expected values for each month
         const monthKeys = Object.keys(monthlyData).sort();
         const monthLabels = [];
+        const monthActual = [];
         const monthExpected = [];
+        
+        monthKeys.forEach(monthKey => {
+            const [year, month] = monthKey.split('-').map(Number);
+            const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
+            monthLabels.push(monthName);
+            monthActual.push(monthlyData[monthKey].generation);
+            
+            // Calculate expected value with degradation
+            const monthPadded = month.toString().padStart(2, '0');
+            if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthPadded]) {
+                const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                const targetDate = new Date(year, month - 1, 15);
+                const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                const yearsActive = daysActive / 365.25;
+                
+                let degradationPercent;
+                if (yearsActive < 1) {
+                    degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                } else {
+                    degradationPercent = (dashboardData.system.degradation_year_1 + 
+                        (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                }
+                
+                const degradationFactor = 1 - (degradationPercent / 100);
+                const avgDailyPrediction = dashboardData.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
+                const expectedForDays = avgDailyPrediction * monthlyData[monthKey].days;
+                
+                monthExpected.push(expectedForDays);
+            } else {
+                monthExpected.push(0);
+            }
+        });
+        
+        // Create chart
+        const ctx = document.getElementById('lifetimeActualVsExpectedChart').getContext('2d');
+        if (lifetimeActualVsExpectedChart) lifetimeActualVsExpectedChart.destroy();
+        
+        lifetimeActualVsExpectedChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        label: 'Expected Generation (kWh)',
+                        data: monthExpected,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 4,
+                        pointBackgroundColor: '#3b82f6',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Actual Generation (kWh)',
+                        data: monthActual,
+                        borderColor: '#4ade80',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#4ade80',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { 
+                        labels: { 
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleFont: { size: 18, weight: 'bold' },
+                        bodyFont: { size: 16 },
+                        padding: 20
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Generation (kWh)',
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading actual vs expected chart:', error);
+    }
+}
+
+async function loadLifetimePerformanceLineChart() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+        const response = await fetch(historyPath);
+        
+        if (!response.ok) {
+            console.error('Could not load historical data');
+            return;
+        }
+        
+        const historyData = await response.json();
+        
+        // Group daily records by month
+        const monthlyData = {};
+        historyData.daily_records.forEach(record => {
+            const monthKey = record.date.substring(0, 7); // "YYYY-MM"
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {
+                    generation: 0,
+                    expected: 0,
+                    days: 0
+                };
+            }
+            monthlyData[monthKey].generation += record.generation_kwh;
+            monthlyData[monthKey].days += 1;
+        });
+        
+        // Calculate performance for each month
+        const monthKeys = Object.keys(monthlyData).sort();
+        const monthLabels = [];
         const monthPerformance = [];
         
         monthKeys.forEach(monthKey => {
@@ -2374,47 +2543,31 @@ async function loadLifetimePerformanceChart() {
                 const avgDailyPrediction = dashboardData.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
                 const expectedForDays = avgDailyPrediction * monthlyData[monthKey].days;
                 
-                monthExpected.push(expectedForDays);
-                
                 const performance = expectedForDays > 0 ? (monthlyData[monthKey].generation / expectedForDays * 100) : 0;
                 monthPerformance.push(performance);
             } else {
-                monthExpected.push(0);
                 monthPerformance.push(0);
             }
         });
         
         // Create chart
-        const ctx = document.getElementById('lifetimePerformanceChart').getContext('2d');
-        if (lifetimePerformanceChart) lifetimePerformanceChart.destroy();
+        const ctx = document.getElementById('lifetimePerformanceLineChart').getContext('2d');
+        if (lifetimePerformanceLineChart) lifetimePerformanceLineChart.destroy();
         
-        lifetimePerformanceChart = new Chart(ctx, {
-            type: 'bar',
+        lifetimePerformanceLineChart = new Chart(ctx, {
+            type: 'line',
             data: {
                 labels: monthLabels,
                 datasets: [
                     {
-                        label: 'Expected Generation (kWh)',
-                        data: monthExpected,
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                        borderColor: '#3b82f6',
-                        borderWidth: 1,
-                        borderRadius: 5,
-                        yAxisID: 'y',
-                        order: 2
-                    },
-                    {
                         label: 'Performance (%)',
                         data: monthPerformance,
-                        type: 'line',
                         borderColor: '#FFD700',
                         backgroundColor: 'transparent',
                         borderWidth: 3,
                         pointRadius: 5,
                         pointBackgroundColor: '#FFD700',
-                        tension: 0.4,
-                        yAxisID: 'y1',
-                        order: 1
+                        tension: 0.4
                     }
                 ]
             },
@@ -2439,11 +2592,7 @@ async function loadLifetimePerformanceChart() {
                         padding: 20,
                         callbacks: {
                             label: function(context) {
-                                if (context.datasetIndex === 0) {
-                                    return 'Expected: ' + context.parsed.y.toFixed(0) + ' kWh';
-                                } else {
-                                    return 'Performance: ' + context.parsed.y.toFixed(1) + '%';
-                                }
+                                return 'Performance: ' + context.parsed.y.toFixed(1) + '%';
                             }
                         }
                     }
@@ -2461,48 +2610,28 @@ async function loadLifetimePerformanceChart() {
                         display: true,
                         position: 'left',
                         beginAtZero: true,
+                        max: 150,
                         title: { 
                             display: true, 
-                            text: 'Expected Generation (kWh)',
-                            color: '#ffffff',
-                            font: { size: 16, weight: 'bold' }
-                        },
-                        ticks: { 
-                            color: '#ffffff',
-                            font: { size: 14, weight: '500' }
-                        },
-                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        beginAtZero: true,
-                        max: 150,
-                        title: {
-                            display: true,
                             text: 'Performance (%)',
                             color: '#FFD700',
                             font: { size: 16, weight: 'bold' }
                         },
-                        ticks: {
+                        ticks: { 
                             color: '#ffffff',
                             font: { size: 14, weight: '500' },
                             callback: function(value) {
                                 return value + '%';
                             }
                         },
-                        grid: {
-                            drawOnChartArea: false,
-                            drawBorder: false
-                        }
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
                     }
                 }
             }
         });
         
     } catch (error) {
-        console.error('Error loading lifetime performance chart:', error);
+        console.error('Error loading performance line chart:', error);
     }
 }
 
@@ -2737,4 +2866,4 @@ async function loadPast30Days() {
         });
     </script>
 </body>
-    </html>
+</html>
