@@ -1614,11 +1614,28 @@ function updateDailyView(data, selectedDate) {
     const labels = data.map(d => d.time);
     const irradiationData = data.map(d => d.irradiation_wm2);
     
+    // Calculate average hourly predicted for the month
+    // Use the predicted_kw from data (which comes from PVSyst pattern for this date)
+    const avgPredictedData = data.map(d => d.predicted_kw);
+    
     dailyChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [
+                {
+                    label: 'Irradiation (W/m²)',
+                    data: irradiationData,
+                    type: 'line',
+                    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+                    borderColor: 'rgba(255, 215, 0, 0.3)',
+                    borderWidth: 1,
+                    fill: true,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y1',
+                    order: 3
+                },
                 {
                     label: 'PV Generation (kW)',
                     data: pvData,
@@ -1630,13 +1647,16 @@ function updateDailyView(data, selectedDate) {
                     order: 2
                 },
                 {
-                    label: 'Irradiation (W/m²)',
-                    data: irradiationData,
-                    type: 'bar',
-                    backgroundColor: 'rgba(255, 215, 0, 0.3)',
-                    borderColor: '#FFD700',
-                    borderWidth: 1,
-                    yAxisID: 'y1',
+                    label: 'Avg Predicted (kW)',
+                    data: avgPredictedData,
+                    type: 'line',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y',
                     order: 1
                 }
             ]
@@ -1676,7 +1696,7 @@ function updateDailyView(data, selectedDate) {
                             }
                             if (context.parsed.y !== null) {
                                 label += context.parsed.y.toFixed(1);
-                                if (context.datasetIndex === 1) {
+                                if (context.datasetIndex === 0) {
                                     label += ' W/m²';
                                 } else {
                                     label += ' kW';
@@ -2717,4 +2737,4 @@ async function loadPast30Days() {
         });
     </script>
 </body>
-</html>
+    </html>
