@@ -97,25 +97,41 @@ def calculate_system_degradation(config):
 def load_pvsyst_predictions():
     """Load daily hourly predictions from PVSyst data file (2025-2044 with Load, Grid, PV)"""
     try:
+        # Try new file first
         predictions_file = 'predictions_2025_2044.json'
         if os.path.exists(predictions_file):
             with open(predictions_file, 'r') as f:
                 data = json.load(f)
-            print(f"  ✓ Loaded predictions for {len(data['daily_predictions'])} days ({data['years'][0]}-{data['years'][-1]})")
+            print(f"  ✓ Loaded predictions for {len(data['daily_predictions'])} days ({data.get('years', ['?'])[0]}-{data.get('years', ['?'])[-1]})")
             return data['daily_predictions']
-        else:
-            # Fallback to old format
-            predictions_file = 'pvsyst_predictions_2025.json'
-            if os.path.exists(predictions_file):
-                with open(predictions_file, 'r') as f:
-                    data = json.load(f)
-                print(f"  ✓ Loaded PVSyst predictions for {len(data['daily_predictions'])} days (legacy format)")
-                return data['daily_predictions']
-            else:
-                print(f"  ⚠️ PVSyst predictions file not found, using config defaults")
-                return None
+        
+        # Fallback to old filename
+        predictions_file = 'pvsyst_predictions_2025.json'
+        if os.path.exists(predictions_file):
+            with open(predictions_file, 'r') as f:
+                data = json.load(f)
+            
+            daily_preds = data.get('daily_predictions', data)
+            
+            # Detect format by checking first entry
+            if daily_preds:
+                first_key = list(daily_preds.keys())[0]
+                first_value = daily_preds[first_key]
+                
+                if isinstance(first_value, dict) and 'pv_kw' in first_value:
+                    print(f"  ✓ Loaded predictions for {len(daily_preds)} days (new format with Load/Grid)")
+                else:
+                    print(f"  ✓ Loaded predictions for {len(daily_preds)} days (legacy format)")
+            
+            return daily_preds
+        
+        print(f"  ⚠️ PVSyst predictions file not found, using config defaults")
+        return None
+        
     except Exception as e:
         print(f"  ⚠️ Error loading PVSyst predictions: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def get_hourly_predictions_for_date(date_str, pvsyst_data, config, degradation_factor=None):
@@ -312,7 +328,14 @@ def process_solar_data():
             date_str = f"2025-{month_num:02d}-{day:02d}"
             if pvsyst_predictions and date_str in pvsyst_predictions:
                 # Sum raw PVSyst data WITHOUT degradation
-                month_expected_raw += sum(pvsyst_predictions[date_str])
+                data = pvsyst_predictions[date_str]
+                # Handle new format (dict with pv_kw) or old format (array)
+                if isinstance(data, dict) and 'pv_kw' in data:
+                    month_expected_raw += sum(data['pv_kw'])
+                elif isinstance(data, list):
+                    month_expected_raw += sum(data)
+                else:
+                    print(f"  ⚠️ Unexpected data format for {date_str}")
         
         month_key = f"{month_num:02d}"  # Just "01", "02", etc. - works for any year
         monthly_predictions_base[month_key] = {
