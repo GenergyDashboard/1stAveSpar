@@ -2524,25 +2524,66 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
     perf.textContent = `${performance.toFixed(1)}% of expected`;
     perf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
     
-    // Calculate Load, Grid, and PV Coverage
-    const loadData = data.map(d => d.predicted_load_kw || 0);
-    const gridData = data.map(d => d.predicted_grid_kw || 0);
+    // Calculate Load, Grid, and PV Coverage based on data mode
+    let totalLoad, totalGrid, loadData, gridData;
     
-    const totalLoad = loadData.reduce((sum, val) => sum + val, 0);
-    const totalGrid = gridData.reduce((sum, val) => sum + val, 0);
+    if (currentDataMode === 'actual') {
+        // ACTUAL MODE: Use real Load/Grid from XLS scraper data
+        // The hourly_data has load_kw and grid_kw from the scraper
+        loadData = data.map(d => d.load_kw || 0);
+        gridData = data.map(d => Math.abs(d.grid_kw || 0)); // Absolute value since grid can be negative
+        
+        // Use aggregated values from dailyRecord if available (more accurate)
+        if (dailyRecord && dailyRecord.actual_load_kwh) {
+            totalLoad = dailyRecord.actual_load_kwh;
+        } else {
+            // Fallback: sum from hourly data
+            totalLoad = loadData.reduce((sum, val) => sum + val, 0);
+        }
+        
+        if (dailyRecord && dailyRecord.actual_grid_kwh) {
+            totalGrid = dailyRecord.actual_grid_kwh;
+        } else {
+            // Fallback: sum from hourly data
+            totalGrid = gridData.reduce((sum, val) => sum + val, 0);
+        }
+        
+        console.log(`ACTUAL Load: ${totalLoad.toFixed(2)} kWh, Grid: ${totalGrid.toFixed(2)} kWh`);
+    } else {
+        // EXPECTED MODE: Calculate from predictions
+        // For expected, we estimate based on typical consumption patterns
+        // Typical pattern: Load is ~1.5x generation during solar hours
+        // This is because PV doesn't cover 100% of load
+        
+        const typicalLoadRatio = 1.5; // Load is typically 1.5x generation during day
+        const expectedLoad = totalGeneration * typicalLoadRatio;
+        const expectedGrid = expectedLoad - totalGeneration; // Grid makes up the difference
+        
+        // Create hourly arrays for chart
+        loadData = pvData.map(gen => gen * typicalLoadRatio);
+        gridData = pvData.map(gen => gen * (typicalLoadRatio - 1));
+        
+        totalLoad = expectedLoad;
+        totalGrid = expectedGrid;
+        
+        console.log(`EXPECTED Load: ${totalLoad.toFixed(2)} kWh, Grid: ${totalGrid.toFixed(2)} kWh`);
+    }
+    
+    // Calculate coverage metrics
     const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
     const gridCoverage = totalLoad > 0 ? ((totalGrid / totalLoad) * 100) : 0;
     
-    // Calculate averages for display on chart (to match scale of generation)
-    const avgLoad = totalLoad / 24;
-    const avgGrid = totalGrid / 24;
+    // Calculate averages for chart display (to match scale of generation)
+    const avgLoad = totalLoad / data.length;
+    const avgGrid = totalGrid / data.length;
     
+    // Update display
     document.getElementById('daily-load').textContent = formatNumber(totalLoad);
     document.getElementById('daily-load-expected').textContent = formatNumber(totalLoad);
     document.getElementById('daily-grid').textContent = formatNumber(totalGrid);
     document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
     
-    // Update Grid Coverage card (it's the same element as Grid Usage)
+    // Update Grid Coverage card
     const gridCoverageEl = document.getElementById('daily-grid');
     const gridCoveragePctEl = document.getElementById('grid-coverage-pct');
     if (gridCoveragePctEl) {
