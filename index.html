@@ -1118,7 +1118,7 @@
     <div class="value" id="daily-avg">--</div>
 </div>
                     <div class="stat-card">
-                        <div class="label">Load</div>
+                        <div class="label">Expected Load</div>
                         <div class="value" id="daily-load">--</div>
                         <div class="subvalue">Expected: <span id="daily-load-expected">--</span> kWh</div>
                     </div>
@@ -1126,10 +1126,9 @@
                         <div class="label">PV Coverage</div>
                         <div class="value" id="pv-coverage">--</div>
                         <div class="subvalue">% of Load covered by PV</div>
-                        <div class="performance" id="coverage-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Grid Coverage</div>
+                        <div class="label">Expected Grid Coverage</div>
                         <div class="value" id="daily-grid">--</div>
                         <div class="subvalue"><span id="grid-coverage-pct">--</span> of Load</div>
                     </div>
@@ -1179,7 +1178,7 @@
                         <div class="subvalue">Days with data: <span id="monthly-days-count">--</span></div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Total Load</div>
+                        <div class="label">Expected Total Load</div>
                         <div class="value" id="monthly-load">--</div>
                         <div class="subvalue">Expected: <span id="monthly-load-expected">--</span> kWh</div>
                     </div>
@@ -1187,10 +1186,9 @@
                         <div class="label">PV Coverage</div>
                         <div class="value" id="monthly-coverage">--</div>
                         <div class="subvalue">% of Load covered by PV</div>
-                        <div class="performance" id="monthly-coverage-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Grid Coverage</div>
+                        <div class="label">Expected Grid Coverage</div>
                         <div class="value" id="monthly-grid">--</div>
                         <div class="subvalue"><span id="monthly-grid-pct">--</span> of Load</div>
                     </div>
@@ -1221,7 +1219,7 @@
     <div class="subvalue"><span id="lifetime-perf-diff">--</span> kWh <span id="lifetime-perf-status">--</span></div>
 </div>
                     <div class="stat-card">
-                        <div class="label">Total Load</div>
+                        <div class="label">Expected Total Load</div>
                         <div class="value" id="lifetime-load">--</div>
                         <div class="subvalue">Total power consumption</div>
                     </div>
@@ -1231,7 +1229,7 @@
                         <div class="subvalue">% of Load covered by PV</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Grid Coverage</div>
+                        <div class="label">Expected Grid Coverage</div>
                         <div class="value" id="lifetime-grid">--</div>
                         <div class="subvalue"><span id="lifetime-grid-pct">--</span> of Load</div>
                     </div>
@@ -1689,18 +1687,6 @@ function updateDailyView(data, selectedDate) {
         gridCoveragePctEl.textContent = gridCoverage.toFixed(1) + '%';
     }
     
-    const coveragePerf = document.getElementById('coverage-perf');
-    if (pvCoverage >= 30) {
-        coveragePerf.textContent = 'Excellent solar coverage';
-        coveragePerf.className = 'performance positive';
-    } else if (pvCoverage >= 15) {
-        coveragePerf.textContent = 'Good solar coverage';
-        coveragePerf.className = 'performance positive';
-    } else {
-        coveragePerf.textContent = 'Low solar coverage';
-        coveragePerf.className = 'performance negative';
-    }
-    
     const ctx = document.getElementById('dailyChart').getContext('2d');
     if (dailyChart) dailyChart.destroy();
     
@@ -2060,18 +2046,6 @@ async function loadMonthlyData() {
         document.getElementById('monthly-grid').textContent = formatNumber(monthlyGrid);
         document.getElementById('monthly-grid-pct').textContent = gridCoverage.toFixed(1) + '%';
         document.getElementById('monthly-coverage').textContent = pvCoverage.toFixed(1) + '%';
-        
-        const coveragePerfEl = document.getElementById('monthly-coverage-perf');
-        if (pvCoverage >= 30) {
-            coveragePerfEl.textContent = 'Excellent coverage';
-            coveragePerfEl.className = 'performance positive';
-        } else if (pvCoverage >= 15) {
-            coveragePerfEl.textContent = 'Good coverage';
-            coveragePerfEl.className = 'performance positive';
-        } else {
-            coveragePerfEl.textContent = 'Low coverage';
-            coveragePerfEl.className = 'performance negative';
-        }
         
         updateMonthlyChart(monthRecords, selectedMonthYear);
         
