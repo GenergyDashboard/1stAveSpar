@@ -712,6 +712,244 @@
         }
         
         /* ============================================
+           PHASE 2: TOU & FINANCIAL COMPONENTS
+           ============================================ */
+
+        /* Toggle Button for Expected vs Actual */
+        .data-mode-toggle {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-mode-toggle .toggle-label {
+            color: #aaa;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        .toggle-btn {
+            padding: 12px 28px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toggle-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(74, 222, 128, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .toggle-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .toggle-btn.active {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            border-color: #4ade80;
+            color: #000000;
+            font-weight: 700;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+        }
+
+        .toggle-btn.active::before {
+            display: none;
+        }
+
+        /* TOU Breakdown Card */
+        .tou-breakdown-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tou-breakdown-card .label {
+            font-size: 1.3em;
+            color: #aaaaaa;
+            margin-bottom: 20px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .tou-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .tou-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .tou-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(5px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .tou-label {
+            font-weight: 700;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tou-label.peak {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+        }
+
+        .tou-label.standard {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);
+        }
+
+        .tou-label.off-peak {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+        }
+
+        .tou-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Financial Savings Card */
+        .financial-card {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .financial-card .label {
+            color: #ffd700;
+        }
+
+        .financial-value {
+            font-size: 3em;
+            color: #ffd700;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .financial-value .currency {
+            font-size: 0.6em;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .savings-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .savings-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .savings-item:hover {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: rgba(255, 215, 0, 0.4);
+            transform: translateY(-3px);
+        }
+
+        .savings-period {
+            font-size: 0.9em;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .savings-period.peak {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .savings-period.standard {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .savings-period.off-peak {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .savings-amount {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #ffd700;
+        }
+
+        /* Financial Overview Tab Specific */
+        .financial-hero {
+            font-size: 4em;
+            color: #ffd700;
+            font-weight: 900;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+            line-height: 1;
+        }
+
+        .stat-card.large {
+            grid-column: span 2;
+        }
+
+        /* ============================================
            RESPONSIVE DESIGN - Mobile, Tablet, Desktop
            ============================================ */
         
@@ -738,6 +976,11 @@
             /* Public stats - 2 columns on tablet */
             .public-stats-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            
+            /* Phase 2: Savings breakdown single column */
+            .savings-breakdown {
+                grid-template-columns: 1fr;
             }
         }
         
@@ -874,6 +1117,31 @@
             .tab {
                 padding: 10px 16px;
                 font-size: 0.9em;
+            }
+            
+            /* Phase 2: Data mode toggle responsive */
+            .data-mode-toggle {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .toggle-btn {
+                width: 100%;
+                padding: 15px 20px;
+            }
+            
+            /* Phase 2: Savings breakdown single column */
+            .savings-breakdown {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Phase 2: Financial values smaller on mobile */
+            .financial-value {
+                font-size: 2.5em;
+            }
+            
+            .financial-hero {
+                font-size: 2.5em;
             }
             
             /* Date selector */
@@ -1094,6 +1362,7 @@
                 <button class="tab active" onclick="switchClientTab('daily')">Daily Generation</button>
                 <button class="tab" onclick="switchClientTab('monthly')">Monthly Overview</button>
                 <button class="tab" onclick="switchClientTab('lifetime')">Lifetime Stats</button>
+                <button class="tab" onclick="switchClientTab('financial')">💰 Financial Overview</button>
             </div>
             
             <div id="daily-tab" class="tab-content active">
@@ -1102,6 +1371,18 @@
                     <input type="date" id="dateSelector" onchange="loadDailyData()">
                     <button class="btn btn-secondary" onclick="loadToday()">Today</button>
                 </div>
+                
+                <!-- Data Mode Toggle -->
+                <div class="data-mode-toggle">
+                    <span class="toggle-label">📊 Data View:</span>
+                    <button class="toggle-btn active" data-mode="expected" onclick="toggleDataMode('expected')">
+                        Expected Data
+                    </button>
+                    <button class="toggle-btn" data-mode="actual" onclick="toggleDataMode('actual')">
+                        Actual Data
+                    </button>
+                </div>
+                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="label">Generation</div>
@@ -1133,6 +1414,51 @@
                         <div class="subvalue"><span id="grid-coverage-pct">--</span> of Load</div>
                     </div>
                 </div>
+                
+                <!-- TOU Breakdown & Savings Cards -->
+                <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 30px;">
+                    <!-- TOU Breakdown Card -->
+                    <div class="tou-breakdown-card">
+                        <div class="label">⚡ Time of Use Breakdown</div>
+                        <div class="tou-breakdown">
+                            <div class="tou-item">
+                                <span class="tou-label peak">Peak</span>
+                                <span class="tou-value" id="daily-tou-peak">--</span>
+                            </div>
+                            <div class="tou-item">
+                                <span class="tou-label standard">Standard</span>
+                                <span class="tou-value" id="daily-tou-standard">--</span>
+                            </div>
+                            <div class="tou-item">
+                                <span class="tou-label off-peak">Off-Peak</span>
+                                <span class="tou-value" id="daily-tou-off-peak">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Today's Savings Card -->
+                    <div class="stat-card financial-card">
+                        <div class="label">💰 Today's Savings</div>
+                        <div class="value financial-value">
+                            <span class="currency">R</span> <span id="daily-total-savings">--</span>
+                        </div>
+                        <div class="savings-breakdown">
+                            <div class="savings-item">
+                                <span class="savings-period peak">Peak</span>
+                                <span class="savings-amount">R<span id="daily-savings-peak">--</span></span>
+                            </div>
+                            <div class="savings-item">
+                                <span class="savings-period standard">Standard</span>
+                                <span class="savings-amount">R<span id="daily-savings-standard">--</span></span>
+                            </div>
+                            <div class="savings-item">
+                                <span class="savings-period off-peak">Off-Peak</span>
+                                <span class="savings-amount">R<span id="daily-savings-off-peak">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="chart-container">
                     <h3 class="chart-title">Hourly Generation Pattern</h3>
                     <canvas id="dailyChart"></canvas>
@@ -1162,6 +1488,18 @@
                     <button class="btn btn-secondary" onclick="loadCurrentMonth()">This Month</button>
                     <button class="btn btn-secondary" onclick="loadPast30Days()">Past 30 Days</button>
                 </div>
+                
+                <!-- Data Mode Toggle -->
+                <div class="data-mode-toggle">
+                    <span class="toggle-label">📊 Data View:</span>
+                    <button class="toggle-btn active" data-mode="expected" onclick="toggleDataMode('expected')">
+                        Expected Data
+                    </button>
+                    <button class="toggle-btn" data-mode="actual" onclick="toggleDataMode('actual')">
+                        Actual Data
+                    </button>
+                </div>
+                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="label">Monthly Generation</div>
@@ -1193,6 +1531,51 @@
                         <div class="subvalue"><span id="monthly-grid-pct">--</span> of Load</div>
                     </div>
                 </div>
+                
+                <!-- TOU Breakdown & Savings Cards -->
+                <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 30px;">
+                    <!-- TOU Breakdown Card -->
+                    <div class="tou-breakdown-card">
+                        <div class="label">⚡ Time of Use Breakdown</div>
+                        <div class="tou-breakdown">
+                            <div class="tou-item">
+                                <span class="tou-label peak">Peak</span>
+                                <span class="tou-value" id="monthly-tou-peak">--</span>
+                            </div>
+                            <div class="tou-item">
+                                <span class="tou-label standard">Standard</span>
+                                <span class="tou-value" id="monthly-tou-standard">--</span>
+                            </div>
+                            <div class="tou-item">
+                                <span class="tou-label off-peak">Off-Peak</span>
+                                <span class="tou-value" id="monthly-tou-off-peak">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Savings Card -->
+                    <div class="stat-card financial-card">
+                        <div class="label">💰 This Month's Savings</div>
+                        <div class="value financial-value">
+                            <span class="currency">R</span> <span id="monthly-total-savings">--</span>
+                        </div>
+                        <div class="savings-breakdown">
+                            <div class="savings-item">
+                                <span class="savings-period peak">Peak</span>
+                                <span class="savings-amount">R<span id="monthly-savings-peak">--</span></span>
+                            </div>
+                            <div class="savings-item">
+                                <span class="savings-period standard">Standard</span>
+                                <span class="savings-amount">R<span id="monthly-savings-standard">--</span></span>
+                            </div>
+                            <div class="savings-item">
+                                <span class="savings-period off-peak">Off-Peak</span>
+                                <span class="savings-amount">R<span id="monthly-savings-off-peak">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="chart-container">
                     <h3 class="chart-title">Daily Generation for Selected Month</h3>
                     <canvas id="monthlyChart"></canvas>
@@ -1200,6 +1583,17 @@
             </div>
             
             <div id="lifetime-tab" class="tab-content">
+                <!-- Data Mode Toggle -->
+                <div class="data-mode-toggle">
+                    <span class="toggle-label">📊 Data View:</span>
+                    <button class="toggle-btn active" data-mode="expected" onclick="toggleDataMode('expected')">
+                        Expected Data
+                    </button>
+                    <button class="toggle-btn" data-mode="actual" onclick="toggleDataMode('actual')">
+                        Actual Data
+                    </button>
+                </div>
+                
                 <div class="stats-grid">
                     <div class="stat-card">
     <div class="label">Total Generation</div>
@@ -1234,6 +1628,51 @@
                         <div class="subvalue"><span id="lifetime-grid-pct">--</span> of Load</div>
                     </div>
                 </div>
+                
+                <!-- TOU Breakdown & Savings Cards -->
+                <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 30px;">
+                    <!-- TOU Breakdown Card -->
+                    <div class="tou-breakdown-card">
+                        <div class="label">⚡ Lifetime TOU Breakdown</div>
+                        <div class="tou-breakdown">
+                            <div class="tou-item">
+                                <span class="tou-label peak">Peak</span>
+                                <span class="tou-value" id="lifetime-tou-peak">--</span>
+                            </div>
+                            <div class="tou-item">
+                                <span class="tou-label standard">Standard</span>
+                                <span class="tou-value" id="lifetime-tou-standard">--</span>
+                            </div>
+                            <div class="tou-item">
+                                <span class="tou-label off-peak">Off-Peak</span>
+                                <span class="tou-value" id="lifetime-tou-off-peak">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lifetime Savings Card -->
+                    <div class="stat-card financial-card">
+                        <div class="label">💰 Lifetime Savings</div>
+                        <div class="value financial-value">
+                            <span class="currency">R</span> <span id="lifetime-total-savings">--</span>
+                        </div>
+                        <div class="savings-breakdown">
+                            <div class="savings-item">
+                                <span class="savings-period peak">Peak</span>
+                                <span class="savings-amount">R<span id="lifetime-savings-peak">--</span></span>
+                            </div>
+                            <div class="savings-item">
+                                <span class="savings-period standard">Standard</span>
+                                <span class="savings-amount">R<span id="lifetime-savings-standard">--</span></span>
+                            </div>
+                            <div class="savings-item">
+                                <span class="savings-period off-peak">Off-Peak</span>
+                                <span class="savings-amount">R<span id="lifetime-savings-off-peak">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="chart-container">
                     <h3 class="chart-title">Environmental Impact</h3>
                     <div class="env-grid" id="client-env-lifetime"></div>
@@ -1261,6 +1700,92 @@
                             <canvas id="lifetimePerformanceLineChart"></canvas>
                         </div>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Financial Overview Tab -->
+            <div id="financial-tab" class="tab-content">
+                <!-- Data Mode Toggle -->
+                <div class="data-mode-toggle">
+                    <span class="toggle-label">📊 Data View:</span>
+                    <button class="toggle-btn active" data-mode="expected" onclick="toggleDataMode('expected')">
+                        Expected Data
+                    </button>
+                    <button class="toggle-btn" data-mode="actual" onclick="toggleDataMode('actual')">
+                        Actual Data
+                    </button>
+                </div>
+                
+                <!-- Hero Stats Grid -->
+                <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 30px;">
+                    <!-- Total Lifetime Savings Hero Card -->
+                    <div class="stat-card large financial-card" style="grid-column: span 2;">
+                        <div class="label">💰 Total Lifetime Savings</div>
+                        <div class="value financial-hero">
+                            <span style="font-size: 0.5em; font-weight: 500;">R</span>
+                            <span id="financial-lifetime-savings">--</span>
+                        </div>
+                        <div class="subvalue" style="font-size: 1.2em; margin-top: 10px;">
+                            Since system commissioning
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOU Breakdown Stats -->
+                <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <div class="label">🔴 Peak Savings</div>
+                        <div class="value" style="color: #ef4444;">
+                            R <span id="financial-peak-savings">--</span>
+                        </div>
+                        <div class="subvalue">
+                            <span id="financial-peak-pct">--</span>% of total
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="label">🟠 Standard Savings</div>
+                        <div class="value" style="color: #f59e0b;">
+                            R <span id="financial-standard-savings">--</span>
+                        </div>
+                        <div class="subvalue">
+                            <span id="financial-standard-pct">--</span>% of total
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="label">🟢 Off-Peak Savings</div>
+                        <div class="value" style="color: #10b981;">
+                            R <span id="financial-off-peak-savings">--</span>
+                        </div>
+                        <div class="subvalue">
+                            <span id="financial-off-peak-pct">--</span>% of total
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Monthly Savings by TOU Period</h3>
+                    <div class="scrollable-chart">
+                        <div style="min-width: 1200px;">
+                            <canvas id="financialMonthlyTouChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 class="chart-title">Cumulative Savings Over Time</h3>
+                    <div class="scrollable-chart">
+                        <div style="min-width: 1200px;">
+                            <canvas id="financialCumulativeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 class="chart-title">TOU Generation Distribution</h3>
+                    <canvas id="financialTouPieChart" style="max-width: 600px; margin: 0 auto;"></canvas>
                 </div>
             </div>
         </div>
@@ -1293,9 +1818,11 @@
 
     <script>
         let dailyChart, monthlyChart, lifetimeMonthlyChart, lifetimeActualVsExpectedChart, lifetimePerformanceLineChart;
+        let financialMonthlyTouChart, financialCumulativeChart, financialTouPieChart;
         let dashboardData = null;
         let isLoggedIn = false;
         let clientCredentials = null;
+        let currentDataMode = 'expected'; // 'expected' or 'actual'
         
         // Check for persisted login state on page load
         function checkPersistedAuth() {
@@ -1455,12 +1982,350 @@
                 } else {
                     loadCurrentMonth();
                 }
+            } else if (tab === 'financial') {
+                loadFinancialOverview();
             }
         }
         
         function formatNumber(num, decimals = 0) {
             return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
         }
+        
+        // ============================================
+        // PHASE 2: DATA MODE TOGGLE & TOU/FINANCIAL
+        // ============================================
+        
+        function toggleDataMode(mode) {
+            currentDataMode = mode;
+            
+            // Update toggle button states
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Reload current tab data with new mode
+            const activeTab = document.querySelector('#clientView .tab.active');
+            if (!activeTab) return;
+            
+            const tabText = activeTab.textContent.toLowerCase();
+            if (tabText.includes('daily')) {
+                loadDailyData();
+            } else if (tabText.includes('monthly')) {
+                loadMonthlyData();
+            } else if (tabText.includes('lifetime')) {
+                loadLifetimeData();
+            }
+        }
+        
+        function updateTouBreakdown(prefix, data) {
+            if (!data || !data.tou_breakdown) {
+                document.getElementById(`${prefix}-tou-peak`).textContent = '-- kWh';
+                document.getElementById(`${prefix}-tou-standard`).textContent = '-- kWh';
+                document.getElementById(`${prefix}-tou-off-peak`).textContent = '-- kWh';
+                return;
+            }
+            
+            const tou = data.tou_breakdown;
+            document.getElementById(`${prefix}-tou-peak`).textContent = formatNumber(tou.peak_kwh, 1) + ' kWh';
+            document.getElementById(`${prefix}-tou-standard`).textContent = formatNumber(tou.standard_kwh, 1) + ' kWh';
+            document.getElementById(`${prefix}-tou-off-peak`).textContent = formatNumber(tou.off_peak_kwh, 1) + ' kWh';
+        }
+        
+        function updateFinancialSavings(prefix, data) {
+            if (!data || !data.financial) {
+                document.getElementById(`${prefix}-total-savings`).textContent = '--';
+                document.getElementById(`${prefix}-savings-peak`).textContent = '--';
+                document.getElementById(`${prefix}-savings-standard`).textContent = '--';
+                document.getElementById(`${prefix}-savings-off-peak`).textContent = '--';
+                return;
+            }
+            
+            const financial = data.financial;
+            document.getElementById(`${prefix}-total-savings`).textContent = formatNumber(financial.total_savings_zar, 2);
+            document.getElementById(`${prefix}-savings-peak`).textContent = formatNumber(financial.peak_savings_zar, 2);
+            document.getElementById(`${prefix}-savings-standard`).textContent = formatNumber(financial.standard_savings_zar, 2);
+            document.getElementById(`${prefix}-savings-off-peak`).textContent = formatNumber(financial.off_peak_savings_zar, 2);
+        }
+        
+        function loadFinancialOverview() {
+            if (!dashboardData || !dashboardData.lifetime_summary) {
+                console.log('No financial data available');
+                return;
+            }
+            
+            const lifetime = dashboardData.lifetime_summary;
+            const financial = lifetime.financial;
+            
+            if (!financial) {
+                console.log('No financial data in lifetime summary');
+                return;
+            }
+            
+            // Update hero card
+            document.getElementById('financial-lifetime-savings').textContent = formatNumber(financial.total_savings_zar, 2);
+            
+            // Update TOU breakdown stats
+            const total = financial.total_savings_zar;
+            document.getElementById('financial-peak-savings').textContent = formatNumber(financial.peak_savings_zar, 2);
+            document.getElementById('financial-peak-pct').textContent = formatNumber((financial.peak_savings_zar / total) * 100, 1);
+            
+            document.getElementById('financial-standard-savings').textContent = formatNumber(financial.standard_savings_zar, 2);
+            document.getElementById('financial-standard-pct').textContent = formatNumber((financial.standard_savings_zar / total) * 100, 1);
+            
+            document.getElementById('financial-off-peak-savings').textContent = formatNumber(financial.off_peak_savings_zar, 2);
+            document.getElementById('financial-off-peak-pct').textContent = formatNumber((financial.off_peak_savings_zar / total) * 100, 1);
+            
+            // Load charts
+            loadFinancialMonthlyTouChart();
+            loadFinancialCumulativeChart();
+            loadFinancialTouPieChart();
+        }
+        
+        function loadFinancialMonthlyTouChart() {
+            if (!dashboardData || !dashboardData.monthly_summaries) return;
+            
+            const ctx = document.getElementById('financialMonthlyTouChart').getContext('2d');
+            const monthlySummaries = dashboardData.monthly_summaries;
+            
+            // Sort months
+            const sortedMonths = Object.keys(monthlySummaries).sort();
+            
+            const labels = sortedMonths.map(month => {
+                const [year, mon] = month.split('-');
+                const date = new Date(year, parseInt(mon) - 1);
+                return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            });
+            
+            const peakData = sortedMonths.map(m => monthlySummaries[m].financial?.peak_savings_zar || 0);
+            const standardData = sortedMonths.map(m => monthlySummaries[m].financial?.standard_savings_zar || 0);
+            const offPeakData = sortedMonths.map(m => monthlySummaries[m].financial?.off_peak_savings_zar || 0);
+            
+            if (financialMonthlyTouChart) {
+                financialMonthlyTouChart.destroy();
+            }
+            
+            financialMonthlyTouChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Peak Savings',
+                            data: peakData,
+                            backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Standard Savings',
+                            data: standardData,
+                            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Off-Peak Savings',
+                            data: offPeakData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#ffffff', font: { size: 14 } }
+                        },
+                        y: {
+                            stacked: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: {
+                                color: '#ffffff',
+                                font: { size: 14 },
+                                callback: function(value) {
+                                    return 'R ' + formatNumber(value);
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Savings (ZAR)',
+                                color: '#ffffff',
+                                font: { size: 16 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { color: '#ffffff', font: { size: 14 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': R ' + formatNumber(context.parsed.y, 2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function loadFinancialCumulativeChart() {
+            if (!dashboardData || !dashboardData.monthly_summaries) return;
+            
+            const ctx = document.getElementById('financialCumulativeChart').getContext('2d');
+            const monthlySummaries = dashboardData.monthly_summaries;
+            
+            // Sort months
+            const sortedMonths = Object.keys(monthlySummaries).sort();
+            
+            const labels = sortedMonths.map(month => {
+                const [year, mon] = month.split('-');
+                const date = new Date(year, parseInt(mon) - 1);
+                return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            });
+            
+            // Calculate cumulative savings
+            let cumulative = 0;
+            const cumulativeData = sortedMonths.map(m => {
+                cumulative += monthlySummaries[m].financial?.total_savings_zar || 0;
+                return cumulative;
+            });
+            
+            if (financialCumulativeChart) {
+                financialCumulativeChart.destroy();
+            }
+            
+            financialCumulativeChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cumulative Savings',
+                        data: cumulativeData,
+                        borderColor: 'rgba(255, 215, 0, 1)',
+                        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#ffffff', font: { size: 14 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: {
+                                color: '#ffffff',
+                                font: { size: 14 },
+                                callback: function(value) {
+                                    return 'R ' + formatNumber(value);
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Cumulative Savings (ZAR)',
+                                color: '#ffffff',
+                                font: { size: 16 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Total Savings: R ' + formatNumber(context.parsed.y, 2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function loadFinancialTouPieChart() {
+            if (!dashboardData || !dashboardData.lifetime_summary) return;
+            
+            const ctx = document.getElementById('financialTouPieChart').getContext('2d');
+            const lifetime = dashboardData.lifetime_summary;
+            const tou = lifetime.tou_breakdown;
+            
+            if (!tou) return;
+            
+            if (financialTouPieChart) {
+                financialTouPieChart.destroy();
+            }
+            
+            financialTouPieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Peak', 'Standard', 'Off-Peak'],
+                    datasets: [{
+                        data: [
+                            tou.peak_kwh || 0,
+                            tou.standard_kwh || 0,
+                            tou.off_peak_kwh || 0
+                        ],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(16, 185, 129, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(16, 185, 129, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#ffffff',
+                                font: { size: 16 },
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return label + ': ' + formatNumber(value, 1) + ' kWh (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // End Phase 2 Functions
         
         function createEnvCards(data, containerId) {
             const container = document.getElementById(containerId);
@@ -1870,6 +2735,15 @@ function updateDailyView(data, selectedDate) {
             }
         }
     });
+    
+    // Phase 2: Update TOU and Financial data
+    if (dashboardData && dashboardData.daily_records) {
+        const dailyRecord = dashboardData.daily_records.find(r => r.date === selectedDate);
+        if (dailyRecord) {
+            updateTouBreakdown('daily', dailyRecord);
+            updateFinancialSavings('daily', dailyRecord);
+        }
+    }
 }
 
         function loadCurrentMonth() {
@@ -2297,6 +3171,18 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
             }
         }
     });
+    
+    // Phase 2: Update TOU and Financial data
+    if (dashboardData && dashboardData.monthly_summaries) {
+        const selectedYear = document.getElementById('yearSelector').value;
+        const selectedMonth = document.getElementById('monthSelector').value;
+        const monthKey = `${selectedYear}-${selectedMonth}`;
+        const monthlyData = dashboardData.monthly_summaries[monthKey];
+        if (monthlyData) {
+            updateTouBreakdown('monthly', monthlyData);
+            updateFinancialSavings('monthly', monthlyData);
+        }
+    }
 }
 
 async function loadLifetimeMonthlyBreakdown() {
@@ -3113,6 +3999,12 @@ async function loadPast30Days() {
                 setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active || 0, 0));
                 
                 createEnvCards(dashboardData.lifetime.env_impact, 'client-env-lifetime');
+                
+                // Phase 2: Update TOU and Financial data for Lifetime tab
+                if (dashboardData.lifetime_summary) {
+                    updateTouBreakdown('lifetime', dashboardData.lifetime_summary);
+                    updateFinancialSavings('lifetime', dashboardData.lifetime_summary);
+                }
                 
                 document.getElementById('loading').style.display = 'none';
                 
