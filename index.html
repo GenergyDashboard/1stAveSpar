@@ -2167,10 +2167,11 @@ function updateMonthlyChart(records, selectedMonthYear) {
 }
 
 function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, loadData, gridData) {
-    // Scale irradiation to be closer to generation levels
+    // Scale irradiation to match PV generation scale for visual comparison
     const maxGen = Math.max(...records.map(d => d.generation_kwh));
     const maxIrr = Math.max(...irradiationData);
-    const irrScaleFactor = maxGen > 0 && maxIrr > 0 ? (maxGen * 0.15) / maxIrr : 0.1;
+    // Scale irradiation to roughly match max PV so shapes can be compared
+    const irrScaleFactor = maxGen > 0 && maxIrr > 0 ? (maxGen * 1.2) / maxIrr : 0.1;
     const scaledIrradiation = irradiationData.map(val => val * irrScaleFactor);
     
     monthlyChart = new Chart(ctx, {
@@ -2185,8 +2186,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     label: 'Irradiation (scaled)',
                     data: scaledIrradiation,
                     type: 'line',
-                    borderColor: 'rgba(255, 215, 0, 0.3)',
-                    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                    borderColor: 'rgba(255, 215, 0, 0.4)',
+                    backgroundColor: 'rgba(255, 215, 0, 0.08)',
                     borderWidth: 1,
                     fill: true,
                     pointRadius: 0,
@@ -2224,7 +2225,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     borderWidth: 2,
                     pointRadius: 0,
                     tension: 0,
-                    yAxisID: 'y',
+                    yAxisID: 'y1',
                     order: 0
                 },
                 {
@@ -2237,7 +2238,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     borderDash: [3, 3],
                     pointRadius: 0,
                     tension: 0,
-                    yAxisID: 'y',
+                    yAxisID: 'y1',
                     order: 0
                 }
             ]
@@ -2290,8 +2291,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     beginAtZero: true,
                     title: { 
                         display: true, 
-                        text: 'Energy (kWh)',
-                        color: '#ffffff',
+                        text: 'PV Generation (kWh)',
+                        color: '#4ade80',
                         font: { size: 16, weight: 'bold' }
                     },
                     ticks: { 
@@ -2299,6 +2300,25 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                         font: { size: 14, weight: '500' }
                     },
                     grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: { 
+                        display: true, 
+                        text: 'Load / Grid (kWh)',
+                        color: '#ef4444',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: { 
+                        drawOnChartArea: false  // Don't draw gridlines for secondary axis
+                    }
                 }
             }
         }
