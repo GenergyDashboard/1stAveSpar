@@ -294,5 +294,67 @@
       "irradiation_wh_m2": 7334.0,
       "updated_at": "2026-01-14T13:17:58.358192+02:00"
     }
+  ],
+  "daily_records": [],
+  "monthly_summaries": {},
+  "lifetime_summary": {
+    "total_generation_kwh": 0,
+    "actual_load_kwh": 0,
+    "actual_grid_kwh": 0,
+    "days_active": 0,
+    "tou_breakdown": {
+      "peak_kwh": 0,
+      "standard_kwh": 0,
+      "off_peak_kwh": 0
+    },
+    "financial": {
+      "total_savings_zar": 0,
+      "peak_savings_zar": 0,
+      "standard_savings_zar": 0,
+      "off_peak_savings_zar": 0,
+      "by_year": {},
+      "by_month": {}
+    }
+  },
+  "tou_rates": [
+    {
+      "effective_date": "2023-07-01",
+      "high_season": {
+        "peak": 9.69,
+        "standard": 2.79,
+        "off_peak": 2.02
+      },
+      "low_season": {
+        "peak": 4.21,
+        "standard": 2.64,
+        "off_peak": 2.0
+      }
+    },
+    {
+      "effective_date": "2024-07-01",
+      "high_season": {
+        "peak": 9.69,
+        "standard": 2.79,
+        "off_peak": 2.02
+      },
+      "low_season": {
+        "peak": 4.21,
+        "standard": 2.64,
+        "off_peak": 2.0
+      }
+    },
+    {
+      "effective_date": "2025-07-01",
+      "high_season": {
+        "peak": 17.15,
+        "standard": 4.94,
+        "off_peak": 3.57
+      },
+      "low_season": {
+        "peak": 7.46,
+        "standard": 4.67,
+        "off_peak": 3.55
+      }
+    }
   ]
 }
