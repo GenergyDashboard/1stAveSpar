@@ -177,27 +177,59 @@ def migrate_data(dashboard_json_path, xls_directory='data/daily'):
     
     print(f"\nFound {len(xls_files)} XLS files in {xls_directory}/")
     
+    # Get today's date for smart updating
+    from datetime import date
+    today = date.today().strftime('%Y-%m-%d')
+    
+    # Build a map of existing daily records for efficient updates
+    existing_records = {rec['date']: rec for rec in dashboard_data.get('daily_records', [])}
+    
     # Parse each XLS file
-    daily_records = []
+    daily_records_map = existing_records.copy()  # Start with existing records
     success_count = 0
     error_count = 0
+    updated_count = 0
     
     for xls_file in xls_files:
         print(f"\nProcessing: {xls_file.name}")
         record = parse_xls_file(str(xls_file))
         
         if record:
-            daily_records.append(record)
+            record_date = record['date']
+            
+            # Check if this record already exists and if it's changed
+            if record_date in daily_records_map:
+                old_gen = daily_records_map[record_date].get('generation_kwh', 0)
+                new_gen = record['generation_kwh']
+                
+                # Always update today's record, and update others if generation changed significantly
+                if record_date == today or abs(old_gen - new_gen) > 1.0:
+                    daily_records_map[record_date] = record
+                    updated_count += 1
+                    if record_date == today:
+                        print(f"  🔄 UPDATED (today): {record_date}: {new_gen} kWh, {len(record['hourly_data'])} hours")
+                    else:
+                        print(f"  🔄 Updated: {record_date}: {old_gen:.1f} → {new_gen} kWh")
+                else:
+                    print(f"  ✓ Unchanged: {record_date}: {old_gen:.1f} kWh")
+            else:
+                # New record
+                daily_records_map[record_date] = record
+                print(f"  ✓ NEW: {record_date}: {record['generation_kwh']} kWh, {len(record['hourly_data'])} hours")
+            
             success_count += 1
-            print(f"  ✓ {record['date']}: {record['generation_kwh']} kWh, {len(record['hourly_data'])} hours")
         else:
             error_count += 1
+    
+    # Convert map back to sorted list
+    daily_records = sorted(daily_records_map.values(), key=lambda x: x['date'])
     
     print("\n" + "=" * 80)
     print("MIGRATION SUMMARY")
     print("=" * 80)
     print(f"XLS files processed: {len(xls_files)}")
     print(f"Successfully parsed: {success_count}")
+    print(f"Updated records: {updated_count}")
     print(f"Errors: {error_count}")
     
     if not daily_records:
@@ -272,4 +304,3 @@ if __name__ == '__main__':
     else:
         print("✗ Migration failed")
         sys.exit(1)
- 
