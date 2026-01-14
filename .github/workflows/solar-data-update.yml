@@ -73,7 +73,7 @@ jobs:
       
       - name: Process data and generate stats
         run: |
-          python process_data.py
+          solar_processor_enhanced.py
       
       - name: Check file structure
         run: |
