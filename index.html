@@ -2016,7 +2016,10 @@
             } else if (tabText.includes('monthly')) {
                 loadMonthlyData();
             } else if (tabText.includes('lifetime')) {
-                loadLifetimeData();
+                // Reload all lifetime charts
+                loadLifetimeMonthlyBreakdown();
+                loadLifetimeActualVsExpectedChart();
+                loadLifetimePerformanceLineChart();
             }
         }
         
@@ -2459,9 +2462,67 @@ async function updateDatePickerRange() {
 function updateDailyView(data, selectedDate, dailyRecord = null) {
     if (!data || !Array.isArray(data) || data.length === 0) return;
     
+    console.log(`📊 updateDailyView called for ${selectedDate}`);
+    
     // Calculate stats from the hourly data provided
     const pvData = data.map(d => d.pv_kw || d.generation_kw || 0);
-    const predictedData = data.map(d => d.predicted_kw || 0);
+    console.log(`  PV Data: ${pvData.length} hours, max: ${Math.max(...pvData).toFixed(2)} kW`);
+    
+    // Load predicted data and irradiation from predictions JSON
+    const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+    const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+    
+    console.log(`  Loading predictions from: ${predictionsPath}`);
+    
+    fetch(predictionsPath)
+        .then(response => {
+            console.log(`  Predictions response status: ${response.status}`);
+            return response.ok ? response.json() : null;
+        })
+        .then(predictionsData => {
+            let predictedData = [];
+            let irradiationData = [];
+            
+            if (predictionsData && predictionsData.daily_predictions && predictionsData.daily_predictions[selectedDate]) {
+                const dayPredictions = predictionsData.daily_predictions[selectedDate];
+                console.log(`  ✅ Found predictions for ${selectedDate}`);
+                console.log(`     Prediction keys: ${Object.keys(dayPredictions).join(', ')}`);
+                
+                predictedData = dayPredictions.generation_kw || [];
+                irradiationData = dayPredictions.irradiation_wm2 || [];
+                
+                console.log(`     Predicted data: ${predictedData.length} values, max: ${Math.max(...predictedData).toFixed(2)} kW`);
+                console.log(`     Irradiation data: ${irradiationData.length} values, max: ${Math.max(...irradiationData).toFixed(0)} W/m²`);
+            } else {
+                console.warn(`  ⚠️ No predictions found for ${selectedDate}`);
+            }
+            
+            // If predictions not available, use fallback
+            if (predictedData.length === 0) {
+                console.log(`  Using fallback for predicted data`);
+                predictedData = data.map(d => d.predicted_kw || 0);
+            }
+            if (irradiationData.length === 0) {
+                console.log(`  Using fallback for irradiation data`);
+                irradiationData = data.map(d => d.irradiation_wm2 || 0);
+            }
+            
+            console.log(`  ✅ Calling continueUpdateDailyView with predicted and irradiation data`);
+            
+            // Continue with the view update
+            continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predictedData, irradiationData);
+        })
+        .catch(error => {
+            console.error(`  ❌ Error loading predictions:`, error);
+            // Fallback to data fields
+            const predictedData = data.map(d => d.predicted_kw || 0);
+            const irradiationData = data.map(d => d.irradiation_wm2 || 0);
+            console.log(`  Using fallback data: predicted=${predictedData.length}, irradiation=${irradiationData.length}`);
+            continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predictedData, irradiationData);
+        });
+}
+
+function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predictedData, irradiationData) {
     
     // Check if we're viewing today
     const today = new Date().toISOString().split('T')[0];
@@ -2551,7 +2612,7 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
         console.log(`ACTUAL Load: ${totalLoad.toFixed(2)} kWh, Grid: ${totalGrid.toFixed(2)} kWh`);
         
         // Continue with display updates
-        finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord);
+        finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData);
         
     } else {
         // EXPECTED MODE: Load from predictions_2025_2044.min.json
@@ -2592,7 +2653,7 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
                 }
                 
                 // Continue with display updates
-                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord);
+                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData);
             })
             .catch(error => {
                 console.warn('Could not load predictions:', error);
@@ -2610,7 +2671,7 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
                 console.log(`EXPECTED Load: ${totalLoad.toFixed(2)} kWh, Grid: ${totalGrid.toFixed(2)} kWh (fallback)`);
                 
                 // Continue with display updates
-                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord);
+                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData);
             });
         
         return; // Exit early, async completion will call finishDailyViewUpdate
@@ -2618,7 +2679,7 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
 }
 
 // Helper function to complete the daily view update
-function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord) {
+function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData) {
     // Calculate coverage metrics
     const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
     const gridCoverage = totalLoad > 0 ? ((totalGrid / totalLoad) * 100) : 0;
@@ -2645,10 +2706,9 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
     
     // Prepare data arrays
     const labels = data.map(d => d.time);
-    const irradiationData = data.map(d => d.irradiation_wm2);
     
-    // Calculate average hourly predicted for the month
-    // Use the predicted_kw from data (which comes from PVSyst pattern for this date)
+    // Use passed irradiationData (loaded from predictions)
+    // Use passed predictedData (loaded from predictions)
     const avgPredictedData = predictedData;
     
     // Create arrays with average values for Load and Grid (to match generation scale)
@@ -2871,20 +2931,23 @@ async function loadMonthlyData() {
         saveMonthSelection();
         
         const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
-        const response = await fetch(historyPath);
+        
+        // Load from dashboard_data.json (has both actual and aggregated data)
+        const dashboardPath = `${basePath}data/dashboard_data.json`.replace('//', '/');
+        const response = await fetch(dashboardPath);
         
         if (!response.ok) {
-            console.error('Could not load historical data');
+            console.error('Could not load dashboard data');
             return;
         }
         
-        const historyData = await response.json();
+        const dashData = await response.json();
         const selectedMonth = document.getElementById('monthSelector').value;
         const selectedYear = document.getElementById('yearSelector').value;
         const selectedMonthYear = `${selectedYear}-${selectedMonth}`;
         
-        const monthRecords = historyData.daily_records.filter(record => 
+        // Get daily records for this month
+        const monthRecords = dashData.daily_records.filter(record => 
             record.date.startsWith(selectedMonthYear)
         );
         
@@ -2967,32 +3030,60 @@ async function loadMonthlyData() {
             targetPerfEl.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
         }
         
-        // Calculate Load and Grid for the month
-        // Load predictions from predictions_2025_2044.min.json
+        // Calculate Load and Grid for the month based on data mode
         let monthlyLoad = 0;
         let monthlyGrid = 0;
         
-        try {
-            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
-            const predictionsResponse = await fetch(predictionsPath);
-            
-            if (predictionsResponse.ok) {
-                const predictionsData = await predictionsResponse.json();
+        console.log(`📊 Monthly Load/Grid calculation - Mode: ${currentDataMode}`);
+        
+        if (currentDataMode === 'actual') {
+            // ACTUAL MODE: Sum from daily records
+            monthlyLoad = monthRecords.reduce((sum, day) => sum + (day.actual_load_kwh || 0), 0);
+            monthlyGrid = monthRecords.reduce((sum, day) => sum + (day.actual_grid_kwh || 0), 0);
+            console.log(`  ✅ ACTUAL Monthly Load: ${monthlyLoad.toFixed(2)} kWh, Grid: ${monthlyGrid.toFixed(2)} kWh`);
+            console.log(`     From ${monthRecords.length} daily records`);
+            console.log(`     Sample record: ${JSON.stringify({
+                date: monthRecords[0].date,
+                load: monthRecords[0].actual_load_kwh,
+                grid: monthRecords[0].actual_grid_kwh
+            })}`);
+        } else {
+            // EXPECTED MODE: Load from predictions_2025_2044.min.json
+            console.log(`  Loading predictions for expected Load/Grid...`);
+            try {
+                const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+                const predictionsResponse = await fetch(predictionsPath);
                 
-                // Sum Load and Grid for each day in the month
-                monthRecords.forEach(record => {
-                    const dateKey = record.date;
-                    if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
-                        const dayData = predictionsData.daily_predictions[dateKey];
-                        const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
-                        monthlyLoad += dailyLoad;
-                        monthlyGrid += dailyGrid;
-                    }
-                });
+                if (predictionsResponse.ok) {
+                    const predictionsData = await predictionsResponse.json();
+                    
+                    // Sum Load and Grid for each day in the month
+                    monthRecords.forEach(record => {
+                        const dateKey = record.date;
+                        if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                            const dayData = predictionsData.daily_predictions[dateKey];
+                            const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                            const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                            monthlyLoad += dailyLoad;
+                            monthlyGrid += dailyGrid;
+                        }
+                    });
+                    console.log(`  ✅ EXPECTED Monthly Load: ${monthlyLoad.toFixed(2)} kWh, Grid: ${monthlyGrid.toFixed(2)} kWh (from predictions)`);
+                    console.log(`     From ${monthRecords.length} days of predictions`);
+                } else {
+                    console.warn(`  ⚠️ Predictions response not OK: ${predictionsResponse.status}`);
+                    // Fallback calculation
+                    monthlyLoad = monthlyGen * 1.5;
+                    monthlyGrid = monthlyLoad - monthlyGen;
+                    console.log(`  Using fallback calculation: Load=${monthlyLoad.toFixed(2)}, Grid=${monthlyGrid.toFixed(2)}`);
+                }
+            } catch (error) {
+                console.error(`  ❌ Error loading predictions:`, error);
+                // Fallback calculation
+                monthlyLoad = monthlyGen * 1.5;
+                monthlyGrid = monthlyLoad - monthlyGen;
+                console.log(`  Using fallback calculation: Load=${monthlyLoad.toFixed(2)}, Grid=${monthlyGrid.toFixed(2)}`);
             }
-        } catch (error) {
-            console.warn('Could not load predictions for Load/Grid:', error);
         }
         
         // Calculate PV Coverage and Grid Coverage
@@ -3273,19 +3364,21 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
 async function loadLifetimeMonthlyBreakdown() {
     try {
         const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
-        const response = await fetch(historyPath);
+        
+        // Load from dashboard_data.json (has both actual and predictions)
+        const dashboardPath = `${basePath}data/dashboard_data.json`.replace('//', '/');
+        const response = await fetch(dashboardPath);
         
         if (!response.ok) {
-            console.error('Could not load historical data');
+            console.error('Could not load dashboard data');
             return;
         }
         
-        const historyData = await response.json();
+        const dashData = await response.json();
         
         // Group daily records by month
         const monthlyData = {};
-        historyData.daily_records.forEach(record => {
+        dashData.daily_records.forEach(record => {
             const monthKey = record.date.substring(0, 7); // "YYYY-MM"
             if (!monthlyData[monthKey]) {
                 monthlyData[monthKey] = {
@@ -3300,34 +3393,63 @@ async function loadLifetimeMonthlyBreakdown() {
             monthlyData[monthKey].generation += record.generation_kwh;
             monthlyData[monthKey].irradiation += (record.irradiation_wh_m2 || 0);
             monthlyData[monthKey].days += 1;
+            
+            // Add Load and Grid based on currentDataMode
+            if (currentDataMode === 'actual') {
+                // ACTUAL MODE: Use actual data from daily records
+                monthlyData[monthKey].load += (record.actual_load_kwh || 0);
+                monthlyData[monthKey].grid += (record.actual_grid_kwh || 0);
+            }
         });
         
-        // Load predictions to calculate Load and Grid
-        let predictionsData = null;
-        try {
-            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
-            const predictionsResponse = await fetch(predictionsPath);
-            if (predictionsResponse.ok) {
-                predictionsData = await predictionsResponse.json();
-                
-                // Calculate Load and Grid for each month
-                historyData.daily_records.forEach(record => {
-                    const monthKey = record.date.substring(0, 7);
-                    const dateKey = record.date;
+        console.log(`📊 Lifetime Load/Grid - Mode: ${currentDataMode}`);
+        console.log(`   Total months: ${Object.keys(monthlyData).length}`);
+        
+        // For EXPECTED mode, load predictions to calculate Load and Grid
+        if (currentDataMode === 'expected') {
+            console.log(`   Loading predictions for expected Load/Grid...`);
+            try {
+                const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+                const predictionsResponse = await fetch(predictionsPath);
+                if (predictionsResponse.ok) {
+                    const predictionsData = await predictionsResponse.json();
                     
-                    if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
-                        const dayData = predictionsData.daily_predictions[dateKey];
-                        const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
-                        if (monthlyData[monthKey]) {
-                            monthlyData[monthKey].load += dailyLoad;
-                            monthlyData[monthKey].grid += dailyGrid;
+                    // Calculate Load and Grid for each month from predictions
+                    dashData.daily_records.forEach(record => {
+                        const monthKey = record.date.substring(0, 7);
+                        const dateKey = record.date;
+                        
+                        if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                            const dayData = predictionsData.daily_predictions[dateKey];
+                            const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                            const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                            if (monthlyData[monthKey]) {
+                                monthlyData[monthKey].load += dailyLoad;
+                                monthlyData[monthKey].grid += dailyGrid;
+                            }
                         }
-                    }
+                    });
+                    console.log(`   ✅ EXPECTED Lifetime Load/Grid from predictions`);
+                } else {
+                    console.warn(`   ⚠️ Predictions response not OK: ${predictionsResponse.status}`);
+                    // Fallback calculation for expected mode
+                    Object.keys(monthlyData).forEach(monthKey => {
+                        monthlyData[monthKey].load = monthlyData[monthKey].generation * 1.5;
+                        monthlyData[monthKey].grid = monthlyData[monthKey].load - monthlyData[monthKey].generation;
+                    });
+                    console.log(`   Using fallback calculation`);
+                }
+            } catch (error) {
+                console.error(`   ❌ Error loading predictions:`, error);
+                // Fallback calculation
+                Object.keys(monthlyData).forEach(monthKey => {
+                    monthlyData[monthKey].load = monthlyData[monthKey].generation * 1.5;
+                    monthlyData[monthKey].grid = monthlyData[monthKey].load - monthlyData[monthKey].generation;
                 });
+                console.log(`   Using fallback calculation`);
             }
-        } catch (error) {
-            console.warn('Could not load predictions for Load/Grid:', error);
+        } else {
+            console.log(`   ✅ ACTUAL Lifetime Load/Grid from daily records`);
         }
         
         // Calculate expected values and performance for each month
