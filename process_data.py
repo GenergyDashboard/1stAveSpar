@@ -1,528 +1,419 @@
-import pandas as pd
+#!/usr/bin/env python3
+"""
+Enhanced Solar Data Processor with TOU and Financial Analysis
+Processes hourly solar generation data with Time-of-Use classification and financial calculations
+"""
+
 import json
-from datetime import datetime, timedelta, timezone
-import calendar
 import os
-import glob
-import requests
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+import openpyxl
 
-# South African timezone (SAST = UTC+2)
-SAST = timezone(timedelta(hours=2))
+# ============================================================================
+# TOU Configuration
+# ============================================================================
 
-def get_sast_now():
-    """Get current time in South African timezone"""
-    return datetime.now(SAST)
-
-def load_config():
-    """Load configuration file"""
-    with open('config.json', 'r') as f:
-        return json.load(f)
-
-def convert_to_number(value):
-    """Convert text values to numbers"""
-    if pd.isna(value) or value == '':
-        return 0
-    try:
-        return float(str(value).replace(' ', '').replace(',', ''))
-    except:
-        return 0
-
-def fetch_irradiation_data(date):
-    """Fetch hourly irradiation data from open-meteo API"""
-    try:
-        base_url = "https://archive-api.open-meteo.com/v1/archive"
-        params = {
-            "latitude": -33.97422273793887,
-            "longitude": 25.61212584301634,
-            "start_date": date,
-            "end_date": date,
-            "hourly": "direct_radiation"
+# TOU Time Periods (South African Standard)
+# Based on Municipality/Eskom TOU schedule
+TOU_SCHEDULE = {
+    'high_season': {  # June, July, August (Winter)
+        'weekday': {
+            'peak': [(7, 10), (18, 20)],      # 07:00-10:00, 18:00-20:00
+            'standard': [(6, 7), (10, 18), (20, 22)],  # 06:00-07:00, 10:00-18:00, 20:00-22:00
+            'off_peak': [(22, 24), (0, 6)]    # 22:00-00:00, 00:00-06:00
+        },
+        'weekend': {  # Saturday, Sunday
+            'peak': [],
+            'standard': [(6, 22)],             # 06:00-22:00
+            'off_peak': [(22, 24), (0, 6)]    # 22:00-00:00, 00:00-06:00
         }
-        
-        response = requests.get(base_url, params=params, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            timestamps = data["hourly"]["time"]
-            direct_radiation = data["hourly"]["direct_radiation"]
-            
-            # Convert API timestamps to SAST (South Africa Standard Time)
-            # User reported: irradiation shows 1 hour early, so adding 1 hour offset
-            # If still incorrect after testing, try TIMEZONE_OFFSET_HOURS = 2 (full UTC+2)
-            TIMEZONE_OFFSET_HOURS = 1  # Adjust to 2 if irradiation still appears early
-            
-            hourly_data = {}
-            for timestamp, radiation in zip(timestamps, direct_radiation):
-                # Parse timestamp and apply timezone offset
-                utc_time = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M')
-                local_time = utc_time + timedelta(hours=TIMEZONE_OFFSET_HOURS)
-                hour = local_time.hour
-                
-                hourly_data[hour] = radiation if radiation is not None else 0
-            
-            print(f"  ✓ Fetched irradiation data for {date}")
-            return hourly_data
-        else:
-            print(f"  ⚠️ Failed to fetch irradiation data: Status {response.status_code}")
-            return {}
-    except Exception as e:
-        print(f"  ⚠️ Error fetching irradiation data: {e}")
-        return {}
+    },
+    'low_season': {  # All other months
+        'weekday': {
+            'peak': [(7, 10), (18, 20)],      # 07:00-10:00, 18:00-20:00
+            'standard': [(6, 7), (10, 18), (20, 22)],  # 06:00-07:00, 10:00-18:00, 20:00-22:00
+            'off_peak': [(22, 24), (0, 6)]    # 22:00-00:00, 00:00-06:00
+        },
+        'weekend': {
+            'peak': [],
+            'standard': [(6, 22)],             # 06:00-22:00
+            'off_peak': [(22, 24), (0, 6)]    # 22:00-00:00, 00:00-06:00
+        }
+    }
+}
 
-def calculate_system_degradation(config):
-    """Calculate current system degradation factor based on age"""
-    try:
-        commissioning_date = datetime.strptime(config['system']['commissioning_date'], '%Y-%m-%d')
-        # Use SAST time for consistency
-        days_active = (get_sast_now().replace(tzinfo=None) - commissioning_date).days
-        years_active = days_active / 365.25
-        
-        if years_active < 1:
-            # First year: 1% degradation prorated
-            degradation = config['system']['degradation']['year_1'] * years_active
-        else:
-            # After first year: 1% + 0.5% per additional year
-            first_year_deg = config['system']['degradation']['year_1']
-            subsequent_years = years_active - 1
-            subsequent_deg = config['system']['degradation']['subsequent_years'] * subsequent_years
-            degradation = first_year_deg + subsequent_deg
-        
-        degradation_factor = 1 - degradation
-        print(f"  System age: {years_active:.2f} years, Degradation factor: {degradation_factor:.4f}")
-        return degradation_factor
-    except Exception as e:
-        print(f"  ⚠️ Could not calculate degradation: {e}")
-        return 1.0  # No degradation if error
+# High season months (winter in South Africa)
+HIGH_SEASON_MONTHS = [6, 7, 8]
 
-def load_pvsyst_predictions():
-    """Load daily hourly predictions from PVSyst data file (2025-2044 with Load, Grid, PV)"""
-    try:
-        # Try minified file first (smaller, faster)
-        predictions_file = 'predictions_2025_2044.min.json'
-        if os.path.exists(predictions_file):
-            with open(predictions_file, 'r') as f:
-                data = json.load(f)
-            print(f"  ✓ Loaded predictions for {len(data['daily_predictions'])} days ({data.get('years', ['?'])[0]}-{data.get('years', ['?'])[-1]})")
-            return data['daily_predictions']
-        
-        # Fallback to full file
-        predictions_file = 'predictions_2025_2044.json'
-        if os.path.exists(predictions_file):
-            with open(predictions_file, 'r') as f:
-                data = json.load(f)
-            print(f"  ✓ Loaded predictions for {len(data['daily_predictions'])} days ({data.get('years', ['?'])[0]}-{data.get('years', ['?'])[-1]})")
-            return data['daily_predictions']
-        
-        # Fallback to old filename
-        predictions_file = 'pvsyst_predictions_2025.json'
-        if os.path.exists(predictions_file):
-            with open(predictions_file, 'r') as f:
-                data = json.load(f)
-            
-            daily_preds = data.get('daily_predictions', data)
-            
-            # Detect format by checking first entry
-            if daily_preds:
-                first_key = list(daily_preds.keys())[0]
-                first_value = daily_preds[first_key]
-                
-                if isinstance(first_value, dict) and 'pv_kw' in first_value:
-                    print(f"  ✓ Loaded predictions for {len(daily_preds)} days (new format with Load/Grid)")
-                else:
-                    print(f"  ✓ Loaded predictions for {len(daily_preds)} days (legacy format)")
-            
-            return daily_preds
-        
-        print(f"  ⚠️ PVSyst predictions file not found, using config defaults")
-        return None
-        
-    except Exception as e:
-        print(f"  ⚠️ Error loading PVSyst predictions: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+# TOU Rates (from uploaded image - effective dates)
+# Format: {effective_date: {high_season: {peak, standard, off_peak}, low_season: {...}}}
+TOU_RATES = [
+    {
+        'effective_date': '2023-07-01',
+        'high_season': {'peak': 9.69, 'standard': 2.79, 'off_peak': 2.02},
+        'low_season': {'peak': 4.21, 'standard': 2.64, 'off_peak': 2.00}
+    },
+    {
+        'effective_date': '2024-07-01',
+        'high_season': {'peak': 9.69, 'standard': 2.79, 'off_peak': 2.02},
+        'low_season': {'peak': 4.21, 'standard': 2.64, 'off_peak': 2.00}
+    },
+    {
+        'effective_date': '2025-07-01',
+        'high_season': {'peak': 17.15, 'standard': 4.94, 'off_peak': 3.57},
+        'low_season': {'peak': 7.46, 'standard': 4.67, 'off_peak': 3.55}
+    },
+    # Add more as rates change
+]
 
-def get_hourly_predictions_for_date(date_str, pvsyst_data, config, degradation_factor=None):
-    """Get hourly predictions for a specific date
-    Returns dict with pv_kw, load_kw, grid_kw (if available)
+def get_tou_rate(date, period_type, season_type='high'):
+    """Get the TOU rate for a specific date and period"""
+    # Find the applicable rate period
+    applicable_rate = TOU_RATES[0]  # Default to first
+    
+    for rate in TOU_RATES:
+        rate_date = datetime.strptime(rate['effective_date'], '%Y-%m-%d').date()
+        if date >= rate_date:
+            applicable_rate = rate
+    
+    # Return the rate for the specified season and period
+    season_rates = applicable_rate[f'{season_type}_season']
+    return season_rates.get(period_type, 0)
+
+def classify_tou_period(dt):
     """
-    # Try to get actual data for this date
-    if pvsyst_data and date_str in pvsyst_data:
-        data = pvsyst_data[date_str]
-        
-        # Check if it's the new format (dict with pv_kw, load_kw, grid_kw)
-        if isinstance(data, dict) and 'pv_kw' in data:
-            print(f"  ✓ Using predictions data for {date_str} (includes Load/Grid)")
-            return {
-                'pv_kw': data['pv_kw'],
-                'load_kw': data.get('load_kw', [0]*24),
-                'grid_kw': data.get('grid_kw', [0]*24)
-            }
-        # Old format (just PV array)
-        elif isinstance(data, list):
-            predictions = [p * (degradation_factor or 1.0) for p in data]
-            print(f"  ✓ Using PVSyst data for {date_str} (legacy format)")
-            return {
-                'pv_kw': predictions,
-                'load_kw': [0]*24,
-                'grid_kw': [0]*24
-            }
+    Classify a datetime into TOU period (peak, standard, off_peak)
     
-    # If not found, use the same month/day from 2025 as the pattern
-    # Extract month and day from date_str (YYYY-MM-DD)
-    parts = date_str.split('-')
-    if len(parts) == 3:
-        pattern_date = f"2025-{parts[1]}-{parts[2]}"
-        if pvsyst_data and pattern_date in pvsyst_data:
-            data = pvsyst_data[pattern_date]
-            print(f"  ✓ Using 2025 pattern ({pattern_date}) for {date_str}")
+    Args:
+        dt: datetime object
+        
+    Returns:
+        tuple: (period_type, season_type) e.g. ('peak', 'high')
+    """
+    hour = dt.hour
+    month = dt.month
+    weekday = dt.weekday()  # 0=Monday, 6=Sunday
+    
+    # Determine season
+    season = 'high' if month in HIGH_SEASON_MONTHS else 'low'
+    
+    # Determine day type
+    is_weekend = weekday >= 5  # Saturday=5, Sunday=6
+    day_type = 'weekend' if is_weekend else 'weekday'
+    
+    # Get schedule for this season and day type
+    schedule = TOU_SCHEDULE[f'{season}_season'][day_type]
+    
+    # Classify hour
+    for period_type in ['peak', 'standard', 'off_peak']:
+        time_ranges = schedule[period_type]
+        for start_hour, end_hour in time_ranges:
+            if start_hour <= hour < end_hour:
+                return (period_type, season)
+    
+    # Default to off_peak if not found
+    return ('off_peak', season)
+
+# ============================================================================
+# Data Processing Functions
+# ============================================================================
+
+def process_hourly_data(hourly_data, date):
+    """
+    Process hourly data to extract actual Load, Grid, and calculate TOU breakdown
+    
+    Args:
+        hourly_data: List of hourly records
+        date: Date string (YYYY-MM-DD)
+        
+    Returns:
+        dict: Enhanced hourly data with TOU classification and financial calculations
+    """
+    date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+    
+    # Initialize totals
+    totals = {
+        'actual_load_kwh': 0,
+        'actual_grid_kwh': 0,
+        'tou_breakdown': {
+            'peak_kwh': 0,
+            'standard_kwh': 0,
+            'off_peak_kwh': 0
+        },
+        'financial': {
+            'total_savings_zar': 0,
+            'peak_savings_zar': 0,
+            'standard_savings_zar': 0,
+            'off_peak_savings_zar': 0
+        }
+    }
+    
+    enhanced_hourly = []
+    
+    for record in hourly_data:
+        # Parse time
+        time_str = record.get('time', '00:00')
+        try:
+            hour = int(time_str.split(':')[0])
+            minute = int(time_str.split(':')[1])
+            dt = datetime.combine(date_obj, datetime.min.time().replace(hour=hour, minute=minute))
+        except:
+            continue
+        
+        # Extract values (already in kW from scraper)
+        generation_kw = record.get('generation_kw', 0)
+        grid_kw = record.get('grid_kw', 0)  # Negative when drawing from grid
+        load_kw = record.get('load_kw', 0)
+        
+        # Classify TOU period
+        period_type, season_type = classify_tou_period(dt)
+        
+        # Get rate
+        rate = get_tou_rate(date_obj, period_type, season_type)
+        
+        # Calculate savings (generation * rate)
+        # This is how much you would have paid if you drew this from grid
+        savings_zar = generation_kw * rate
+        
+        # Add to totals
+        totals['actual_load_kwh'] += load_kw
+        totals['actual_grid_kwh'] += abs(grid_kw)  # Absolute value for total drawn
+        totals['tou_breakdown'][f'{period_type}_kwh'] += generation_kw
+        totals['financial'][f'{period_type}_savings_zar'] += savings_zar
+        totals['financial']['total_savings_zar'] += savings_zar
+        
+        # Enhance record
+        enhanced_record = {
+            **record,
+            'tou_period': period_type,
+            'tou_season': season_type,
+            'tou_rate': rate,
+            'savings_zar': round(savings_zar, 2)
+        }
+        enhanced_hourly.append(enhanced_record)
+    
+    return enhanced_hourly, totals
+
+def aggregate_monthly_data(daily_records):
+    """
+    Aggregate daily records into monthly summaries with TOU and financial data
+    
+    Args:
+        daily_records: List of daily record dictionaries
+        
+    Returns:
+        dict: Monthly summaries keyed by 'YYYY-MM'
+    """
+    monthly_summaries = {}
+    
+    for record in daily_records:
+        date = record['date']
+        month_key = date[:7]  # 'YYYY-MM'
+        
+        if month_key not in monthly_summaries:
+            monthly_summaries[month_key] = {
+                'total_generation_kwh': 0,
+                'actual_load_kwh': 0,
+                'actual_grid_kwh': 0,
+                'days_with_data': 0,
+                'tou_breakdown': {
+                    'peak_kwh': 0,
+                    'standard_kwh': 0,
+                    'off_peak_kwh': 0
+                },
+                'financial': {
+                    'total_savings_zar': 0,
+                    'peak_savings_zar': 0,
+                    'standard_savings_zar': 0,
+                    'off_peak_savings_zar': 0
+                }
+            }
+        
+        month_data = monthly_summaries[month_key]
+        month_data['total_generation_kwh'] += record.get('generation_kwh', 0)
+        month_data['actual_load_kwh'] += record.get('actual_load_kwh', 0)
+        month_data['actual_grid_kwh'] += record.get('actual_grid_kwh', 0)
+        month_data['days_with_data'] += 1
+        
+        # TOU breakdown
+        if 'tou_breakdown' in record:
+            for period in ['peak', 'standard', 'off_peak']:
+                month_data['tou_breakdown'][f'{period}_kwh'] += record['tou_breakdown'].get(f'{period}_kwh', 0)
+        
+        # Financial
+        if 'financial' in record:
+            for key in ['total_savings_zar', 'peak_savings_zar', 'standard_savings_zar', 'off_peak_savings_zar']:
+                month_data['financial'][key] += record['financial'].get(key, 0)
+    
+    # Round financial values
+    for month_key in monthly_summaries:
+        for key in monthly_summaries[month_key]['financial']:
+            monthly_summaries[month_key]['financial'][key] = round(monthly_summaries[month_key]['financial'][key], 2)
+    
+    return monthly_summaries
+
+def calculate_lifetime_summary(daily_records):
+    """
+    Calculate lifetime summary with TOU and financial data
+    
+    Args:
+        daily_records: List of daily record dictionaries
+        
+    Returns:
+        dict: Lifetime summary statistics
+    """
+    summary = {
+        'total_generation_kwh': 0,
+        'actual_load_kwh': 0,
+        'actual_grid_kwh': 0,
+        'days_active': len(daily_records),
+        'tou_breakdown': {
+            'peak_kwh': 0,
+            'standard_kwh': 0,
+            'off_peak_kwh': 0
+        },
+        'financial': {
+            'total_savings_zar': 0,
+            'peak_savings_zar': 0,
+            'standard_savings_zar': 0,
+            'off_peak_savings_zar': 0,
+            'by_year': {},
+            'by_month': {}
+        }
+    }
+    
+    for record in daily_records:
+        summary['total_generation_kwh'] += record.get('generation_kwh', 0)
+        summary['actual_load_kwh'] += record.get('actual_load_kwh', 0)
+        summary['actual_grid_kwh'] += record.get('actual_grid_kwh', 0)
+        
+        # TOU breakdown
+        if 'tou_breakdown' in record:
+            for period in ['peak', 'standard', 'off_peak']:
+                summary['tou_breakdown'][f'{period}_kwh'] += record['tou_breakdown'].get(f'{period}_kwh', 0)
+        
+        # Financial by year
+        year = record['date'][:4]
+        if year not in summary['financial']['by_year']:
+            summary['financial']['by_year'][year] = 0
+        
+        # Financial by month
+        month_key = record['date'][:7]
+        if month_key not in summary['financial']['by_month']:
+            summary['financial']['by_month'][month_key] = 0
+        
+        if 'financial' in record:
+            daily_savings = record['financial'].get('total_savings_zar', 0)
             
-            # Check format
-            if isinstance(data, dict) and 'pv_kw' in data:
-                predictions = data['pv_kw']
-                load_predictions = data.get('load_kw', [0]*24)
-                grid_predictions = data.get('grid_kw', [0]*24)
-            else:
-                predictions = data
-                load_predictions = [0]*24
-                grid_predictions = [0]*24
-        else:
-            # Final fallback to config average values
-            predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
-            load_predictions = [0]*24
-            grid_predictions = [0]*24
-            print(f"  ⚠️ Using config defaults for {date_str} (no pattern data)")
-    else:
-        # Fallback to config average values
-        predictions = config.get('hourly_predictions', {}).get('year_1_kwh', [0] * 24)
-        load_predictions = [0]*24
-        grid_predictions = [0]*24
-        print(f"  ⚠️ Using config defaults for {date_str} (invalid date format)")
+            summary['financial']['total_savings_zar'] += daily_savings
+            summary['financial']['by_year'][year] += daily_savings
+            summary['financial']['by_month'][month_key] += daily_savings
+            
+            for key in ['peak_savings_zar', 'standard_savings_zar', 'off_peak_savings_zar']:
+                summary['financial'][key] += record['financial'].get(key, 0)
     
-    # Apply degradation if needed (for old format or pattern-based predictions)
-    if degradation_factor:
-        degraded_predictions = [pred * degradation_factor for pred in predictions]
-    else:
-        degraded_predictions = predictions
-        
-    return {
-        'pv_kw': degraded_predictions,
-        'load_kw': load_predictions,
-        'grid_kw': grid_predictions
-    }
+    # Round financial values
+    summary['financial']['total_savings_zar'] = round(summary['financial']['total_savings_zar'], 2)
+    for key in ['peak_savings_zar', 'standard_savings_zar', 'off_peak_savings_zar']:
+        summary['financial'][key] = round(summary['financial'][key], 2)
+    
+    for year in summary['financial']['by_year']:
+        summary['financial']['by_year'][year] = round(summary['financial']['by_year'][year], 2)
+    
+    for month in summary['financial']['by_month']:
+        summary['financial']['by_month'][month] = round(summary['financial']['by_month'][month], 2)
+    
+    return summary
 
-def process_solar_data():
-    """Process the downloaded solar data and calculate all metrics"""
-    
-    config = load_config()
-    
-    # Find the latest export file
-    latest_file = 'data/solar_export_latest.xls'
-    
-    if not os.path.exists(latest_file):
-        print("No data file found!")
-        return
-    
-    print(f"Processing {latest_file}...")
-    
-    # Read the Excel file, skipping to row 29 (0-indexed = 28)
-    df = pd.read_excel(latest_file, header=28, engine='xlrd')
-    
-    # Select and rename columns
-    df = df.rename(columns={
-        'Time': 'time',
-        'PV(W)': 'pv_w',
-        'Grid(W)': 'grid_w',
-        'Load(W)': 'load_w'
-    })
-    
-    # Keep only relevant columns
-    df = df[['time', 'pv_w', 'grid_w', 'load_w']].copy()
-    
-    # Convert all values from text to numbers
-    df['pv_w'] = df['pv_w'].apply(convert_to_number)
-    df['grid_w'] = df['grid_w'].apply(convert_to_number)
-    df['load_w'] = df['load_w'].apply(convert_to_number)
-    
-    # Remove rows where time is empty
-    df = df[df['time'].notna()].copy()
-    
-    # Convert watts to kilowatts
-    df['pv_kw'] = df['pv_w'] / 1000
-    df['grid_kw'] = df['grid_w'] / 1000
-    df['load_kw'] = df['load_w'] / 1000
-    
-    # Calculate generation (5-minute intervals)
-    df['generation_kwh'] = df['pv_kw'] * (5/60)
-    
-    # Calculate daily totals
-    today_generation = df['generation_kwh'].sum()
-    today_pv_avg = df['pv_kw'].mean()
-    today_pv_max = df['pv_kw'].max()
-    
-    print(f"Today's Generation: {today_generation:.2f} kWh")
-    
-    # Fetch today's irradiation data EARLY (needed for daily records)
-    today_date = get_sast_now().strftime('%Y-%m-%d')
-    print("Fetching irradiation data...")
-    irradiation_data = fetch_irradiation_data(today_date)
-    
-    # Calculate daily irradiation total (Wh/m²)
-    daily_irradiation_total = sum(irradiation_data.values())
-    print(f"  Daily irradiation total: {daily_irradiation_total:.0f} Wh/m²")
-    
-    # Load historical data
-    history_file = 'data/generation_history.json'
-    if os.path.exists(history_file):
-        with open(history_file, 'r') as f:
-            history = json.load(f)
-    else:
-        history = {
-            'daily_records': [],
-            'hourly_records': {},  # Store last 7 days of hourly data
-            'monthly_total': 0,
-            'total_generation': 0,
-            'current_month': get_sast_now().strftime('%Y-%m')
-        }
-    
-    # Check if new month (use SAST time)
-    current_month = get_sast_now().strftime('%Y-%m')
-    if history['current_month'] != current_month:
-        history['monthly_total'] = 0
-        history['current_month'] = current_month
-    
-    # Find and update today's record
-    existing_record = None
-    for record in history['daily_records']:
-        if record['date'] == today_date:
-            existing_record = record
-            break
-    
-    if existing_record:
-        old_generation = existing_record['generation_kwh']
-        existing_record['generation_kwh'] = today_generation
-        existing_record['irradiation_wh_m2'] = daily_irradiation_total
-        existing_record['updated_at'] = get_sast_now().isoformat()
-        
-        history['monthly_total'] += (today_generation - old_generation)
-        history['total_generation'] += (today_generation - old_generation)
-    else:
-        history['daily_records'].append({
-            'date': today_date,
-            'generation_kwh': today_generation,
-            'irradiation_wh_m2': daily_irradiation_total,
-            'updated_at': get_sast_now().isoformat()
-        })
-        history['monthly_total'] += today_generation
-        history['total_generation'] += today_generation
-    
-    # Keep only last 365 days
-    history['daily_records'] = sorted(history['daily_records'], key=lambda x: x['date'])[-365:]
-    
-    # Load PVSyst predictions and calculate degradation
-    pvsyst_predictions = load_pvsyst_predictions()
-    degradation_factor = calculate_system_degradation(config)
-    
-    # Calculate BASE monthly predictions FIRST (without year-specific degradation)
-    # These are reusable for any year - just apply the year's degradation factor
-    print("  Calculating base monthly predictions (2025 pattern)...")
-    monthly_predictions_base = {}
-    
-    for month_num in range(1, 13):
-        days_in_month = calendar.monthrange(2025, month_num)[1]
-        month_expected_raw = 0  # Without degradation
-        
-        for day in range(1, days_in_month + 1):
-            date_str = f"2025-{month_num:02d}-{day:02d}"
-            if pvsyst_predictions and date_str in pvsyst_predictions:
-                # Sum raw PVSyst data WITHOUT degradation
-                data = pvsyst_predictions[date_str]
-                # Handle new format (dict with pv_kw) or old format (array)
-                if isinstance(data, dict) and 'pv_kw' in data:
-                    month_expected_raw += sum(data['pv_kw'])
-                elif isinstance(data, list):
-                    month_expected_raw += sum(data)
-                else:
-                    print(f"  ⚠️ Unexpected data format for {date_str}")
-        
-        month_key = f"{month_num:02d}"  # Just "01", "02", etc. - works for any year
-        monthly_predictions_base[month_key] = {
-            'month_name': calendar.month_name[month_num],
-            'base_kwh': round(month_expected_raw, 2),  # Raw PVSyst prediction
-            'avg_daily_kwh': round(month_expected_raw / days_in_month, 2),  # Average daily for this month
-            'days': days_in_month
-        }
-    
-    annual_base = sum(m['base_kwh'] for m in monthly_predictions_base.values())
-    print(f"  ✓ Calculated base predictions for 12 months (annual base: {annual_base:.2f} kWh)")
-    
-    # Calculate expected values from actual PVSyst predictions OR monthly averages
-    sast_now = get_sast_now()
-    year = sast_now.year
-    month = sast_now.month
-    today_month_key = f"{month:02d}"
-    
-    # Get today's expected using monthly average with degradation
-    if today_month_key in monthly_predictions_base:
-        expected_daily_kwh = monthly_predictions_base[today_month_key]['avg_daily_kwh'] * degradation_factor
-        print(f"  ✓ Using monthly average for today's expected: {expected_daily_kwh:.2f} kWh")
-    else:
-        # Fallback if no prediction data
-        today_hourly_predictions_data = get_hourly_predictions_for_date(today_date, pvsyst_predictions, config, degradation_factor)
-        expected_daily_kwh = sum(today_hourly_predictions_data['pv_kw'])
-        print(f"  ⚠️ Using hourly fallback for today's expected: {expected_daily_kwh:.2f} kWh")
-    
-    # Calculate monthly expected by using monthly base prediction with degradation
-    days_in_month_calc = calendar.monthrange(year, month)[1]
-    
-    if today_month_key in monthly_predictions_base:
-        expected_monthly_kwh = monthly_predictions_base[today_month_key]['base_kwh'] * degradation_factor
-        print(f"  ✓ Using monthly base for expected: {expected_monthly_kwh:.2f} kWh")
-    else:
-        # Fallback: sum daily predictions
-        expected_monthly_kwh = 0
-        for day in range(1, days_in_month_calc + 1):
-            date_str = f"{year}-{month:02d}-{day:02d}"
-            day_predictions_data = get_hourly_predictions_for_date(date_str, pvsyst_predictions, config, degradation_factor)
-            expected_monthly_kwh += sum(day_predictions_data['pv_kw'])
-        print(f"  ⚠️ Using daily sum fallback for monthly expected: {expected_monthly_kwh:.2f} kWh")
-    
-    # Calculate performance ratios
-    daily_performance = (today_generation / expected_daily_kwh * 100) if expected_daily_kwh > 0 else 0
-    monthly_performance = (history['monthly_total'] / expected_monthly_kwh * 100) if expected_monthly_kwh > 0 else 0
-    
-    # Environmental impact calculations
-    def calculate_env_impact(generation_kwh):
-        """Calculate environmental impact based on generation"""
-        factors = config['environmental_factors']
-        co2_offset = generation_kwh * factors['co2_per_kwh']
-        
-        return {
-            'co2_offset_tons': co2_offset / 1000,
-            'trees_equivalent': generation_kwh / factors['trees_per_kwh'],
-            'households_offset': generation_kwh / factors['households_kwh_per_year'],
-            'km_driven_offset': co2_offset / factors['co2_per_km_driven'],
-            'km_flown_offset': co2_offset / factors['co2_per_km_flown'],
-            'coal_saved_kg': co2_offset * factors['coal_per_kwh'],
-            'water_saved_litres': generation_kwh * factors['water_per_kwh']
-        }
-    
-    # Calculate environmental impacts
-    env_impact_today = calculate_env_impact(today_generation)
-    env_impact_monthly = calculate_env_impact(history['monthly_total'])
-    env_impact_lifetime = calculate_env_impact(history['total_generation'])
-    
-    # Get yesterday's data from history (use SAST time)
-    yesterday_date = (get_sast_now() - timedelta(days=1)).strftime('%Y-%m-%d')
-    yesterday_record = next((r for r in history['daily_records'] if r['date'] == yesterday_date), None)
-    
-    if yesterday_record:
-        yesterday_generation = yesterday_record['generation_kwh']
-        env_impact_yesterday = calculate_env_impact(yesterday_generation)
-    else:
-        # Fallback if no yesterday data exists
-        yesterday_generation = 0
-        env_impact_yesterday = calculate_env_impact(0)
-    
-    # Calculate system degradation
-    degradation_factor = calculate_system_degradation(config)
-    
-    # Load PVSyst daily predictions
-    pvsyst_data = load_pvsyst_predictions()
-    
-    # Get hourly predictions for today (includes PV, Load, Grid)
-    predictions_data = get_hourly_predictions_for_date(today_date, pvsyst_data, config, degradation_factor)
-    
-    # Prepare hourly data with PV generation, predicted values, irradiation, load, and grid
-    hourly_data = []
-    
-    # Group PV data by hour
-    df['hour'] = pd.to_datetime(df['time']).dt.hour
-    hourly_pv = df.groupby('hour')['pv_kw'].mean().to_dict()
-    
-    for hour in range(24):
-        hourly_data.append({
-            'hour': hour,
-            'time': f"{hour:02d}:00",
-            'pv_kw': round(hourly_pv.get(hour, 0), 2),
-            'predicted_kw': round(predictions_data['pv_kw'][hour], 2) if hour < len(predictions_data['pv_kw']) else 0,
-            'predicted_load_kw': round(predictions_data['load_kw'][hour], 2) if hour < len(predictions_data['load_kw']) else 0,
-            'predicted_grid_kw': round(predictions_data['grid_kw'][hour], 2) if hour < len(predictions_data['grid_kw']) else 0,
-            'irradiation_wm2': irradiation_data.get(hour, 0)
-        })
-    
-    # Store hourly data for last 7 days
-    if 'hourly_records' not in history:
-        history['hourly_records'] = {}
-    
-    history['hourly_records'][today_date] = hourly_data
-    
-    # Keep only last 7 days of hourly data
-    all_dates = sorted(history['hourly_records'].keys())
-    if len(all_dates) > 7:
-        dates_to_remove = all_dates[:-7]
-        for old_date in dates_to_remove:
-            del history['hourly_records'][old_date]
-    
-    print(f"  ✓ Stored hourly data (keeping last 7 days, current: {len(history['hourly_records'])} days)")
+# ============================================================================
+# Main Processing Pipeline
+# ============================================================================
 
-    # Create dashboard data
-    dashboard_data = {
-        'last_updated': get_sast_now().isoformat(),
-        'yesterday': {
-            'date': yesterday_date,
-            'generation_kwh': round(yesterday_generation, 2),
-            'env_impact': {k: round(v, 2) for k, v in env_impact_yesterday.items()}
-        },
-        'today': {
-            'date': today_date,
-            'generation_kwh': round(today_generation, 2),
-            'expected_kwh': round(expected_daily_kwh, 2),
-            'performance_percent': round(daily_performance, 1),
-            'avg_power_kw': round(today_pv_avg, 2),
-            'peak_power_kw': round(today_pv_max, 2),
-            'env_impact': {k: round(v, 2) for k, v in env_impact_today.items()}
-        },
-        'month': {
-            'generation_kwh': round(history['monthly_total'], 2),
-            'expected_kwh': round(expected_monthly_kwh, 2),
-            'performance_percent': round(monthly_performance, 1),
-            'month_name': get_sast_now().strftime('%B %Y'),
-            'env_impact': {k: round(v, 2) for k, v in env_impact_monthly.items()}
-        },
-        'lifetime': {
-            'total_generation_kwh': round(history['total_generation'], 2),
-            'total_generation_mwh': round(history['total_generation'] / 1000, 2),
-            'days_active': len(history['daily_records']),
-            'env_impact': {k: round(v, 2) for k, v in env_impact_lifetime.items()}
-        },
-        'system': {
-            'installed_capacity_kwp': config['system']['installed_capacity_kwp'],
-            'plant_name': config['system']['plant_name'],
-            'commissioning_date': config['system']['commissioning_date'],
-            'degradation_year_1': config['system']['degradation']['year_1'],
-            'degradation_subsequent_years': config['system']['degradation']['subsequent_years']
-        },
-        'monthly_predictions_base': monthly_predictions_base,
-        'recent_days': history['daily_records'][-30:]
-    }
+def enhance_dashboard_data(input_file, output_file=None):
+    """
+    Enhance existing dashboard data with TOU and financial calculations
     
-    # Save files
-    with open(history_file, 'w') as f:
-        json.dump(history, f, indent=2)
+    Args:
+        input_file: Path to dashboard_data.json
+        output_file: Path to output file (defaults to input_file)
+    """
+    if output_file is None:
+        output_file = input_file
     
-    with open('data/dashboard_data.json', 'w') as f:
-        json.dump(dashboard_data, f, indent=2)
+    # Load existing data
+    with open(input_file, 'r') as f:
+        data = json.load(f)
     
-    # Save today's detailed hourly data (with irradiation and predictions)
-    with open('data/today_detailed.json', 'w') as f:
-        json.dump(hourly_data, f, indent=2)
+    print(f"Processing {len(data.get('daily_records', []))} daily records...")
     
-    print("✅ Data processing completed!")
-    print(f"  - Today: {today_generation:.2f} kWh ({daily_performance:.1f}% of expected)")
-    print(f"  - This Month: {history['monthly_total']:.2f} kWh")
-    print(f"  - Total: {history['total_generation']:.2f} kWh")
-    print(f"  - CO₂ Offset: {env_impact_lifetime['co2_offset_tons']:.2f} tons")
+    # Process each daily record
+    enhanced_daily_records = []
+    for record in data.get('daily_records', []):
+        date = record['date']
+        hourly_data = record.get('hourly_data', [])
+        
+        # Process hourly data
+        enhanced_hourly, totals = process_hourly_data(hourly_data, date)
+        
+        # Update record
+        enhanced_record = {
+            **record,
+            'actual_load_kwh': round(totals['actual_load_kwh'], 2),
+            'actual_grid_kwh': round(totals['actual_grid_kwh'], 2),
+            'tou_breakdown': {
+                'peak_kwh': round(totals['tou_breakdown']['peak_kwh'], 2),
+                'standard_kwh': round(totals['tou_breakdown']['standard_kwh'], 2),
+                'off_peak_kwh': round(totals['tou_breakdown']['off_peak_kwh'], 2)
+            },
+            'financial': totals['financial'],
+            'hourly_data': enhanced_hourly
+        }
+        
+        enhanced_daily_records.append(enhanced_record)
+        print(f"  {date}: Gen={record.get('generation_kwh', 0):.1f} kWh, Savings=R{totals['financial']['total_savings_zar']:.2f}")
+    
+    # Calculate monthly summaries
+    print("\nAggregating monthly summaries...")
+    monthly_summaries = aggregate_monthly_data(enhanced_daily_records)
+    
+    for month_key, month_data in sorted(monthly_summaries.items()):
+        print(f"  {month_key}: Gen={month_data['total_generation_kwh']:.1f} kWh, Savings=R{month_data['financial']['total_savings_zar']:.2f}")
+    
+    # Calculate lifetime summary
+    print("\nCalculating lifetime summary...")
+    lifetime_summary = calculate_lifetime_summary(enhanced_daily_records)
+    print(f"  Total Savings: R{lifetime_summary['financial']['total_savings_zar']:,.2f}")
+    print(f"  Peak: R{lifetime_summary['financial']['peak_savings_zar']:,.2f}")
+    print(f"  Standard: R{lifetime_summary['financial']['standard_savings_zar']:,.2f}")
+    print(f"  Off-Peak: R{lifetime_summary['financial']['off_peak_savings_zar']:,.2f}")
+    
+    # Update data structure
+    data['daily_records'] = enhanced_daily_records
+    data['monthly_summaries'] = monthly_summaries
+    data['lifetime_summary'] = lifetime_summary
+    data['tou_rates'] = TOU_RATES
+    
+    # Save enhanced data
+    print(f"\nSaving enhanced data to {output_file}...")
+    with open(output_file, 'w') as f:
+        json.dump(data, f, indent=2)
+    
+    print("✓ Processing complete!")
+    print(f"\n{'='*80}")
+    print("SUMMARY")
+    print(f"{'='*80}")
+    print(f"Daily records processed: {len(enhanced_daily_records)}")
+    print(f"Monthly summaries: {len(monthly_summaries)}")
+    print(f"Total lifetime generation: {lifetime_summary['total_generation_kwh']:,.1f} kWh")
+    print(f"Total lifetime savings: R{lifetime_summary['financial']['total_savings_zar']:,.2f}")
+    print(f"{'='*80}")
 
-if __name__ == "__main__":
-    process_solar_data()
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Usage: python3 solar_processor_enhanced.py <dashboard_data.json>")
+        sys.exit(1)
+    
+    input_file = sys.argv[1]
+    enhance_dashboard_data(input_file)
