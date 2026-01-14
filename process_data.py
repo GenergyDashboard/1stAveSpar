@@ -97,7 +97,15 @@ def calculate_system_degradation(config):
 def load_pvsyst_predictions():
     """Load daily hourly predictions from PVSyst data file (2025-2044 with Load, Grid, PV)"""
     try:
-        # Try new file first
+        # Try minified file first (smaller, faster)
+        predictions_file = 'predictions_2025_2044.min.json'
+        if os.path.exists(predictions_file):
+            with open(predictions_file, 'r') as f:
+                data = json.load(f)
+            print(f"  ✓ Loaded predictions for {len(data['daily_predictions'])} days ({data.get('years', ['?'])[0]}-{data.get('years', ['?'])[-1]})")
+            return data['daily_predictions']
+        
+        # Fallback to full file
         predictions_file = 'predictions_2025_2044.json'
         if os.path.exists(predictions_file):
             with open(predictions_file, 'r') as f:
