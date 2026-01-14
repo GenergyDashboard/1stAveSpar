@@ -1666,12 +1666,12 @@ function updateDailyView(data, selectedDate) {
     
     // Calculate Load, Grid, and PV Coverage
     const loadData = data.map(d => d.predicted_load_kw || 0);
+    const gridData = data.map(d => d.predicted_grid_kw || 0);
     
     const totalLoad = loadData.reduce((sum, val) => sum + val, 0);
-    // Calculate actual Grid as Load - actual PV (not using predicted grid)
-    const totalGrid = Math.max(0, totalLoad - totalGeneration);
+    const totalGrid = gridData.reduce((sum, val) => sum + val, 0);
     const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
-    const gridCoverage = 100 - pvCoverage;  // Grid coverage is the inverse of PV coverage
+    const gridCoverage = totalLoad > 0 ? ((totalGrid / totalLoad) * 100) : 0;
     
     // Calculate averages for display on chart (to match scale of generation)
     const avgLoad = totalLoad / 24;
@@ -2025,6 +2025,7 @@ async function loadMonthlyData() {
         // Calculate Load and Grid for the month
         // Load predictions from predictions_2025_2044.min.json
         let monthlyLoad = 0;
+        let monthlyGrid = 0;
         
         try {
             const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
@@ -2033,13 +2034,15 @@ async function loadMonthlyData() {
             if (predictionsResponse.ok) {
                 const predictionsData = await predictionsResponse.json();
                 
-                // Sum Load for each day in the month
+                // Sum Load and Grid for each day in the month
                 monthRecords.forEach(record => {
                     const dateKey = record.date;
                     if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
                         const dayData = predictionsData.daily_predictions[dateKey];
                         const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
                         monthlyLoad += dailyLoad;
+                        monthlyGrid += dailyGrid;
                     }
                 });
             }
@@ -2047,12 +2050,9 @@ async function loadMonthlyData() {
             console.warn('Could not load predictions for Load/Grid:', error);
         }
         
-        // Calculate Grid as Load - PV (so that PV + Grid = Load)
-        const monthlyGrid = Math.max(0, monthlyLoad - monthlyGen);
-        
-        // Calculate PV Coverage
+        // Calculate PV Coverage and Grid Coverage
         const pvCoverage = monthlyLoad > 0 ? ((monthlyGen / monthlyLoad) * 100) : 0;
-        const gridCoverage = 100 - pvCoverage;
+        const gridCoverage = monthlyLoad > 0 ? ((monthlyGrid / monthlyLoad) * 100) : 0;
         
         // Update Load/Grid/Coverage displays
         document.getElementById('monthly-load').textContent = formatNumber(monthlyLoad);
@@ -2131,13 +2131,11 @@ function updateMonthlyChart(records, selectedMonthYear) {
         .then(predictionsData => {
             records.forEach(record => {
                 const dateKey = record.date;
-                const actualPV = record.generation_kwh || 0;
                 
                 if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
                     const dayData = predictionsData.daily_predictions[dateKey];
                     const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                    // Calculate Grid as: Load - PV (so that PV + Grid = Load)
-                    const dailyGrid = Math.max(0, dailyLoad - actualPV);
+                    const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
                     loadData.push(dailyLoad);
                     gridData.push(dailyGrid);
                 } else {
@@ -2159,10 +2157,10 @@ function updateMonthlyChart(records, selectedMonthYear) {
 }
 
 function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, loadData, gridData) {
-    // Scale irradiation to be closer to generation levels (divide by ~15 to get reasonable scale)
-    const maxLoad = Math.max(...loadData);
+    // Scale irradiation to be closer to generation levels
+    const maxGen = Math.max(...records.map(d => d.generation_kwh));
     const maxIrr = Math.max(...irradiationData);
-    const irrScaleFactor = maxLoad > 0 && maxIrr > 0 ? (maxLoad * 0.12) / maxIrr : 0.1;
+    const irrScaleFactor = maxGen > 0 && maxIrr > 0 ? (maxGen * 0.15) / maxIrr : 0.1;
     const scaledIrradiation = irradiationData.map(val => val * irrScaleFactor);
     
     monthlyChart = new Chart(ctx, {
@@ -2184,7 +2182,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y',
-                    order: 4
+                    order: 5
                 },
                 {
                     label: 'PV Generation (kWh)',
@@ -2192,29 +2190,45 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     backgroundColor: '#4ade80',
                     borderRadius: 5,
                     yAxisID: 'y',
-                    stack: 'energy',
                     order: 2
                 },
                 {
-                    label: 'Grid (kWh)',
-                    data: gridData.length > 0 ? gridData : records.map(() => 0),
-                    backgroundColor: '#f97316',
-                    borderRadius: 5,
+                    label: 'Predicted PV (kWh)',
+                    data: avgPredictionLine,
+                    type: 'line',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
                     yAxisID: 'y',
-                    stack: 'energy',
-                    order: 2
+                    order: 1
                 },
                 {
-                    label: 'Load (kWh)',
+                    label: 'Expected Load (kWh)',
                     data: loadData.length > 0 ? loadData : records.map(() => 0),
                     type: 'line',
                     borderColor: '#ef4444',
                     backgroundColor: 'transparent',
-                    borderWidth: 3,
+                    borderWidth: 2,
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y',
-                    order: 1
+                    order: 0
+                },
+                {
+                    label: 'Expected Grid (kWh)',
+                    data: gridData.length > 0 ? gridData : records.map(() => 0),
+                    type: 'line',
+                    borderColor: '#f97316',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [3, 3],
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 0
                 }
             ]
         },
@@ -2253,7 +2267,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
             },
             scales: {
                 x: {
-                    stacked: true,
                     ticks: { 
                         color: '#ffffff',
                         font: { size: 14, weight: '500' }
@@ -2264,7 +2277,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     type: 'linear',
                     display: true,
                     position: 'left',
-                    stacked: true,
                     beginAtZero: true,
                     title: { 
                         display: true, 
@@ -2327,13 +2339,11 @@ async function loadLifetimeMonthlyBreakdown() {
                 historyData.daily_records.forEach(record => {
                     const monthKey = record.date.substring(0, 7);
                     const dateKey = record.date;
-                    const actualPV = record.generation_kwh || 0;
                     
                     if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
                         const dayData = predictionsData.daily_predictions[dateKey];
                         const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                        // Calculate Grid as Load - actual PV (so PV + Grid = Load)
-                        const dailyGrid = Math.max(0, dailyLoad - actualPV);
+                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
                         if (monthlyData[monthKey]) {
                             monthlyData[monthKey].load += dailyLoad;
                             monthlyData[monthKey].grid += dailyGrid;
