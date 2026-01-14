@@ -1713,8 +1713,8 @@ function updateDailyView(data, selectedDate) {
     const avgPredictedData = data.map(d => d.predicted_kw);
     
     // Create arrays with average values for Load and Grid (to match generation scale)
-    const avgLoadData = loadData.map(() => avgLoad);
-    const avgGridData = gridData.map(() => avgGrid);
+    const avgLoadData = new Array(data.length).fill(avgLoad);
+    const avgGridData = new Array(data.length).fill(avgGrid);
     
     dailyChart = new Chart(ctx, {
         type: 'bar',
@@ -2122,7 +2122,12 @@ function updateMonthlyChart(records, selectedMonthYear) {
     // Load predictions synchronously (will use cached data if already loaded)
     const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
     fetch(`${basePath}predictions_2025_2044.min.json`.replace('//', '/'))
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(predictionsData => {
             records.forEach(record => {
                 const dateKey = record.date;
@@ -2146,8 +2151,9 @@ function updateMonthlyChart(records, selectedMonthYear) {
             createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, loadData, gridData);
         })
         .catch(error => {
-            console.warn('Could not load Load/Grid data for chart:', error);
-            // Create chart without Load/Grid
+            console.warn('Could not load Load/Grid predictions:', error.message || error);
+            console.info('Load and Grid charts disabled. Deploy predictions_2025_2044.min.json to enable.');
+            // Create chart without Load/Grid (will only show PV generation)
             createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, [], []);
         });
 }
