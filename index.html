@@ -2144,9 +2144,19 @@ function updateMonthlyChart(records, selectedMonthYear) {
                 }
             });
             
+            // Calculate averages for Load and Grid (like avgPredictionLine)
+            const totalLoad = loadData.reduce((sum, val) => sum + val, 0);
+            const totalGrid = gridData.reduce((sum, val) => sum + val, 0);
+            const avgLoad = loadData.length > 0 ? totalLoad / loadData.length : 0;
+            const avgGrid = gridData.length > 0 ? totalGrid / gridData.length : 0;
+            
+            // Create arrays with average values (like avgPredictionLine)
+            const avgLoadLine = new Array(records.length).fill(avgLoad);
+            const avgGridLine = new Array(records.length).fill(avgGrid);
+            
             // Recreate chart with Load and Grid data
             if (monthlyChart) monthlyChart.destroy();
-            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, loadData, gridData);
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, avgLoadLine, avgGridLine);
         })
         .catch(error => {
             console.warn('Could not load Load/Grid predictions:', error.message || error);
@@ -2206,19 +2216,19 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     order: 1
                 },
                 {
-                    label: 'Expected Load (kWh)',
+                    label: 'Avg Expected Load (kWh)',
                     data: loadData.length > 0 ? loadData : records.map(() => 0),
                     type: 'line',
                     borderColor: '#ef4444',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     pointRadius: 0,
-                    tension: 0.4,
+                    tension: 0,
                     yAxisID: 'y',
                     order: 0
                 },
                 {
-                    label: 'Expected Grid (kWh)',
+                    label: 'Avg Expected Grid (kWh)',
                     data: gridData.length > 0 ? gridData : records.map(() => 0),
                     type: 'line',
                     borderColor: '#f97316',
@@ -2226,7 +2236,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     borderWidth: 2,
                     borderDash: [3, 3],
                     pointRadius: 0,
-                    tension: 0.4,
+                    tension: 0,
                     yAxisID: 'y',
                     order: 0
                 }
