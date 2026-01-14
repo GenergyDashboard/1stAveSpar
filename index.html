@@ -2498,6 +2498,11 @@ async function loadLifetimeMonthlyBreakdown() {
         const ctx = document.getElementById('lifetimeMonthlyChart').getContext('2d');
         if (lifetimeMonthlyChart) lifetimeMonthlyChart.destroy();
         
+        // Scale Performance to fit on primary axis with Generation
+        // Performance is 0-150%, scale it to match generation range
+        const maxGeneration = Math.max(...monthGeneration);
+        const scaledPerformance = monthPerformance.map(perf => (perf / 100) * (maxGeneration * 0.8));
+        
         lifetimeMonthlyChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -2523,7 +2528,7 @@ async function loadLifetimeMonthlyBreakdown() {
                     },
                     {
                         label: 'Performance (%)',
-                        data: monthPerformance,
+                        data: scaledPerformance,
                         type: 'line',
                         borderColor: '#FFD700',
                         backgroundColor: 'transparent',
@@ -2531,8 +2536,10 @@ async function loadLifetimeMonthlyBreakdown() {
                         pointRadius: 5,
                         pointBackgroundColor: '#FFD700',
                         tension: 0.4,
-                        yAxisID: 'y1',
-                        order: 1
+                        yAxisID: 'y',
+                        order: 1,
+                        // Store original performance values for tooltip
+                        originalData: monthPerformance
                     },
                     {
                         label: 'Expected Load (kWh)',
@@ -2544,7 +2551,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         pointRadius: 3,
                         pointBackgroundColor: '#ef4444',
                         tension: 0.4,
-                        yAxisID: 'y',
+                        yAxisID: 'y1',
                         order: 0
                     },
                     {
@@ -2558,7 +2565,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         pointRadius: 3,
                         pointBackgroundColor: '#f97316',
                         tension: 0.4,
-                        yAxisID: 'y',
+                        yAxisID: 'y1',
                         order: 0
                     }
                 ]
@@ -2589,7 +2596,9 @@ async function loadLifetimeMonthlyBreakdown() {
                                 } else if (context.datasetIndex === 1) {
                                     return 'Actual: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else if (context.datasetIndex === 2) {
-                                    return 'Performance: ' + context.parsed.y.toFixed(1) + '%';
+                                    // Show actual performance % from originalData
+                                    const actualPerf = context.dataset.originalData[context.dataIndex];
+                                    return 'Performance: ' + actualPerf.toFixed(1) + '%';
                                 } else if (context.datasetIndex === 3) {
                                     return 'Load: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else {
@@ -2615,7 +2624,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         title: { 
                             display: true, 
                             text: 'Generation (kWh)',
-                            color: '#ffffff',
+                            color: '#4ade80',
                             font: { size: 16, weight: 'bold' }
                         },
                         ticks: { 
@@ -2629,23 +2638,18 @@ async function loadLifetimeMonthlyBreakdown() {
                         display: true,
                         position: 'right',
                         beginAtZero: true,
-                        max: 150,
                         title: {
                             display: true,
-                            text: 'Performance (%)',
-                            color: '#FFD700',
+                            text: 'Load / Grid (kWh)',
+                            color: '#ef4444',
                             font: { size: 16, weight: 'bold' }
                         },
                         ticks: {
                             color: '#ffffff',
-                            font: { size: 14, weight: '500' },
-                            callback: function(value) {
-                                return value + '%';
-                            }
+                            font: { size: 14, weight: '500' }
                         },
                         grid: {
-                            drawOnChartArea: false,
-                            drawBorder: false
+                            drawOnChartArea: false
                         }
                     }
                 }
