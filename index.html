@@ -2422,53 +2422,45 @@ async function updateDatePickerRange() {
     try {
         const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
         const selectedDate = document.getElementById('dateSelector').value;
-        const today = new Date().toISOString().split('T')[0];
         
-        let data;
+        // Load from dashboard_data.json (Phase 2)
+        const dashboardPath = `${basePath}data/dashboard_data.json`.replace('//', '/');
+        const response = await fetch(dashboardPath);
         
-        if (selectedDate === today) {
-            // Load today's detailed data
-            const dailyPath = `${basePath}data/today_detailed.json`.replace('//', '/');
-            const response = await fetch(dailyPath);
-            if (!response.ok) {
-                console.error('Could not load today\'s data');
-                return;
-            }
-            data = await response.json();
-            console.log('✓ Today\'s data loaded');
-        } else {
-            // Load historical data from generation_history.json
-            const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
-            const response = await fetch(historyPath);
-            if (!response.ok) {
-                console.error('Could not load historical data');
-                return;
-            }
-            const historyData = await response.json();
-            
-            // Check if we have hourly data for this date
-            if (historyData.hourly_records && historyData.hourly_records[selectedDate]) {
-                data = historyData.hourly_records[selectedDate];
-                console.log(`✓ Historical data loaded for ${selectedDate}`);
-            } else {
-                alert(`No hourly data available for ${selectedDate}. We only keep the last 7 days of hourly data.`);
-                console.warn(`No hourly data for ${selectedDate}`);
-                return;
-            }
+        if (!response.ok) {
+            console.error('Could not load dashboard_data.json');
+            return;
         }
         
-        updateDailyView(data, selectedDate);
+        const dashboardData = await response.json();
+        
+        // Find the daily record for selected date
+        const dailyRecords = dashboardData.daily_records || [];
+        const dailyRecord = dailyRecords.find(r => r.date === selectedDate);
+        
+        if (!dailyRecord) {
+            alert(`No data available for ${selectedDate}`);
+            console.warn(`No data for ${selectedDate}`);
+            return;
+        }
+        
+        // Convert to expected format (hourly_data array)
+        const data = dailyRecord.hourly_data || [];
+        console.log(`✓ Data loaded for ${selectedDate} from dashboard_data.json`);
+        
+        // Pass the daily record for TOU/Financial updates
+        updateDailyView(data, selectedDate, dailyRecord);
     } catch (error) {
         console.error('Error loading daily data:', error);
         alert('Error loading data. Please try again.');
     }
 }
         
-function updateDailyView(data, selectedDate) {
+function updateDailyView(data, selectedDate, dailyRecord = null) {
     if (!data || !Array.isArray(data) || data.length === 0) return;
     
     // Calculate stats from the hourly data provided
-    const pvData = data.map(d => d.pv_kw || 0);
+    const pvData = data.map(d => d.pv_kw || d.generation_kw || 0);
     const predictedData = data.map(d => d.predicted_kw || 0);
     
     // Check if we're viewing today
@@ -2477,43 +2469,48 @@ function updateDailyView(data, selectedDate) {
     
     let totalGeneration, totalPredicted, peakPower, avgPower;
     
-    if (viewingToday && dashboardData && dashboardData.today) {
-        // Use accurate values from dashboardData (calculated from 5-minute data)
+    // Use dailyRecord if available (most accurate from Phase 1 migration)
+    if (dailyRecord) {
+        totalGeneration = dailyRecord.generation_kwh;
+        peakPower = Math.max(...pvData);
+        avgPower = pvData.filter(v => v > 0).length > 0 ? 
+                   (totalGeneration / pvData.filter(v => v > 0).length) : 0;
+    } else if (viewingToday && dashboardData && dashboardData.today) {
+        // Fallback to old structure for backward compatibility
         totalGeneration = dashboardData.today.generation_kwh;
         totalPredicted = dashboardData.today.expected_kwh;
         peakPower = dashboardData.today.peak_power_kw;
         avgPower = dashboardData.today.avg_power_kw;
     } else {
-        // For historical dates, calculate from hourly data
-        // Sum hourly kW values to get kWh for the day
+        // Last resort: calculate from hourly data
         totalGeneration = pvData.reduce((sum, val) => sum + val, 0);
         peakPower = Math.max(...pvData);
         avgPower = totalGeneration / pvData.filter(v => v > 0).length || 0;
+    }
+    
+    // Calculate expected using monthly average daily prediction with degradation
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const monthKey = month.toString().padStart(2, '0');
+    
+    if (dashboardData && dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+        const commissioningDate = new Date(dashboardData.system.commissioning_date);
+        const targetDate = new Date(year, month - 1, day);
+        const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+        const yearsActive = daysActive / 365.25;
         
-        // Calculate expected using monthly average daily prediction with degradation
-        const [year, month, day] = selectedDate.split('-').map(Number);
-        const monthKey = month.toString().padStart(2, '0');
-        
-        if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
-            const commissioningDate = new Date(dashboardData.system.commissioning_date);
-            const targetDate = new Date(year, month - 1, day);
-            const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
-            const yearsActive = daysActive / 365.25;
-            
-            let degradationPercent;
-            if (yearsActive < 1) {
-                degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
-            } else {
-                degradationPercent = (dashboardData.system.degradation_year_1 + 
-                    (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
-            }
-            
-            const degradationFactor = 1 - (degradationPercent / 100);
-            totalPredicted = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
+        let degradationPercent;
+        if (yearsActive < 1) {
+            degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
         } else {
-            // Fallback to generic average
-            totalPredicted = 316;
+            degradationPercent = (dashboardData.system.degradation_year_1 + 
+                (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
         }
+        
+        const degradationFactor = 1 - (degradationPercent / 100);
+        totalPredicted = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
+    } else {
+        // Fallback to generic average
+        totalPredicted = 316;
     }
     
     const performance = totalPredicted > 0 ? (totalGeneration / totalPredicted * 100) : 0;
@@ -2737,12 +2734,9 @@ function updateDailyView(data, selectedDate) {
     });
     
     // Phase 2: Update TOU and Financial data
-    if (dashboardData && dashboardData.daily_records) {
-        const dailyRecord = dashboardData.daily_records.find(r => r.date === selectedDate);
-        if (dailyRecord) {
-            updateTouBreakdown('daily', dailyRecord);
-            updateFinancialSavings('daily', dailyRecord);
-        }
+    if (dailyRecord) {
+        updateTouBreakdown('daily', dailyRecord);
+        updateFinancialSavings('daily', dailyRecord);
     }
 }
 
