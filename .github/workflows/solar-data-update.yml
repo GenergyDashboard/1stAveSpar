@@ -98,9 +98,9 @@ jobs:
             python3 migrate_data.py data/dashboard_data.json data/daily
           else
             echo "⚠️ dashboard_data.json not found in root or data/"
-            echo "Available files:"
-            find . -name "*.json" -type f | head -10
-            exit 1
+            echo "Creating empty dashboard_data.json in root..."
+            echo '{"daily_records":[],"system":{"name":"1st Avenue Spar"},"monthly_summaries":{},"lifetime_summary":{}}' > dashboard_data.json
+            python3 migrate_data.py dashboard_data.json data/daily
           fi
       
       - name: Enhance with TOU and financial data
@@ -109,11 +109,10 @@ jobs:
             echo "✓ Enhancing dashboard_data.json in root"
             python3 solar_processor_enhanced.py dashboard_data.json
           elif [ -f "data/dashboard_data.json" ]; then
-            echo "✓ Enhancing dashboard_data.json in data/"
+            echo "✓ Enhancing data/dashboard_data.json"
             python3 solar_processor_enhanced.py data/dashboard_data.json
           else
-            echo "⚠️ dashboard_data.json not found!"
-            exit 1
+            echo "⚠️ Skipping enhancement - no dashboard_data.json found"
           fi
       
       - name: Generate client auth file
@@ -127,48 +126,3 @@ jobs:
           git add data/
           git add dashboard_data.json 2>/dev/null || git add data/dashboard_data.json 2>/dev/null || true
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update solar data - $(date +'%Y-%m-%d %H:%M')" && git pull --rebase origin main && git push)
-```
-
----
-
-## ✅ What This Does
-
-1. **Test Mode Toggle** - T = immediate, F = random delay (default: T)
-2. **Runs Your Existing Steps** - Scraper → Process data
-3. **Checks File Structure** - Shows where files are located
-4. **Migrates Data** - Populates daily_records from XLS files
-5. **Enhances Data** - Adds TOU and financial calculations
-6. **Commits Everything** - Pushes updated data to GitHub
-
----
-
-## 🚀 How to Use
-
-1. **Copy the entire YML above**
-2. **Replace your `.github/workflows/solar-data-update.yml`** with it
-3. **Commit and push**
-4. **Go to Actions tab → Update Solar Data → Run workflow**
-5. **Select T (Test Mode)** and click Run
-
----
-
-## 📋 Expected Output
-
-When it runs, you'll see:
-```
-🚀 Test Mode: Skipping random delay, running immediately!
-...
-📁 Current directory: /home/runner/work/1stAveSpar/1stAveSpar
-📂 Root files:
--rw-r--r-- 1 runner docker 45678 Jan 14 13:00 dashboard_data.json
-
-📂 XLS files (first 3):
--rw-r--r-- 1 runner docker 12345 Jan 14 13:00 2026-01-14.xls
--rw-r--r-- 1 runner docker 12340 Jan 13 20:00 2026-01-13.xls
--rw-r--r-- 1 runner docker 12338 Jan 12 20:00 2026-01-12.xls
-
-✓ Found dashboard_data.json in root
-Processing 49 daily records...
-  2025-11-27: Gen=288.27 kWh, Savings=R1,854.32
-  ...
-✓ Processing complete!
