@@ -9,18 +9,35 @@ on:
     # 20:00-20:10 SAST = 18:00 UTC
     - cron: '0 18 * * *'
   workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test Mode (T=immediate, F=random delay)'
+        required: false
+        default: 'T'
+        type: choice
+        options:
+          - 'T'
+          - 'F'
+
 permissions:
      contents: write
+     
 jobs:
   scrape-and-update:
     runs-on: ubuntu-latest
     
     steps:
       - name: Add random delay (0-10 minutes)
+        if: github.event.inputs.test_mode != 'T' && github.event_name != 'workflow_dispatch' || github.event.inputs.test_mode == 'F'
         run: |
           DELAY=$((RANDOM % 600))
           echo "⏱️ Waiting $DELAY seconds ($(($DELAY / 60)) minutes) before starting..."
           sleep $DELAY
+      
+      - name: Skip delay notification
+        if: github.event.inputs.test_mode == 'T'
+        run: |
+          echo "🚀 Test Mode: Skipping random delay, running immediately!"
       
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,6 +74,14 @@ jobs:
         run: |
           python process_data.py
       
+      - name: Migrate XLS data to daily records
+        run: |
+          python migrate_data.py dashboard_data.json data/daily
+      
+      - name: Enhance with TOU and financial data
+        run: |
+          python solar_processor_enhanced.py dashboard_data.json
+      
       - name: Generate client auth file
         run: |
           echo '{"username":"${{ secrets.CLIENT_USERNAME }}","password":"${{ secrets.CLIENT_PASSWORD }}"}' > data/client_auth.json
@@ -66,4 +91,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/
+          git add dashboard_data.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update solar data - $(date +'%Y-%m-%d %H:%M')" && git pull --rebase origin main && git push)
