@@ -1666,10 +1666,10 @@ function updateDailyView(data, selectedDate) {
     
     // Calculate Load, Grid, and PV Coverage
     const loadData = data.map(d => d.predicted_load_kw || 0);
-    const gridData = data.map(d => d.predicted_grid_kw || 0);
     
     const totalLoad = loadData.reduce((sum, val) => sum + val, 0);
-    const totalGrid = gridData.reduce((sum, val) => sum + val, 0);
+    // Calculate actual Grid as Load - actual PV (not using predicted grid)
+    const totalGrid = Math.max(0, totalLoad - totalGeneration);
     const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
     const gridCoverage = 100 - pvCoverage;  // Grid coverage is the inverse of PV coverage
     
@@ -2023,32 +2023,32 @@ async function loadMonthlyData() {
         }
         
         // Calculate Load and Grid for the month
-        // Load predictions from predictions_2025_2044.json
+        // Load predictions from predictions_2025_2044.min.json
         let monthlyLoad = 0;
-        let monthlyGrid = 0;
         
         try {
-            const predictionsPath = `${basePath}predictions_2025_2044.json`.replace('//', '/');
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
             const predictionsResponse = await fetch(predictionsPath);
             
             if (predictionsResponse.ok) {
                 const predictionsData = await predictionsResponse.json();
                 
-                // Sum Load and Grid for each day in the month
+                // Sum Load for each day in the month
                 monthRecords.forEach(record => {
                     const dateKey = record.date;
                     if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
                         const dayData = predictionsData.daily_predictions[dateKey];
                         const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
                         monthlyLoad += dailyLoad;
-                        monthlyGrid += dailyGrid;
                     }
                 });
             }
         } catch (error) {
             console.warn('Could not load predictions for Load/Grid:', error);
         }
+        
+        // Calculate Grid as Load - PV (so that PV + Grid = Load)
+        const monthlyGrid = Math.max(0, monthlyLoad - monthlyGen);
         
         // Calculate PV Coverage
         const pvCoverage = monthlyLoad > 0 ? ((monthlyGen / monthlyLoad) * 100) : 0;
@@ -2121,15 +2121,18 @@ function updateMonthlyChart(records, selectedMonthYear) {
     
     // Load predictions synchronously (will use cached data if already loaded)
     const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-    fetch(`${basePath}predictions_2025_2044.json`.replace('//', '/'))
+    fetch(`${basePath}predictions_2025_2044.min.json`.replace('//', '/'))
         .then(response => response.json())
         .then(predictionsData => {
             records.forEach(record => {
                 const dateKey = record.date;
+                const actualPV = record.generation_kwh || 0;
+                
                 if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
                     const dayData = predictionsData.daily_predictions[dateKey];
                     const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                    const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                    // Calculate Grid as: Load - PV (so that PV + Grid = Load)
+                    const dailyGrid = Math.max(0, dailyLoad - actualPV);
                     loadData.push(dailyLoad);
                     gridData.push(dailyGrid);
                 } else {
@@ -2309,7 +2312,7 @@ async function loadLifetimeMonthlyBreakdown() {
         // Load predictions to calculate Load and Grid
         let predictionsData = null;
         try {
-            const predictionsPath = `${basePath}predictions_2025_2044.json`.replace('//', '/');
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
             const predictionsResponse = await fetch(predictionsPath);
             if (predictionsResponse.ok) {
                 predictionsData = await predictionsResponse.json();
@@ -2318,10 +2321,13 @@ async function loadLifetimeMonthlyBreakdown() {
                 historyData.daily_records.forEach(record => {
                     const monthKey = record.date.substring(0, 7);
                     const dateKey = record.date;
+                    const actualPV = record.generation_kwh || 0;
+                    
                     if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
                         const dayData = predictionsData.daily_predictions[dateKey];
                         const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                        // Calculate Grid as Load - actual PV (so PV + Grid = Load)
+                        const dailyGrid = Math.max(0, dailyLoad - actualPV);
                         if (monthlyData[monthKey]) {
                             monthlyData[monthKey].load += dailyLoad;
                             monthlyData[monthKey].grid += dailyGrid;
