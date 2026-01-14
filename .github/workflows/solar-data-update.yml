@@ -73,13 +73,16 @@ jobs:
       
       - name: Process data and generate stats
         run: |
-          solar_processor_enhanced.py
+          python process_data.py
       
       - name: Check file structure
         run: |
           echo "📁 Current directory: $(pwd)"
           echo ""
-          echo "📂 Root files:"
+          echo "📂 Python scripts:"
+          ls -la *.py 2>/dev/null || echo "No .py files in root"
+          echo ""
+          echo "📂 Root JSON files:"
           ls -la *.json 2>/dev/null || echo "No JSON files in root"
           echo ""
           echo "📂 Data directory:"
@@ -90,6 +93,11 @@ jobs:
       
       - name: Migrate XLS data to daily records
         run: |
+          if [ ! -f "migrate_data.py" ]; then
+            echo "⚠️ migrate_data.py not found - skipping migration"
+            exit 0
+          fi
+          
           if [ -f "dashboard_data.json" ]; then
             echo "✓ Found dashboard_data.json in root"
             python3 migrate_data.py dashboard_data.json data/daily
@@ -105,6 +113,12 @@ jobs:
       
       - name: Enhance with TOU and financial data
         run: |
+          if [ ! -f "solar_processor_enhanced.py" ]; then
+            echo "⚠️ solar_processor_enhanced.py not found - skipping enhancement"
+            echo "📌 Please upload solar_processor_enhanced.py to enable TOU and financial calculations"
+            exit 0
+          fi
+          
           if [ -f "dashboard_data.json" ]; then
             echo "✓ Enhancing dashboard_data.json in root"
             python3 solar_processor_enhanced.py dashboard_data.json
