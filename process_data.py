@@ -411,9 +411,33 @@ def enhance_dashboard_data(input_file, output_file=None):
     print(f"{'='*80}")
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Usage: python3 solar_processor_enhanced.py <dashboard_data.json>")
+    # Auto-detect dashboard_data.json location
+    if len(sys.argv) >= 2:
+        input_file = sys.argv[1]
+    else:
+        # Try common locations
+        possible_locations = [
+            'dashboard_data.json',
+            '../dashboard_data.json',
+            '../../dashboard_data.json',
+            './data/dashboard_data.json',
+        ]
+        
+        input_file = None
+        for location in possible_locations:
+            if os.path.exists(location):
+                input_file = location
+                print(f"Found dashboard_data.json at: {location}")
+                break
+        
+        if input_file is None:
+            print("Error: Could not find dashboard_data.json")
+            print("\nUsage: python3 solar_processor_enhanced.py <path_to_dashboard_data.json>")
+            print("\nOr place this script in the same directory as dashboard_data.json")
+            sys.exit(1)
+    
+    if not os.path.exists(input_file):
+        print(f"Error: File not found: {input_file}")
         sys.exit(1)
     
-    input_file = sys.argv[1]
     enhance_dashboard_data(input_file)
