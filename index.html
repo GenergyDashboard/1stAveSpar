@@ -3243,13 +3243,17 @@ function updateMonthlyChart(records, selectedMonthYear) {
             return response.json();
         })
         .then(predictionsData => {
-            // Get irradiation for each day
+            console.log(`✅ Loaded predictions file, checking ${records.length} days...`);
+            
+            // Get irradiation for each day (if available)
             const irradiationData = records.map(record => {
                 const dateKey = record.date;
                 if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
                     const dayData = predictionsData.daily_predictions[dateKey];
-                    // Sum hourly irradiation to get daily total (Wh/m²)
-                    return dayData.irradiation_wm2.reduce((sum, val) => sum + val, 0);
+                    // Irradiation may not exist in all predictions files
+                    if (dayData.irradiation_wm2) {
+                        return dayData.irradiation_wm2.reduce((sum, val) => sum + val, 0);
+                    }
                 }
                 return 0;
             });
@@ -3267,6 +3271,8 @@ function updateMonthlyChart(records, selectedMonthYear) {
                 console.log(`📊 Monthly Chart using ACTUAL data: avg load=${(loadData.reduce((a,b)=>a+b,0)/loadData.length).toFixed(2)} kWh/day`);
             } else {
                 // EXPECTED MODE: Use predictions
+                console.log(`   Fetching Load/Grid from predictions for ${records.length} days...`);
+                let daysFound = 0;
                 records.forEach(record => {
                     const dateKey = record.date;
                     
@@ -3276,21 +3282,26 @@ function updateMonthlyChart(records, selectedMonthYear) {
                         const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
                         loadData.push(dailyLoad);
                         gridData.push(dailyGrid);
+                        daysFound++;
                     } else {
+                        console.warn(`   ⚠️ No prediction for ${dateKey}`);
                         loadData.push(0);
                         gridData.push(0);
                     }
                 });
+                console.log(`   Found predictions for ${daysFound}/${records.length} days`);
                 console.log(`📊 Monthly Chart using EXPECTED data: avg load=${(loadData.reduce((a,b)=>a+b,0)/loadData.length).toFixed(2)} kWh/day`);
             }
             
-            // Calculate averages for Load and Grid (like avgPredictionLine)
+            // Calculate averages for Load and Grid
             const totalLoad = loadData.reduce((sum, val) => sum + val, 0);
             const totalGrid = gridData.reduce((sum, val) => sum + val, 0);
             const avgLoad = loadData.length > 0 ? totalLoad / loadData.length : 0;
             const avgGrid = gridData.length > 0 ? totalGrid / gridData.length : 0;
             
-            // Create arrays with average values (like avgPredictionLine)
+            console.log(`   Final averages: avgLoad=${avgLoad.toFixed(2)} kWh/day, avgGrid=${avgGrid.toFixed(2)} kWh/day`);
+            
+            // Create arrays with average values
             const avgLoadLine = new Array(records.length).fill(avgLoad);
             const avgGridLine = new Array(records.length).fill(avgGrid);
             
@@ -3300,11 +3311,13 @@ function updateMonthlyChart(records, selectedMonthYear) {
             createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, avgLoadLine, avgGridLine, modeLabel);
         })
         .catch(error => {
-            console.warn('Could not load predictions:', error.message || error);
-            console.info('Irradiation, Load and Grid charts disabled. Deploy predictions_2025_2044.min.json to enable.');
-            // Create chart without predictions data
+            console.error('❌ Failed to load predictions:', error.message || error);
+            console.error('   Please ensure predictions_2025_2044.min.json is deployed');
+            
+            // Create chart without Load/Grid data
             const emptyIrradiation = new Array(records.length).fill(0);
-            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, emptyIrradiation, [], [], 'Expected ');
+            const emptyLine = new Array(records.length).fill(0);
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, emptyIrradiation, emptyLine, emptyLine, 'Expected ');
         });
 }
 
@@ -3335,7 +3348,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y',
-                    order: 10
+                    order: 5
                 },
                 {
                     label: 'PV Generation (kWh)',
@@ -3343,7 +3356,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     backgroundColor: '#4ade80',
                     borderRadius: 5,
                     yAxisID: 'y',
-                    order: 2
+                    order: 4
                 },
                 {
                     label: 'Predicted PV (kWh)',
@@ -3356,7 +3369,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
-                    order: 1
+                    order: 2
                 },
                 {
                     label: `Avg ${modeLabel}Load (kWh)`,
@@ -3364,11 +3377,11 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     type: 'line',
                     borderColor: '#ef4444',
                     backgroundColor: 'transparent',
-                    borderWidth: 2,
+                    borderWidth: 3,
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y1',
-                    order: 0
+                    order: 1
                 },
                 {
                     label: `Avg ${modeLabel}Grid (kWh)`,
@@ -3376,7 +3389,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     type: 'line',
                     borderColor: '#f97316',
                     backgroundColor: 'transparent',
-                    borderWidth: 2,
+                    borderWidth: 3,
                     borderDash: [3, 3],
                     pointRadius: 0,
                     tension: 0,
