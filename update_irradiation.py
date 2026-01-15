@@ -61,18 +61,21 @@ def update_predictions_file(predictions_file, new_irradiation):
     with open(predictions_file, 'r') as f:
         predictions = json.load(f)
     
-    total_days = len(predictions['daily_predictions'])
+    total_days = len(predictions.get('daily_predictions', {}))
     updated_count = 0
     
     print(f"✓ Loaded predictions for {total_days} days")
     print(f"\n🔄 Updating irradiation data...")
     
     for date_str, irradiation_hourly in new_irradiation.items():
-        if date_str in predictions['daily_predictions']:
+        if 'daily_predictions' in predictions and date_str in predictions['daily_predictions']:
             predictions['daily_predictions'][date_str]['irradiation_wm2'] = irradiation_hourly
             updated_count += 1
     
-    # Update metadata
+    # Update or create metadata
+    if 'metadata' not in predictions:
+        predictions['metadata'] = {}
+    
     predictions['metadata']['irradiation_last_updated'] = datetime.now().isoformat()
     predictions['metadata']['irradiation_dates_updated'] = list(new_irradiation.keys())
     
