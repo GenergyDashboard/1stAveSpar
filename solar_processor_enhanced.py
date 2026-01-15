@@ -413,6 +413,52 @@ def enhance_dashboard_data(input_file, output_file=None):
     data['lifetime_summary'] = lifetime_summary
     data['tou_rates'] = TOU_RATES
     
+    # Update top-level summaries (today, yesterday, month, lifetime) for dashboard compatibility
+    from datetime import date as date_class
+    today_str = date_class.today().strftime('%Y-%m-%d')
+    yesterday_str = (date_class.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+    current_month = date_class.today().strftime('%Y-%m')
+    
+    # Find today's record
+    today_record = next((r for r in enhanced_daily_records if r['date'] == today_str), None)
+    yesterday_record = next((r for r in enhanced_daily_records if r['date'] == yesterday_str), None)
+    
+    if today_record:
+        data['today'] = {
+            'date': today_str,
+            'generation_kwh': today_record['generation_kwh'],
+            'expected_kwh': today_record.get('expected_kwh', 0),
+            'performance_percent': today_record.get('performance_percent', 0),
+            'avg_power_kw': today_record.get('avg_power_kw', 0),
+            'peak_power_kw': today_record.get('peak_power_kw', 0),
+            'env_impact': today_record.get('env_impact', {})
+        }
+    
+    if yesterday_record:
+        data['yesterday'] = {
+            'date': yesterday_str,
+            'generation_kwh': yesterday_record['generation_kwh'],
+            'env_impact': yesterday_record.get('env_impact', {})
+        }
+    
+    # Update current month summary
+    if current_month in monthly_summaries:
+        month_data = monthly_summaries[current_month]
+        data['month'] = {
+            'generation_kwh': month_data['total_generation_kwh'],
+            'expected_kwh': month_data.get('expected_kwh', 0),
+            'performance_percent': month_data.get('performance_percent', 0),
+            'month_name': datetime.strptime(current_month, '%Y-%m').strftime('%B %Y'),
+            'env_impact': month_data.get('env_impact', {})
+        }
+    
+    # Update lifetime summary
+    data['lifetime'] = {
+        'total_generation_kwh': lifetime_summary['total_generation_kwh'],
+        'total_generation_mwh': lifetime_summary['total_generation_kwh'] / 1000,
+        'env_impact': lifetime_summary.get('env_impact', {})
+    }
+    
     # Save enhanced data
     print(f"\nSaving enhanced data to {output_file}...")
     with open(output_file, 'w') as f:
