@@ -2515,17 +2515,8 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
                 console.log(`     Prediction keys: ${Object.keys(dayPredictions).join(', ')}`);
                 
                 // Support both field name formats
-                predictedData = dayPredictions.generation_kw || dayPredictions.pv_kw || [];
-                irradiationData = dayPredictions.irradiation_wm2 || [];
-                
-                // If no irradiation data, estimate from predicted generation (rough approximation)
-                if (irradiationData.length === 0 && predictedData.length > 0) {
-                    console.log(`     ℹ️ No irradiation data, estimating from PV generation`);
-                    // Rough estimate: 1 kW solar ≈ 800-1000 W/m² at peak
-                    // Scale factor: typical system efficiency ~15-20%
-                    // So: irradiation ≈ generation_kw × 200 (very rough)
-                    irradiationData = predictedData.map(kw => kw > 0 ? kw * 200 : 0);
-                }
+                predictedData = dayPredictions.predicted_pv_kw || dayPredictions.generation_kw || dayPredictions.pv_kw || [];
+                irradiationData = dayPredictions.irradiation_wm2 || dayPredictions.irradiation || [];
                 
                 if (predictedData.length > 0) {
                     const maxPred = Math.max(...predictedData);
@@ -2557,10 +2548,10 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
             // If predictions not available, use fallback
             if (predictedData.length === 0) {
                 console.log(`  Using fallback for predicted data`);
-                predictedData = data.map(d => d.predicted_kw || 0);
+                predictedData = data.map(d => d.predicted_kw || d.pv_kw || 0);
             }
             if (irradiationData.length === 0) {
-                console.log(`  Using fallback for irradiation data`);
+                console.log(`  Using actual irradiation from hourly_data`);
                 irradiationData = data.map(d => d.irradiation_wm2 || 0);
             }
             
@@ -2572,9 +2563,9 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
         .catch(error => {
             console.error(`  ❌ Error loading predictions:`, error);
             // Fallback to data fields
-            const predictedData = data.map(d => d.predicted_kw || 0);
+            const predictedData = data.map(d => d.predicted_kw || d.pv_kw || 0);
             const irradiationData = data.map(d => d.irradiation_wm2 || 0);
-            console.log(`  Using fallback data: predicted=${predictedData.length}, irradiation=${irradiationData.length}`);
+            console.log(`  Using fallback data: predicted=${predictedData.length}, irradiation=${irradiationData.length} (actual values)`);
             continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predictedData, irradiationData);
         });
 }
