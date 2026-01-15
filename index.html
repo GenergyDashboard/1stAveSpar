@@ -3191,16 +3191,7 @@ function updateMonthlyChart(records, selectedMonthYear) {
     // Create array of avg prediction for line
     const avgPredictionLine = new Array(records.length).fill(avgDailyPrediction);
     
-    // Get irradiation data for each day from records
-    const irradiationData = records.map(record => {
-        return record.irradiation_wh_m2 || 0;
-    });
-    
-    // Fetch Load and Grid data for each day
-    const loadData = [];
-    const gridData = [];
-    
-    // Load predictions synchronously (will use cached data if already loaded)
+    // Get irradiation data from predictions file for each day
     const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
     fetch(`${basePath}predictions_2025_2044.min.json`.replace('//', '/'))
         .then(response => {
@@ -3210,6 +3201,20 @@ function updateMonthlyChart(records, selectedMonthYear) {
             return response.json();
         })
         .then(predictionsData => {
+            // Get irradiation for each day
+            const irradiationData = records.map(record => {
+                const dateKey = record.date;
+                if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                    const dayData = predictionsData.daily_predictions[dateKey];
+                    // Sum hourly irradiation to get daily total (Wh/m²)
+                    return dayData.irradiation_wm2.reduce((sum, val) => sum + val, 0);
+                }
+                return 0;
+            });
+            
+            // Fetch Load and Grid data
+            const loadData = [];
+            const gridData = [];
             records.forEach(record => {
                 const dateKey = record.date;
                 
@@ -3240,10 +3245,11 @@ function updateMonthlyChart(records, selectedMonthYear) {
             createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, avgLoadLine, avgGridLine);
         })
         .catch(error => {
-            console.warn('Could not load Load/Grid predictions:', error.message || error);
-            console.info('Load and Grid charts disabled. Deploy predictions_2025_2044.min.json to enable.');
-            // Create chart without Load/Grid (will only show PV generation)
-            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, [], []);
+            console.warn('Could not load predictions:', error.message || error);
+            console.info('Irradiation, Load and Grid charts disabled. Deploy predictions_2025_2044.min.json to enable.');
+            // Create chart without predictions data
+            const emptyIrradiation = new Array(records.length).fill(0);
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, emptyIrradiation, [], []);
         });
 }
 
