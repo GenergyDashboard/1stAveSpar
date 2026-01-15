@@ -2,6 +2,9 @@
 """
 Enhanced Solar Data Processor with TOU and Financial Analysis
 Processes hourly solar generation data with Time-of-Use classification and financial calculations
+
+CORRECTED VERSION - Based on Book2.xlsx
+High-demand season (June-Aug) shifts peak/standard times 1 hour EARLIER compared to Low-demand season
 """
 
 import json
@@ -12,34 +15,45 @@ from pathlib import Path
 import openpyxl
 
 # ============================================================================
-# TOU Configuration
+# TOU Configuration - CORRECTED FROM Book2.xlsx
 # ============================================================================
 
-# TOU Time Periods (South African Standard)
-# Based on Municipality/Eskom TOU schedule
+# TOU Time Periods (Based on Book2.xlsx with proper seasonal differences)
+# High-demand season (June-Aug) shifts peak/standard times 1 hour EARLIER compared to Low-demand
+# Weekday pattern: High-demand starts morning peak at 6am (vs 7am), evening peak at 5pm (vs 6pm)
 TOU_SCHEDULE = {
     'high_season': {  # June, July, August (Winter)
-        'weekday': {
-            'peak': [(7, 10), (18, 20)],      # 07:00-10:00, 18:00-20:00
-            'standard': [(6, 7), (10, 18), (20, 22)],  # 06:00-07:00, 10:00-18:00, 20:00-22:00
-            'off_peak': [(22, 24), (0, 6)]    # 22:00-00:00, 00:00-06:00
+        'weekday': {  # Monday-Friday
+            'peak': [(6, 8), (17, 20)],      # 06:00-08:00, 17:00-20:00 (hours 6,7 and 17,18,19)
+            'standard': [(8, 17), (20, 22)],  # 08:00-17:00, 20:00-22:00 (hours 8-16 and 20,21)
+            'off_peak': [(0, 6), (22, 24)]    # 00:00-06:00, 22:00-24:00 (hours 0-5 and 22,23)
         },
-        'weekend': {  # Saturday, Sunday
+        'saturday': {
             'peak': [],
-            'standard': [(6, 22)],             # 06:00-22:00
-            'off_peak': [(22, 24), (0, 6)]    # 22:00-00:00, 00:00-06:00
+            'standard': [(7, 12), (17, 19)],  # 07:00-12:00, 17:00-19:00 (hours 7-11 and 17,18)
+            'off_peak': [(0, 7), (12, 17), (19, 24)]  # Rest of the day
+        },
+        'sunday': {
+            'peak': [],
+            'standard': [(17, 19)],           # 17:00-19:00 (hours 17,18) - 2-hour standard period
+            'off_peak': [(0, 17), (19, 24)]   # Rest of the day
         }
     },
     'low_season': {  # All other months
-        'weekday': {
-            'peak': [(7, 10), (18, 20)],      # 07:00-10:00, 18:00-20:00
-            'standard': [(6, 7), (10, 18), (20, 22)],  # 06:00-07:00, 10:00-18:00, 20:00-22:00
-            'off_peak': [(22, 24), (0, 6)]    # 22:00-00:00, 00:00-06:00
+        'weekday': {  # Monday-Friday
+            'peak': [(7, 9), (18, 21)],      # 07:00-09:00, 18:00-21:00 (hours 7,8 and 18,19,20)
+            'standard': [(6, 7), (9, 18), (21, 22)],  # 06:00-07:00, 09:00-18:00, 21:00-22:00 (hours 6, 9-17, 21)
+            'off_peak': [(0, 6), (22, 24)]    # 00:00-06:00, 22:00-24:00 (hours 0-5 and 22,23)
         },
-        'weekend': {
+        'saturday': {
             'peak': [],
-            'standard': [(6, 22)],             # 06:00-22:00
-            'off_peak': [(22, 24), (0, 6)]    # 22:00-00:00, 00:00-06:00
+            'standard': [(7, 12), (18, 20)],  # 07:00-12:00, 18:00-20:00 (hours 7-11 and 18,19)
+            'off_peak': [(0, 7), (12, 18), (20, 24)]  # Rest of the day
+        },
+        'sunday': {
+            'peak': [],
+            'standard': [(18, 20)],           # 18:00-20:00 (hours 18,19) - 2-hour standard period
+            'off_peak': [(0, 18), (20, 24)]   # Rest of the day
         }
     }
 }
@@ -99,9 +113,13 @@ def classify_tou_period(dt):
     # Determine season
     season = 'high' if month in HIGH_SEASON_MONTHS else 'low'
     
-    # Determine day type
-    is_weekend = weekday >= 5  # Saturday=5, Sunday=6
-    day_type = 'weekend' if is_weekend else 'weekday'
+    # Determine day type - CORRECTED to differentiate Saturday and Sunday
+    if weekday == 6:  # Sunday
+        day_type = 'sunday'
+    elif weekday == 5:  # Saturday
+        day_type = 'saturday'
+    else:  # Monday-Friday
+        day_type = 'weekday'
     
     # Get schedule for this season and day type
     schedule = TOU_SCHEDULE[f'{season}_season'][day_type]
@@ -113,7 +131,7 @@ def classify_tou_period(dt):
             if start_hour <= hour < end_hour:
                 return (period_type, season)
     
-    # Default to off_peak if not found
+    # Default to off_peak if not found (shouldn't happen)
     return ('off_peak', season)
 
 # ============================================================================
