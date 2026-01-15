@@ -2780,14 +2780,14 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                     label: 'Irradiation (W/m²)',
                     data: irradiationData,
                     type: 'line',
-                    backgroundColor: 'rgba(255, 215, 0, 0.25)',
-                    borderColor: 'rgba(255, 193, 7, 0.6)',
-                    borderWidth: 2,
+                    backgroundColor: 'rgba(255, 215, 0, 0.3)',
+                    borderColor: 'rgba(255, 193, 7, 0.5)',
+                    borderWidth: 1,
                     fill: true,
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y1',
-                    order: 4
+                    order: 10
                 },
                 {
                     label: 'PV Generation (kW)',
@@ -2822,7 +2822,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                     borderWidth: 2,
                     pointRadius: 0,
                     tension: 0,
-                    yAxisID: 'y',
+                    yAxisID: 'y1',
                     order: 0
                 },
                 {
@@ -2835,7 +2835,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                     borderDash: [3, 3],
                     pointRadius: 0,
                     tension: 0,
-                    yAxisID: 'y',
+                    yAxisID: 'y1',
                     order: 0
                 }
             ]
@@ -2924,7 +2924,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
     beginAtZero: true,
     title: {
         display: true,
-        text: 'Irradiation (W/m²)',
+        text: 'Load / Grid (kW) | Irradiation (W/m²)',
         color: '#FFD700',
         font: { size: 16, weight: 'bold' }
     },
@@ -3273,14 +3273,14 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     label: 'Irradiation (scaled)',
                     data: scaledIrradiation,
                     type: 'line',
-                    borderColor: 'rgba(255, 193, 7, 0.7)',
-                    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-                    borderWidth: 2,
+                    borderColor: 'rgba(255, 193, 7, 0.5)',
+                    backgroundColor: 'rgba(255, 215, 0, 0.3)',
+                    borderWidth: 1,
                     fill: true,
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y',
-                    order: 5
+                    order: 10
                 },
                 {
                     label: 'PV Generation (kWh)',
