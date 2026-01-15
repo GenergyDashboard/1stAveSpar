@@ -116,6 +116,26 @@ jobs:
             python3 migrate_data.py dashboard_data.json data/daily
           fi
       
+      - name: Update irradiation from Open-Meteo API
+        run: |
+          if [ ! -f "update_irradiation.py" ]; then
+            echo "⚠️ update_irradiation.py not found - skipping irradiation update"
+            echo "   Predictions file will use existing/static irradiation data"
+            exit 0
+          fi
+          
+          if [ ! -f "predictions_2025_2044.min.json" ]; then
+            echo "⚠️ predictions_2025_2044.min.json not found"
+            echo "   Cannot update irradiation without predictions file"
+            exit 0
+          fi
+          
+          echo "📡 Fetching fresh irradiation data from Open-Meteo API..."
+          python3 update_irradiation.py || {
+            echo "⚠️ Irradiation update failed, continuing with existing data"
+            exit 0
+          }
+      
       - name: Enhance with TOU and financial data
         run: |
           if [ ! -f "solar_processor_enhanced.py" ]; then
@@ -143,5 +163,6 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/
+          git add predictions_2025_2044.min.json 2>/dev/null || true
           git add dashboard_data.json 2>/dev/null || git add data/dashboard_data.json 2>/dev/null || true
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update solar data - $(date +'%Y-%m-%d %H:%M')" && git pull --rebase origin main && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update solar data with fresh irradiation - $(date +'%Y-%m-%d %H:%M')" && git pull --rebase origin main && git push)
