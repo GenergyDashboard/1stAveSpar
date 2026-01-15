@@ -82,6 +82,29 @@ TOU_RATES = [
     # Add more as rates change
 ]
 
+# Environmental impact factors (per kWh)
+ENV_FACTORS = {
+    'co2_offset_kg': 1.0,  # kg CO2 per kWh
+    'trees_equivalent': 0.045,  # trees per kWh
+    'households_offset': 0.102,  # homes powered per kWh
+    'km_driven_offset': 3.98,  # km of car driving offset per kWh
+    'km_flown_offset': 0.081,  # km of flying offset per kWh
+    'coal_saved_kg': 0.548,  # kg of coal saved per kWh
+    'water_saved_litres': 1.4  # litres of water saved per kWh
+}
+
+def calculate_environmental_impact(generation_kwh):
+    """Calculate environmental impact metrics from generation"""
+    return {
+        'co2_offset_tons': round(generation_kwh * ENV_FACTORS['co2_offset_kg'] / 1000, 2),
+        'trees_equivalent': round(generation_kwh * ENV_FACTORS['trees_equivalent'], 2),
+        'households_offset': round(generation_kwh * ENV_FACTORS['households_offset'], 2),
+        'km_driven_offset': round(generation_kwh * ENV_FACTORS['km_driven_offset'], 2),
+        'km_flown_offset': round(generation_kwh * ENV_FACTORS['km_flown_offset'], 2),
+        'coal_saved_kg': round(generation_kwh * ENV_FACTORS['coal_saved_kg'], 2),
+        'water_saved_litres': round(generation_kwh * ENV_FACTORS['water_saved_litres'], 2)
+    }
+
 def get_tou_rate(date, period_type, season_type='high'):
     """Get the TOU rate for a specific date and period"""
     # Find the applicable rate period
@@ -431,14 +454,14 @@ def enhance_dashboard_data(input_file, output_file=None):
             'performance_percent': today_record.get('performance_percent', 0),
             'avg_power_kw': today_record.get('avg_power_kw', 0),
             'peak_power_kw': today_record.get('peak_power_kw', 0),
-            'env_impact': today_record.get('env_impact', {})
+            'env_impact': calculate_environmental_impact(today_record['generation_kwh'])
         }
     
     if yesterday_record:
         data['yesterday'] = {
             'date': yesterday_str,
             'generation_kwh': yesterday_record['generation_kwh'],
-            'env_impact': yesterday_record.get('env_impact', {})
+            'env_impact': calculate_environmental_impact(yesterday_record['generation_kwh'])
         }
     
     # Update current month summary
@@ -449,14 +472,14 @@ def enhance_dashboard_data(input_file, output_file=None):
             'expected_kwh': month_data.get('expected_kwh', 0),
             'performance_percent': month_data.get('performance_percent', 0),
             'month_name': datetime.strptime(current_month, '%Y-%m').strftime('%B %Y'),
-            'env_impact': month_data.get('env_impact', {})
+            'env_impact': calculate_environmental_impact(month_data['total_generation_kwh'])
         }
     
     # Update lifetime summary
     data['lifetime'] = {
         'total_generation_kwh': lifetime_summary['total_generation_kwh'],
         'total_generation_mwh': lifetime_summary['total_generation_kwh'] / 1000,
-        'env_impact': lifetime_summary.get('env_impact', {})
+        'env_impact': calculate_environmental_impact(lifetime_summary['total_generation_kwh'])
     }
     
     # Save enhanced data
