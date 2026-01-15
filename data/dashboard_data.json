@@ -9974,7 +9974,7 @@
     },
     {
       "date": "2026-01-15",
-      "generation_kwh": 19.62,
+      "generation_kwh": 72.08,
       "hourly_data": [
         {
           "time": "05:00",
@@ -10022,27 +10022,71 @@
         },
         {
           "time": "09:00",
-          "generation_kw": 2.219,
-          "grid_kw": -31.84,
-          "load_kw": 34.059,
-          "intervals": 5,
+          "generation_kw": 6.798,
+          "grid_kw": -81.893,
+          "load_kw": 88.692,
+          "intervals": 12,
           "tou_period": "standard",
           "tou_season": "low",
           "tou_rate": 4.67,
-          "savings_zar": 10.36
+          "savings_zar": 31.75
+        },
+        {
+          "time": "10:00",
+          "generation_kw": 10.525,
+          "grid_kw": -72.267,
+          "load_kw": 82.792,
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 49.15
+        },
+        {
+          "time": "11:00",
+          "generation_kw": 11.072,
+          "grid_kw": -74.753,
+          "load_kw": 85.825,
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 51.71
+        },
+        {
+          "time": "12:00",
+          "generation_kw": 23.069,
+          "grid_kw": -63.653,
+          "load_kw": 86.722,
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 107.73
+        },
+        {
+          "time": "13:00",
+          "generation_kw": 3.209,
+          "grid_kw": -9.973,
+          "load_kw": 13.182,
+          "intervals": 2,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 14.99
         }
       ],
-      "actual_load_kwh": 326.82,
-      "actual_grid_kwh": 307.2,
+      "actual_load_kwh": 649.98,
+      "actual_grid_kwh": 577.9,
       "tou_breakdown": {
         "peak_kwh": 12.71,
-        "standard_kwh": 6.45,
+        "standard_kwh": 58.9,
         "off_peak_kwh": 0.46
       },
       "financial": {
-        "total_savings_zar": 126.5819,
+        "total_savings_zar": 371.54208000000006,
         "peak_savings_zar": 94.83897999999999,
-        "standard_savings_zar": 30.10282,
+        "standard_savings_zar": 275.063,
         "off_peak_savings_zar": 1.6401
       }
     }
@@ -10083,46 +10127,46 @@
       }
     },
     "2026-01": {
-      "total_generation_kwh": 6795.74,
-      "actual_load_kwh": 17518.88,
-      "actual_grid_kwh": 10723.150000000001,
+      "total_generation_kwh": 6848.2,
+      "actual_load_kwh": 17842.04,
+      "actual_grid_kwh": 10993.85,
       "days_with_data": 15,
       "tou_breakdown": {
         "peak_kwh": 481.31,
-        "standard_kwh": 4739.54,
+        "standard_kwh": 4791.99,
         "off_peak_kwh": 1574.9
       },
       "financial": {
-        "total_savings_zar": 31315.09,
+        "total_savings_zar": 31560.05,
         "peak_savings_zar": 3590.57,
-        "standard_savings_zar": 22133.7,
+        "standard_savings_zar": 22378.66,
         "off_peak_savings_zar": 5590.83
       }
     }
   },
   "lifetime_summary": {
-    "total_generation_kwh": 21618.379999999997,
-    "actual_load_kwh": 59931.600000000006,
-    "actual_grid_kwh": 38313.23999999999,
+    "total_generation_kwh": 21670.84,
+    "actual_load_kwh": 60254.76000000001,
+    "actual_grid_kwh": 38583.939999999995,
     "days_active": 50,
     "tou_breakdown": {
       "peak_kwh": 1689.3000000000002,
-      "standard_kwh": 14778.810000000001,
+      "standard_kwh": 14831.26,
       "off_peak_kwh": 5150.24
     },
     "financial": {
-      "total_savings_zar": 99902.7,
+      "total_savings_zar": 100147.66,
       "peak_savings_zar": 12602.3,
-      "standard_savings_zar": 69017.18,
+      "standard_savings_zar": 69262.14,
       "off_peak_savings_zar": 18283.21,
       "by_year": {
         "2025": 68587.6,
-        "2026": 31315.09
+        "2026": 31560.05
       },
       "by_month": {
         "2025-11": 5725.75,
         "2025-12": 62861.86,
-        "2026-01": 31315.09
+        "2026-01": 31560.05
       }
     }
   },
