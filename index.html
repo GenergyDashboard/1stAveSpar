@@ -1362,7 +1362,7 @@
                 <button class="tab active" onclick="switchClientTab('daily')">Daily Generation</button>
                 <button class="tab" onclick="switchClientTab('monthly')">Monthly Overview</button>
                 <button class="tab" onclick="switchClientTab('lifetime')">Lifetime Stats</button>
-                <button class="tab" onclick="switchClientTab('financial')">💰 Financial Overview</button>
+                <button class="tab" onclick="switchClientTab('financial')">Financial Overview</button>
             </div>
             
             <div id="daily-tab" class="tab-content active">
@@ -1399,7 +1399,7 @@
     <div class="value" id="daily-avg">--</div>
 </div>
                     <div class="stat-card">
-                        <div class="label">Expected Load</div>
+                        <div class="label" id="daily-load-label">Load</div>
                         <div class="value" id="daily-load">--</div>
                         <div class="subvalue">Expected: <span id="daily-load-expected">--</span> kWh</div>
                     </div>
@@ -1409,14 +1409,14 @@
                         <div class="subvalue">% of Load covered by PV</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Expected Grid Coverage</div>
+                        <div class="label" id="daily-grid-label">Grid Coverage</div>
                         <div class="value" id="daily-grid">--</div>
                         <div class="subvalue"><span id="grid-coverage-pct">--</span> of Load</div>
                     </div>
                 </div>
                 
                 <!-- TOU Breakdown & Savings Cards -->
-                <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 30px;">
+                <div class="stats-grid" style="grid-template-columns: 1fr 1.5fr; margin-top: 30px;">
                     <!-- TOU Breakdown Card -->
                     <div class="tou-breakdown-card">
                         <div class="label">⚡ Time of Use Breakdown</div>
@@ -2308,11 +2308,37 @@
                             position: 'bottom',
                             labels: {
                                 color: '#ffffff',
-                                font: { size: 16 },
-                                padding: 20
+                                font: { size: 18, weight: 'bold' },
+                                padding: 20,
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        const dataset = data.datasets[0];
+                                        const total = dataset.data.reduce((a, b) => a + b, 0);
+                                        return data.labels.map((label, i) => {
+                                            const value = dataset.data[i];
+                                            const percentage = ((value / total) * 100).toFixed(1);
+                                            return {
+                                                text: `${label}: ${formatNumber(value, 0)} kWh (${percentage}%)`,
+                                                fillStyle: dataset.backgroundColor[i],
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
                             }
                         },
                         tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: '#ffffff',
+                            titleFont: { size: 18, weight: 'bold' },
+                            bodyColor: '#ffffff',
+                            bodyFont: { size: 16 },
+                            borderColor: '#4ade80',
+                            borderWidth: 2,
+                            padding: 15,
                             callbacks: {
                                 label: function(context) {
                                     const label = context.label || '';
@@ -2687,6 +2713,11 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
     // Calculate averages for chart display (to match scale of generation)
     const avgLoad = totalLoad / data.length;
     const avgGrid = totalGrid / data.length;
+    
+    // Update labels based on current data mode
+    const modeLabel = currentDataMode === 'actual' ? 'Actual' : 'Expected';
+    document.getElementById('daily-load-label').textContent = `${modeLabel} Load`;
+    document.getElementById('daily-grid-label').textContent = `${modeLabel} Grid Coverage`;
     
     // Update display
     document.getElementById('daily-load').textContent = formatNumber(totalLoad);
@@ -4169,7 +4200,21 @@ async function loadPast30Days() {
                     throw new Error('Missing required data sections (today, month, or lifetime)');
                 }
                 
-                const lastUpdate = new Date(dashboardData.last_updated);
+                // Get the most recent update time from daily_records
+                let lastUpdate;
+                if (dashboardData.daily_records && dashboardData.daily_records.length > 0) {
+                    // Find the most recent updated_at timestamp
+                    const mostRecentRecord = dashboardData.daily_records.reduce((latest, record) => {
+                        const recordTime = new Date(record.updated_at || record.date);
+                        const latestTime = new Date(latest.updated_at || latest.date);
+                        return recordTime > latestTime ? record : latest;
+                    });
+                    lastUpdate = new Date(mostRecentRecord.updated_at || mostRecentRecord.date);
+                } else {
+                    // Fallback to old last_updated field
+                    lastUpdate = new Date(dashboardData.last_updated);
+                }
+                
                 document.getElementById('last-update').textContent = lastUpdate.toLocaleString('en-ZA');
                 
                 // Handle yesterday's data - either from dashboard_data.json or calculate from today
