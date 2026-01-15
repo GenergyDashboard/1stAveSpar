@@ -2514,8 +2514,18 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
                 console.log(`  ✅ Found predictions for ${selectedDate}`);
                 console.log(`     Prediction keys: ${Object.keys(dayPredictions).join(', ')}`);
                 
-                predictedData = dayPredictions.generation_kw || [];
+                // Support both field name formats
+                predictedData = dayPredictions.generation_kw || dayPredictions.pv_kw || [];
                 irradiationData = dayPredictions.irradiation_wm2 || [];
+                
+                // If no irradiation data, estimate from predicted generation (rough approximation)
+                if (irradiationData.length === 0 && predictedData.length > 0) {
+                    console.log(`     ℹ️ No irradiation data, estimating from PV generation`);
+                    // Rough estimate: 1 kW solar ≈ 800-1000 W/m² at peak
+                    // Scale factor: typical system efficiency ~15-20%
+                    // So: irradiation ≈ generation_kw × 200 (very rough)
+                    irradiationData = predictedData.map(kw => kw > 0 ? kw * 200 : 0);
+                }
                 
                 if (predictedData.length > 0) {
                     const maxPred = Math.max(...predictedData);
