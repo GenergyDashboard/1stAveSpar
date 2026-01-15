@@ -208,15 +208,16 @@
 #daily-avg::after {
     content: ' kW';
 }
-/* Remove kWh from percentages and currency values */
+/* Remove kWh from percentages */
 #pv-coverage::after,
-#grid-coverage-pct::after,
 #monthly-coverage::after,
-#lifetime-coverage::after,
-#daily-total-savings::after,
-#monthly-total-savings::after,
-#lifetime-total-savings::after,
-#financial-lifetime-savings::after {
+#lifetime-coverage::after {
+    content: '';
+}
+/* Remove kWh from all financial/currency values */
+.financial-value::after,
+.financial-hero::after,
+.financial-card .value::after {
     content: '';
 }
 
