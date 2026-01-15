@@ -2517,10 +2517,31 @@ function updateDailyView(data, selectedDate, dailyRecord = null) {
                 predictedData = dayPredictions.generation_kw || [];
                 irradiationData = dayPredictions.irradiation_wm2 || [];
                 
-                console.log(`     Predicted data: ${predictedData.length} values, max: ${Math.max(...predictedData).toFixed(2)} kW`);
-                console.log(`     Irradiation data: ${irradiationData.length} values, max: ${Math.max(...irradiationData).toFixed(0)} W/m²`);
+                if (predictedData.length > 0) {
+                    const maxPred = Math.max(...predictedData);
+                    const nonZero = predictedData.filter(v => v > 0).length;
+                    console.log(`     Predicted: ${predictedData.length} values, max: ${maxPred.toFixed(2)} kW, ${nonZero} non-zero values`);
+                } else {
+                    console.warn(`     ⚠️ Predicted data is empty!`);
+                }
+                
+                if (irradiationData.length > 0) {
+                    const maxIrr = Math.max(...irradiationData);
+                    const nonZero = irradiationData.filter(v => v > 0).length;
+                    console.log(`     Irradiation: ${irradiationData.length} values, max: ${maxIrr.toFixed(0)} W/m², ${nonZero} non-zero values`);
+                } else {
+                    console.warn(`     ⚠️ Irradiation data is empty!`);
+                }
             } else {
                 console.warn(`  ⚠️ No predictions found for ${selectedDate}`);
+                if (!predictionsData) {
+                    console.warn(`     predictions_2025_2044.min.json returned null/undefined`);
+                } else if (!predictionsData.daily_predictions) {
+                    console.warn(`     Missing 'daily_predictions' key. Keys: ${Object.keys(predictionsData).join(', ')}`);
+                } else {
+                    const availableDates = Object.keys(predictionsData.daily_predictions);
+                    console.warn(`     Date ${selectedDate} not in predictions. Available: ${availableDates.slice(0, 5).join(', ')}${availableDates.length > 5 ? '...' : ''}`);
+                }
             }
             
             // If predictions not available, use fallback
@@ -2738,9 +2759,12 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
     // Prepare data arrays
     const labels = data.map(d => d.time);
     
-    // Use passed irradiationData (loaded from predictions)
-    // Use passed predictedData (loaded from predictions)
-    const avgPredictedData = predictedData;
+    // Use passed irradiationData and predictedData (loaded from predictions - hourly values)
+    console.log(`  📊 Chart data prepared:`);
+    console.log(`     Labels: ${labels.length} hours`);
+    console.log(`     Predicted: ${predictedData.length} values, sample: [${predictedData.slice(10, 13).map(v => v.toFixed(1)).join(', ')}]`);
+    console.log(`     Irradiation: ${irradiationData.length} values, sample: [${irradiationData.slice(10, 13).map(v => v.toFixed(0)).join(', ')}]`);
+    console.log(`     PV: ${pvData.length} values, max: ${Math.max(...pvData).toFixed(2)} kW`);
     
     // Create arrays with average values for Load and Grid (to match generation scale)
     const avgLoadData = new Array(data.length).fill(avgLoad);
@@ -2755,14 +2779,14 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                     label: 'Irradiation (W/m²)',
                     data: irradiationData,
                     type: 'line',
-                    backgroundColor: 'rgba(255, 215, 0, 0.15)',
-                    borderColor: 'rgba(255, 215, 0, 0.3)',
-                    borderWidth: 1,
+                    backgroundColor: 'rgba(255, 215, 0, 0.25)',
+                    borderColor: 'rgba(255, 193, 7, 0.6)',
+                    borderWidth: 2,
                     fill: true,
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y1',
-                    order: 3
+                    order: 4
                 },
                 {
                     label: 'PV Generation (kW)',
@@ -2775,17 +2799,18 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                     order: 2
                 },
                 {
-                    label: 'Avg Predicted (kW)',
-                    data: avgPredictedData,
+                    label: 'Predicted (Hourly)',
+                    data: predictedData,
                     type: 'line',
                     borderColor: '#3b82f6',
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     borderWidth: 2,
                     borderDash: [5, 5],
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y',
-                    order: 1
+                    order: 1,
+                    fill: false
                 },
                 {
                     label: 'Avg Load (kW)',
@@ -3241,9 +3266,9 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     label: 'Irradiation (scaled)',
                     data: scaledIrradiation,
                     type: 'line',
-                    borderColor: 'rgba(255, 215, 0, 0.4)',
-                    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-                    borderWidth: 1,
+                    borderColor: 'rgba(255, 193, 7, 0.7)',
+                    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                    borderWidth: 2,
                     fill: true,
                     pointRadius: 0,
                     tension: 0.4,
