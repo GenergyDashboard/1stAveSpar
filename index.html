@@ -2757,41 +2757,65 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
     const ctx = document.getElementById('dailyChart').getContext('2d');
     if (dailyChart) dailyChart.destroy();
     
-    // Prepare data arrays
-    const labels = data.map(d => d.time);
+    // Create full 24-hour arrays (00:00 to 23:00)
+    const allHours = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+    
+    // Map data to full 24-hour format
+    const full24HourData = {
+        pv: new Array(24).fill(0),
+        predicted: new Array(24).fill(0),
+        irradiation: new Array(24).fill(0),
+        load: new Array(24).fill(avgLoad),
+        grid: new Array(24).fill(avgGrid)
+    };
+    
+    // Fill in actual data for hours that exist
+    data.forEach(d => {
+        const hour = parseInt(d.time.split(':')[0]);
+        full24HourData.pv[hour] = d.generation_kw || 0;
+    });
+    
+    // Fill in predicted and irradiation data
+    predictedData.forEach((val, idx) => {
+        if (idx < 24) full24HourData.predicted[idx] = val;
+    });
+    irradiationData.forEach((val, idx) => {
+        if (idx < 24) full24HourData.irradiation[idx] = val;
+    });
+    
+    // Scale irradiation for better visibility (multiply by factor to match PV scale)
+    const maxPV = Math.max(...full24HourData.pv);
+    const maxIrr = Math.max(...full24HourData.irradiation);
+    const irrScaleFactor = maxPV > 0 && maxIrr > 0 ? (maxPV * 0.8) / maxIrr : 1;
+    const scaledIrradiation = full24HourData.irradiation.map(v => v * irrScaleFactor);
     
     // Use passed irradiationData and predictedData (loaded from predictions - hourly values)
-    console.log(`  📊 Chart data prepared:`);
-    console.log(`     Labels: ${labels.length} hours`);
-    console.log(`     Predicted: ${predictedData.length} values, sample: [${predictedData.slice(10, 13).map(v => v.toFixed(1)).join(', ')}]`);
-    console.log(`     Irradiation: ${irradiationData.length} values, sample: [${irradiationData.slice(10, 13).map(v => v.toFixed(0)).join(', ')}]`);
-    console.log(`     PV: ${pvData.length} values, max: ${Math.max(...pvData).toFixed(2)} kW`);
-    
-    // Create arrays with average values for Load and Grid (to match generation scale)
-    const avgLoadData = new Array(data.length).fill(avgLoad);
-    const avgGridData = new Array(data.length).fill(avgGrid);
+    console.log(`  📊 Chart data prepared (24 hours):`);
+    console.log(`     Predicted: ${full24HourData.predicted.length} values`);
+    console.log(`     Irradiation: ${full24HourData.irradiation.length} values, max: ${maxIrr.toFixed(0)} W/m², scaled by ${irrScaleFactor.toFixed(2)}x`);
+    console.log(`     PV: ${full24HourData.pv.length} values, max: ${maxPV.toFixed(2)} kW`);
     
     dailyChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: allHours,
             datasets: [
                 {
-                    label: 'Irradiation (W/m²)',
-                    data: irradiationData,
+                    label: 'Irradiation (scaled for visibility)',
+                    data: scaledIrradiation,
                     type: 'line',
-                    backgroundColor: 'rgba(255, 215, 0, 0.3)',
-                    borderColor: 'rgba(255, 193, 7, 0.5)',
+                    backgroundColor: 'rgba(255, 215, 0, 0.35)',
+                    borderColor: 'rgba(255, 193, 7, 0.6)',
                     borderWidth: 1,
                     fill: true,
                     pointRadius: 0,
                     tension: 0.4,
-                    yAxisID: 'y1',
+                    yAxisID: 'y',
                     order: 10
                 },
                 {
                     label: 'PV Generation (kW)',
-                    data: pvData,
+                    data: full24HourData.pv,
                     type: 'bar',
                     backgroundColor: '#4ade80',
                     borderColor: '#22c55e',
@@ -2801,7 +2825,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 },
                 {
                     label: 'Predicted (Hourly)',
-                    data: predictedData,
+                    data: full24HourData.predicted,
                     type: 'line',
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -2815,7 +2839,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 },
                 {
                     label: 'Avg Load (kW)',
-                    data: avgLoadData,
+                    data: full24HourData.load,
                     type: 'line',
                     borderColor: '#ef4444',
                     backgroundColor: 'transparent',
@@ -2827,7 +2851,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 },
                 {
                     label: 'Avg Grid (kW)',
-                    data: avgGridData,
+                    data: full24HourData.grid,
                     type: 'line',
                     borderColor: '#f97316',
                     backgroundColor: 'transparent',
@@ -2874,11 +2898,12 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                                 label += ': ';
                             }
                             if (context.parsed.y !== null) {
-                                label += context.parsed.y.toFixed(1);
+                                // For irradiation, show actual value (dataset 0)
                                 if (context.datasetIndex === 0) {
-                                    label += ' W/m²';
+                                    const actualIrr = full24HourData.irradiation[context.dataIndex];
+                                    label += actualIrr.toFixed(0) + ' W/m² (scaled for visibility)';
                                 } else {
-                                    label += ' kW';
+                                    label += context.parsed.y.toFixed(1) + ' kW';
                                 }
                             }
                             return label;
@@ -2904,7 +2929,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
     beginAtZero: true,
     title: {
         display: true,
-        text: 'Power (kW)',
+        text: 'Power (kW) | Irradiation (scaled)',
         color: '#ffffff',
         font: { size: 16, weight: 'bold' }
     },
@@ -2924,8 +2949,8 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
     beginAtZero: true,
     title: {
         display: true,
-        text: 'Load / Grid (kW) | Irradiation (W/m²)',
-        color: '#FFD700',
+        text: 'Load / Grid (kW)',
+        color: '#ef4444',
         font: { size: 16, weight: 'bold' }
     },
     ticks: { 
