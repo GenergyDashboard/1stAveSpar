@@ -208,6 +208,17 @@
 #daily-avg::after {
     content: ' kW';
 }
+/* Remove kWh from percentages and currency values */
+#pv-coverage::after,
+#grid-coverage-pct::after,
+#monthly-coverage::after,
+#lifetime-coverage::after,
+#daily-total-savings::after,
+#monthly-total-savings::after,
+#lifetime-total-savings::after,
+#financial-lifetime-savings::after {
+    content: '';
+}
 
 #system-cap::after {
     content: ' kWp';
