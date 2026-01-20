@@ -2982,19 +2982,6 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     tension: 0,
                     yAxisID: 'y',
                     order: 0
-                },
-                {
-                    label: 'Irradiation (W/m²)',
-                    data: full24HourData.irradiation,
-                    type: 'line',
-                    backgroundColor: 'rgba(255, 215, 0, 0.35)',
-                    borderColor: 'rgba(255, 193, 7, 0.6)',
-                    borderWidth: 1,
-                    fill: true,
-                    pointRadius: 0,
-                    tension: 0.4,
-                    yAxisID: 'y1',
-                    order: 10
                 }
             ]
         },
@@ -3032,12 +3019,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                                 label += ': ';
                             }
                             if (context.parsed.y !== null) {
-                                // Irradiation is now dataset 4 (moved to end) and on y1 axis
-                                if (context.dataset.label.includes('Irradiation')) {
-                                    label += context.parsed.y.toFixed(0) + ' W/m²';
-                                } else {
-                                    label += context.parsed.y.toFixed(1) + ' kW';
-                                }
+                                label += context.parsed.y.toFixed(1) + ' kW';
                             }
                             return label;
                         }
@@ -3072,27 +3054,6 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
     },
                     grid: { 
                         color: 'rgba(255, 255, 255, 0.15)',
-                        drawBorder: false
-                    }
-                },
-                y1: {
-    type: 'linear',
-    display: true,
-    position: 'right',
-    beginAtZero: true,
-    max: 1000, // Set max to 1000 W/m² so irradiation doesn't dominate
-    title: {
-        display: true,
-        text: 'Irradiation (W/m²)',
-        color: '#FFD700',
-        font: { size: 16, weight: 'bold' }
-    },
-    ticks: { 
-        color: '#ffffff',
-        font: { size: 14, weight: '500' }
-    },
-                    grid: { 
-                        drawOnChartArea: false,
                         drawBorder: false
                     }
                 }
@@ -3503,19 +3464,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     tension: 0,
                     yAxisID: 'y',
                     order: 0
-                },
-                {
-                    label: 'Irradiation (W/m²)',
-                    data: irradiationData,
-                    type: 'line',
-                    borderColor: 'rgba(255, 193, 7, 0.6)',
-                    backgroundColor: 'rgba(255, 215, 0, 0.35)',
-                    borderWidth: 1,
-                    fill: true,
-                    pointRadius: 0,
-                    tension: 0.4,
-                    yAxisID: 'y1',
-                    order: 10
                 }
             ]
         },
@@ -3542,9 +3490,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                             let label = context.dataset.label || '';
                             if (label) {
                                 label += ': ';
-                            }
-                            if (label.includes('Irradiation')) {
-                                return label + context.parsed.y.toFixed(0) + ' W/m²';
                             }
                             label += context.parsed.y.toFixed(1) + ' kWh';
                             return label;
@@ -3576,26 +3521,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                         font: { size: 14, weight: '500' }
                     },
                     grid: { color: 'rgba(255, 255, 255, 0.15)' }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    beginAtZero: true,
-                    max: 1000, // Set max to 1000 W/m² so irradiation doesn't dominate
-                    title: { 
-                        display: true, 
-                        text: 'Irradiation (W/m²)',
-                        color: '#FFD700',
-                        font: { size: 16, weight: 'bold' }
-                    },
-                    ticks: { 
-                        color: '#ffffff',
-                        font: { size: 14, weight: '500' }
-                    },
-                    grid: { 
-                        drawOnChartArea: false  // Don't draw gridlines for secondary axis
-                    }
                 }
             }
         }
