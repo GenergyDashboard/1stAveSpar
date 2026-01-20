@@ -2661,7 +2661,7 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
         console.log(`ACTUAL Load: ${totalLoad.toFixed(2)} kWh, Grid: ${totalGrid.toFixed(2)} kWh`);
         
         // Continue with display updates
-        finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData);
+        finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate);
         
     } else {
         // EXPECTED MODE: Load from predictions_2025_2044.min.json
@@ -2702,7 +2702,7 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
                 }
                 
                 // Continue with display updates
-                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData);
+                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate);
             })
             .catch(error => {
                 console.warn('Could not load predictions:', error);
@@ -2720,7 +2720,7 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
                 console.log(`EXPECTED Load: ${totalLoad.toFixed(2)} kWh, Grid: ${totalGrid.toFixed(2)} kWh (fallback)`);
                 
                 // Continue with display updates
-                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData);
+                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate);
             });
         
         return; // Exit early, async completion will call finishDailyViewUpdate
@@ -2728,10 +2728,9 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
 }
 
 // Helper function to complete the daily view update
-function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData) {
+function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate) {
     // Calculate coverage metrics for ACTUAL data
     const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
-    const selectedDate = document.getElementById('datePicker').value;
     
     // Fetch EXPECTED data regardless of current mode to show comparisons
     const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
