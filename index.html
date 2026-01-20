@@ -204,10 +204,6 @@
             color: #FFD700;
             font-weight: 400;
         }
-        #daily-peak::after,
-#daily-avg::after {
-    content: ' kW';
-}
 /* Remove kWh from percentages */
 #pv-coverage::after,
 #monthly-coverage::after,
@@ -1402,14 +1398,6 @@
                         <div class="subvalue">Expected: <span id="daily-expected">--</span> kWh</div>
                         <div class="performance" id="daily-perf">--</div>
                     </div>
-                    <div class="stat-card">
-    <div class="label">Peak Power</div>
-    <div class="value" id="daily-peak">--</div>
-</div>
-<div class="stat-card">
-    <div class="label">Average Power</div>
-    <div class="value" id="daily-avg">--</div>
-</div>
                     <div class="stat-card">
                         <div class="label" id="daily-load-label">Load</div>
                         <div class="value" id="daily-load">--</div>
@@ -2638,8 +2626,6 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
     
     document.getElementById('daily-gen').textContent = formatNumber(totalGeneration);
     document.getElementById('daily-expected').textContent = formatNumber(totalPredicted);
-    document.getElementById('daily-peak').textContent = formatNumber(peakPower);
-    document.getElementById('daily-avg').textContent = formatNumber(avgPower);
     
     const perf = document.getElementById('daily-perf');
     perf.textContent = `${performance.toFixed(1)}% of expected`;
