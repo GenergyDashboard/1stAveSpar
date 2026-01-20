@@ -2731,15 +2731,20 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
 function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData) {
     // Calculate coverage metrics for ACTUAL data
     const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
+    const selectedDate = document.getElementById('datePicker').value;
     
     // Fetch EXPECTED data regardless of current mode to show comparisons
     const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
     const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
     
     fetch(predictionsPath)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Predictions file not found');
+            }
+            return response.json();
+        })
         .then(predictionsData => {
-            const selectedDate = document.getElementById('datePicker').value;
             let expectedLoad = 0, expectedGrid = 0, expectedPVCoverage = 0;
             
             if (predictionsData.daily_predictions && predictionsData.daily_predictions[selectedDate]) {
@@ -2750,12 +2755,8 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 expectedLoad = expectedLoadData.reduce((sum, val) => sum + val, 0);
                 expectedGrid = expectedGridData.reduce((sum, val) => sum + val, 0);
                 expectedPVCoverage = expectedLoad > 0 ? ((totalGeneration / expectedLoad) * 100) : 0;
-            } else {
-                // Fallback calculation
-                const typicalLoadRatio = 1.5;
-                expectedLoad = totalGeneration * typicalLoadRatio;
-                expectedGrid = expectedLoad - totalGeneration;
-                expectedPVCoverage = expectedLoad > 0 ? ((totalGeneration / expectedLoad) * 100) : 0;
+                
+                console.log(`Expected values from predictions file: Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}, PV Coverage=${expectedPVCoverage.toFixed(1)}%`);
             }
             
             // Calculate % differences
@@ -2788,11 +2789,42 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
             renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData);
         })
         .catch(error => {
-            console.error('Error loading predictions:', error);
-            // Fallback display without expected values
+            console.warn('Could not load predictions file, using fallback:', error);
+            // Fallback: Use typical ratios based on generation
+            const typicalLoadRatio = 1.5;
+            const expectedLoad = totalGeneration * typicalLoadRatio;
+            const expectedGrid = expectedLoad - totalGeneration;
+            const expectedPVCoverage = expectedLoad > 0 ? ((totalGeneration / expectedLoad) * 100) : 0;
+            
+            // Calculate % differences
+            const loadPerf = expectedLoad > 0 ? ((totalLoad / expectedLoad) * 100) : 0;
+            const gridPerf = expectedGrid > 0 ? ((totalGrid / expectedGrid) * 100) : 0;
+            const pvCoveragePerf = expectedPVCoverage > 0 ? ((pvCoverage / expectedPVCoverage) * 100) : 0;
+            
+            // Update displays with fallback values
             document.getElementById('daily-load').textContent = formatNumber(totalLoad);
+            document.getElementById('daily-load-expected').textContent = formatNumber(expectedLoad);
+            const loadPerfEl = document.getElementById('daily-load-perf');
+            if (loadPerfEl) {
+                loadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
+                loadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
+            }
+            
             document.getElementById('daily-grid').textContent = formatNumber(totalGrid);
+            document.getElementById('daily-grid-expected').textContent = formatNumber(expectedGrid);
+            const gridPerfEl = document.getElementById('daily-grid-perf');
+            if (gridPerfEl) {
+                gridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
+                gridPerfEl.className = 'performance ' + (gridPerf <= 100 ? 'positive' : 'negative');
+            }
+            
             document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
+            document.getElementById('pv-coverage-expected').textContent = expectedPVCoverage.toFixed(1);
+            const pvCoveragePerfEl = document.getElementById('pv-coverage-perf');
+            if (pvCoveragePerfEl) {
+                pvCoveragePerfEl.textContent = `${pvCoveragePerf.toFixed(1)}% of expected`;
+                pvCoveragePerfEl.className = 'performance ' + (pvCoveragePerf >= 100 ? 'positive' : 'negative');
+            }
             
             renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData);
         });
@@ -2801,6 +2833,10 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
 function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData) {
     const ctx = document.getElementById('dailyChart').getContext('2d');
     if (dailyChart) dailyChart.destroy();
+    
+    // Calculate averages for chart display
+    const avgLoad = totalLoad / (data.length || 24);
+    const avgGrid = totalGrid / (data.length || 24);
     
     // Create full 24-hour arrays (00:00 to 23:00)
     const allHours = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
