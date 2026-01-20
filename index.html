@@ -2855,10 +2855,42 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
         full24HourData.pv[hour] = d.generation_kw || 0;
     });
     
-    // Fill in predicted and irradiation data
-    predictedData.forEach((val, idx) => {
-        if (idx < 24) full24HourData.predicted[idx] = val;
-    });
+    // Calculate monthly hourly average for predicted data
+    // Instead of using daily predicted values, use the average of that hour across the entire month
+    const selectedDate = document.getElementById('datePicker')?.value || new Date().toISOString().split('T')[0];
+    const [year, month] = selectedDate.split('-');
+    const monthKey = `${year}-${month}`;
+    
+    // Initialize hourly accumulators for the month
+    const monthlyHourlySum = new Array(24).fill(0);
+    const monthlyHourlyCount = new Array(24).fill(0);
+    
+    // Sum up all generation values for each hour across all days in the month
+    if (dashboardData && dashboardData.daily_records) {
+        dashboardData.daily_records
+            .filter(record => record.date.startsWith(monthKey))
+            .forEach(record => {
+                if (record.hourly_data) {
+                    record.hourly_data.forEach(hourData => {
+                        const hour = parseInt(hourData.time.split(':')[0]);
+                        const gen = hourData.generation_kw || 0;
+                        monthlyHourlySum[hour] += gen;
+                        if (gen > 0) monthlyHourlyCount[hour]++;
+                    });
+                }
+            });
+    }
+    
+    // Calculate average for each hour
+    for (let hour = 0; hour < 24; hour++) {
+        if (monthlyHourlyCount[hour] > 0) {
+            full24HourData.predicted[hour] = monthlyHourlySum[hour] / monthlyHourlyCount[hour];
+        } else {
+            full24HourData.predicted[hour] = 0;
+        }
+    }
+    
+    // Fill in irradiation data
     irradiationData.forEach((val, idx) => {
         if (idx < 24) full24HourData.irradiation[idx] = val;
     });
