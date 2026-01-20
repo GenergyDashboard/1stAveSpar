@@ -216,7 +216,7 @@ def process_hourly_data(hourly_data, date):
         
         # Calculate savings (generation * rate)
         # This is how much you would have paid if you drew this from grid
-        savings_zar = generation_kw * rate
+        savings_zar = (generation_kw * rate) - 1.50
         
         # Add to totals
         totals['actual_load_kwh'] += load_kw
