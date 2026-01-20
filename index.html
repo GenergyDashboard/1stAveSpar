@@ -1395,23 +1395,26 @@
                     <div class="stat-card">
                         <div class="label">Generation</div>
                         <div class="value" id="daily-gen">--</div>
-                        <div class="subvalue">Expected: <span id="daily-expected">--</span> kWh</div>
-                        <div class="performance" id="daily-perf">--</div>
+                        <div class="subvalue">Expected: <span id="daily-gen-expected">--</span> kWh</div>
+                        <div class="performance" id="daily-gen-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label" id="daily-load-label">Load</div>
+                        <div class="label">Load</div>
                         <div class="value" id="daily-load">--</div>
-                        <div class="subvalue"><span id="daily-load-expected">--</span> kWh</div>
+                        <div class="subvalue">Expected: <span id="daily-load-expected">--</span> kWh</div>
+                        <div class="performance" id="daily-load-perf">--</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">PV Coverage</div>
                         <div class="value" id="pv-coverage">--</div>
-                        <div class="subvalue">% of Load covered by PV</div>
+                        <div class="subvalue">Expected: <span id="pv-coverage-expected">--</span>%</div>
+                        <div class="performance" id="pv-coverage-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label" id="daily-grid-label">Grid Coverage</div>
+                        <div class="label">Grid</div>
                         <div class="value" id="daily-grid">--</div>
-                        <div class="subvalue"><span id="grid-coverage-pct">--</span> of Load</div>
+                        <div class="subvalue">Expected: <span id="daily-grid-expected">--</span> kWh</div>
+                        <div class="performance" id="daily-grid-perf">--</div>
                     </div>
                 </div>
                 
@@ -2625,11 +2628,11 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
     const performance = totalPredicted > 0 ? (totalGeneration / totalPredicted * 100) : 0;
     
     document.getElementById('daily-gen').textContent = formatNumber(totalGeneration);
-    document.getElementById('daily-expected').textContent = formatNumber(totalPredicted);
+    document.getElementById('daily-gen-expected').textContent = formatNumber(totalPredicted);
     
-    const perf = document.getElementById('daily-perf');
-    perf.textContent = `${performance.toFixed(1)}% of expected`;
-    perf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
+    const genPerf = document.getElementById('daily-gen-perf');
+    genPerf.textContent = `${performance.toFixed(1)}% of expected`;
+    genPerf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
     
     // Calculate Load, Grid, and PV Coverage based on data mode
     let totalLoad, totalGrid, loadData, gridData;
@@ -2726,32 +2729,76 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
 
 // Helper function to complete the daily view update
 function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData) {
-    // Calculate coverage metrics
+    // Calculate coverage metrics for ACTUAL data
     const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
-    const gridCoverage = totalLoad > 0 ? ((totalGrid / totalLoad) * 100) : 0;
     
-    // Calculate averages for chart display (to match scale of generation)
-    const avgLoad = totalLoad / data.length;
-    const avgGrid = totalGrid / data.length;
+    // Fetch EXPECTED data regardless of current mode to show comparisons
+    const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+    const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
     
-    // Update labels based on current data mode
-    const modeLabel = currentDataMode === 'actual' ? 'Actual' : 'Expected';
-    document.getElementById('daily-load-label').textContent = `${modeLabel} Load`;
-    document.getElementById('daily-grid-label').textContent = `${modeLabel} Grid Coverage`;
-    
-    // Update display
-    document.getElementById('daily-load').textContent = formatNumber(totalLoad);
-    document.getElementById('daily-load-expected').textContent = formatNumber(totalLoad);
-    document.getElementById('daily-grid').textContent = formatNumber(totalGrid);
-    document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
-    
-    // Update Grid Coverage card
-    const gridCoverageEl = document.getElementById('daily-grid');
-    const gridCoveragePctEl = document.getElementById('grid-coverage-pct');
-    if (gridCoveragePctEl) {
-        gridCoveragePctEl.textContent = gridCoverage.toFixed(1) + '%';
-    }
-    
+    fetch(predictionsPath)
+        .then(response => response.json())
+        .then(predictionsData => {
+            const selectedDate = document.getElementById('datePicker').value;
+            let expectedLoad = 0, expectedGrid = 0, expectedPVCoverage = 0;
+            
+            if (predictionsData.daily_predictions && predictionsData.daily_predictions[selectedDate]) {
+                const dayPredictions = predictionsData.daily_predictions[selectedDate];
+                const expectedLoadData = dayPredictions.load_kw || [];
+                const expectedGridData = dayPredictions.grid_kw || [];
+                
+                expectedLoad = expectedLoadData.reduce((sum, val) => sum + val, 0);
+                expectedGrid = expectedGridData.reduce((sum, val) => sum + val, 0);
+                expectedPVCoverage = expectedLoad > 0 ? ((totalGeneration / expectedLoad) * 100) : 0;
+            } else {
+                // Fallback calculation
+                const typicalLoadRatio = 1.5;
+                expectedLoad = totalGeneration * typicalLoadRatio;
+                expectedGrid = expectedLoad - totalGeneration;
+                expectedPVCoverage = expectedLoad > 0 ? ((totalGeneration / expectedLoad) * 100) : 0;
+            }
+            
+            // Calculate % differences
+            const loadPerf = expectedLoad > 0 ? ((totalLoad / expectedLoad) * 100) : 0;
+            const gridPerf = expectedGrid > 0 ? ((totalGrid / expectedGrid) * 100) : 0;
+            const pvCoveragePerf = expectedPVCoverage > 0 ? ((pvCoverage / expectedPVCoverage) * 100) : 0;
+            
+            // Update Load display
+            document.getElementById('daily-load').textContent = formatNumber(totalLoad);
+            document.getElementById('daily-load-expected').textContent = formatNumber(expectedLoad);
+            const loadPerfEl = document.getElementById('daily-load-perf');
+            loadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
+            loadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
+            
+            // Update Grid display
+            document.getElementById('daily-grid').textContent = formatNumber(totalGrid);
+            document.getElementById('daily-grid-expected').textContent = formatNumber(expectedGrid);
+            const gridPerfEl = document.getElementById('daily-grid-perf');
+            gridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
+            gridPerfEl.className = 'performance ' + (gridPerf <= 100 ? 'positive' : 'negative');
+            
+            // Update PV Coverage display
+            document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
+            document.getElementById('pv-coverage-expected').textContent = expectedPVCoverage.toFixed(1);
+            const pvCoveragePerfEl = document.getElementById('pv-coverage-perf');
+            pvCoveragePerfEl.textContent = `${pvCoveragePerf.toFixed(1)}% of expected`;
+            pvCoveragePerfEl.className = 'performance ' + (pvCoveragePerf >= 100 ? 'positive' : 'negative');
+            
+            // Continue with chart rendering
+            renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData);
+        })
+        .catch(error => {
+            console.error('Error loading predictions:', error);
+            // Fallback display without expected values
+            document.getElementById('daily-load').textContent = formatNumber(totalLoad);
+            document.getElementById('daily-grid').textContent = formatNumber(totalGrid);
+            document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
+            
+            renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData);
+        });
+}
+
+function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData) {
     const ctx = document.getElementById('dailyChart').getContext('2d');
     if (dailyChart) dailyChart.destroy();
     
