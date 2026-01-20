@@ -3080,6 +3080,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
     display: true,
     position: 'right',
     beginAtZero: true,
+    max: 1000, // Set max to 1000 W/m² so irradiation doesn't dominate
     title: {
         display: true,
         text: 'Irradiation (W/m²)',
@@ -3581,6 +3582,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     display: true,
                     position: 'right',
                     beginAtZero: true,
+                    max: 1000, // Set max to 1000 W/m² so irradiation doesn't dominate
                     title: { 
                         display: true, 
                         text: 'Irradiation (W/m²)',
