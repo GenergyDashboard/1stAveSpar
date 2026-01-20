@@ -2937,19 +2937,6 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             labels: allHours,
             datasets: [
                 {
-                    label: 'Irradiation (scaled for visibility)',
-                    data: scaledIrradiation,
-                    type: 'line',
-                    backgroundColor: 'rgba(255, 215, 0, 0.35)',
-                    borderColor: 'rgba(255, 193, 7, 0.6)',
-                    borderWidth: 1,
-                    fill: true,
-                    pointRadius: 0,
-                    tension: 0.4,
-                    yAxisID: 'y',
-                    order: 10
-                },
-                {
                     label: 'PV Generation (kW)',
                     data: full24HourData.pv,
                     type: 'bar',
@@ -2960,7 +2947,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     order: 2
                 },
                 {
-                    label: 'Predicted (Hourly)',
+                    label: 'Predicted (Monthly Avg)',
                     data: full24HourData.predicted,
                     type: 'line',
                     borderColor: '#3b82f6',
@@ -2982,7 +2969,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     borderWidth: 2,
                     pointRadius: 0,
                     tension: 0,
-                    yAxisID: 'y1',
+                    yAxisID: 'y',
                     order: 0
                 },
                 {
@@ -2995,8 +2982,21 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     borderDash: [3, 3],
                     pointRadius: 0,
                     tension: 0,
-                    yAxisID: 'y1',
+                    yAxisID: 'y',
                     order: 0
+                },
+                {
+                    label: 'Irradiation (W/m²)',
+                    data: scaledIrradiation,
+                    type: 'line',
+                    backgroundColor: 'rgba(255, 215, 0, 0.35)',
+                    borderColor: 'rgba(255, 193, 7, 0.6)',
+                    borderWidth: 1,
+                    fill: true,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y1',
+                    order: 10
                 }
             ]
         },
@@ -3065,7 +3065,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
     beginAtZero: true,
     title: {
         display: true,
-        text: 'Power (kW) | Irradiation (scaled)',
+        text: 'Power (kW) - Generation, Load, Grid',
         color: '#ffffff',
         font: { size: 16, weight: 'bold' }
     },
@@ -3085,8 +3085,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
     beginAtZero: true,
     title: {
         display: true,
-        text: 'Load / Grid (kW)',
-        color: '#ef4444',
+        text: 'Irradiation (W/m²)',
+        color: '#FFD700',
         font: { size: 16, weight: 'bold' }
     },
     ticks: { 
