@@ -2855,45 +2855,69 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
         full24HourData.pv[hour] = d.generation_kw || 0;
     });
     
-    // Calculate monthly hourly average for predicted data
-    // Instead of using daily predicted values, use the average of that hour across the entire month
+    // Calculate monthly hourly average for predicted data from predictions file
+    // Get the average of each hour across the entire month from predictions_2025_2044.min.json
     const selectedDate = document.getElementById('datePicker')?.value || new Date().toISOString().split('T')[0];
     const [year, month] = selectedDate.split('-');
     const monthKey = `${year}-${month}`;
     
-    // Initialize hourly accumulators for the month
-    const monthlyHourlySum = new Array(24).fill(0);
-    const monthlyHourlyCount = new Array(24).fill(0);
+    // Fetch predictions file to calculate monthly hourly averages
+    const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+    const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
     
-    // Sum up all generation values for each hour across all days in the month
-    if (dashboardData && dashboardData.daily_records) {
-        dashboardData.daily_records
-            .filter(record => record.date.startsWith(monthKey))
-            .forEach(record => {
-                if (record.hourly_data) {
-                    record.hourly_data.forEach(hourData => {
-                        const hour = parseInt(hourData.time.split(':')[0]);
-                        const gen = hourData.generation_kw || 0;
-                        monthlyHourlySum[hour] += gen;
-                        if (gen > 0) monthlyHourlyCount[hour]++;
+    fetch(predictionsPath)
+        .then(response => response.json())
+        .then(predictionsData => {
+            // Initialize hourly accumulators for the month
+            const monthlyHourlySum = new Array(24).fill(0);
+            const monthlyHourlyCount = new Array(24).fill(0);
+            
+            // Get all days in the selected month from predictions
+            if (predictionsData.daily_predictions) {
+                Object.keys(predictionsData.daily_predictions)
+                    .filter(date => date.startsWith(monthKey))
+                    .forEach(date => {
+                        const dayPredictions = predictionsData.daily_predictions[date];
+                        if (dayPredictions.pv_kw) {
+                            dayPredictions.pv_kw.forEach((gen, hour) => {
+                                monthlyHourlySum[hour] += gen;
+                                if (gen > 0) monthlyHourlyCount[hour]++;
+                            });
+                        }
                     });
+            }
+            
+            // Calculate average for each hour
+            for (let hour = 0; hour < 24; hour++) {
+                if (monthlyHourlyCount[hour] > 0) {
+                    full24HourData.predicted[hour] = monthlyHourlySum[hour] / monthlyHourlyCount[hour];
+                } else {
+                    full24HourData.predicted[hour] = 0;
                 }
+            }
+            
+            console.log(`  📊 Predicted line uses monthly hourly average from predictions file`);
+            console.log(`     Month: ${monthKey}, Days with predictions: ${monthlyHourlyCount.filter(c => c > 0).length} hours averaged`);
+            
+            // Continue with chart rendering
+            finishChartRendering();
+        })
+        .catch(error => {
+            console.warn('Could not load predictions for monthly average, using daily predicted:', error);
+            // Fallback to daily predicted data
+            predictedData.forEach((val, idx) => {
+                if (idx < 24) full24HourData.predicted[idx] = val;
             });
-    }
-    
-    // Calculate average for each hour
-    for (let hour = 0; hour < 24; hour++) {
-        if (monthlyHourlyCount[hour] > 0) {
-            full24HourData.predicted[hour] = monthlyHourlySum[hour] / monthlyHourlyCount[hour];
-        } else {
-            full24HourData.predicted[hour] = 0;
-        }
-    }
+            finishChartRendering();
+        });
     
     // Fill in irradiation data
     irradiationData.forEach((val, idx) => {
         if (idx < 24) full24HourData.irradiation[idx] = val;
     });
+    
+    // Function to finish chart rendering after predicted data is ready
+    function finishChartRendering() {
     
     // Scale irradiation for better visibility (multiply by factor to match PV scale)
     const maxPV = Math.max(...full24HourData.pv);
@@ -3077,6 +3101,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             }
         }
     });
+    
+    } // End of finishChartRendering function
     
     // Phase 2: Update TOU and Financial data
     if (dailyRecord) {
