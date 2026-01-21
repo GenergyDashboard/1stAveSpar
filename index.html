@@ -2600,44 +2600,42 @@
             infoEl.textContent = '';
             
             try {
-                const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-                
-                // Load dashboard data and predictions
-                const dashPath = `${basePath}dashboard_data.json`.replace('//', '/');
-                const predPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
-                
-                const [dashResp, predResp] = await Promise.all([
-                    fetch(dashPath),
-                    fetch(predPath)
-                ]);
-                
-                if (!dashResp.ok) {
-                    throw new Error('Could not load dashboard data');
+                // Use already-loaded dashboard data
+                if (!dashboardData || !dashboardData.daily_records) {
+                    throw new Error('Dashboard data not loaded. Please refresh the page.');
                 }
                 
-                const dashData = await dashResp.json();
+                const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+                const predPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+                
+                // Load predictions data
                 let predData = null;
-                if (predResp.ok) {
-                    predData = await predResp.json();
+                try {
+                    const predResp = await fetch(predPath);
+                    if (predResp.ok) {
+                        predData = await predResp.json();
+                    }
+                } catch (err) {
+                    console.warn('Could not load predictions:', err);
                 }
                 
                 // Generate CSV based on interval
                 let csvData;
                 switch(interval) {
                     case '5min':
-                        csvData = await generate5MinReport(dashData, predData, startDate, endDate, selectedFields);
+                        csvData = await generate5MinReport(dashboardData, predData, startDate, endDate, selectedFields);
                         break;
                     case '15min':
-                        csvData = await generate15MinReport(dashData, predData, startDate, endDate, selectedFields);
+                        csvData = await generate15MinReport(dashboardData, predData, startDate, endDate, selectedFields);
                         break;
                     case 'hourly':
-                        csvData = await generateHourlyReport(dashData, predData, startDate, endDate, selectedFields);
+                        csvData = await generateHourlyReport(dashboardData, predData, startDate, endDate, selectedFields);
                         break;
                     case 'daily':
-                        csvData = await generateDailyReport(dashData, predData, startDate, endDate, selectedFields);
+                        csvData = await generateDailyReport(dashboardData, predData, startDate, endDate, selectedFields);
                         break;
                     case 'monthly':
-                        csvData = await generateMonthlyReport(dashData, predData, startDate, endDate, selectedFields);
+                        csvData = await generateMonthlyReport(dashboardData, predData, startDate, endDate, selectedFields);
                         break;
                 }
                 
