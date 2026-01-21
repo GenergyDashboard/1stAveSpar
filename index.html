@@ -2275,30 +2275,7 @@
                     maintainAspectRatio: true,
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: '#ffffff',
-                                font: { size: 18, weight: 'bold' },
-                                padding: 20,
-                                generateLabels: function(chart) {
-                                    const data = chart.data;
-                                    if (data.labels.length && data.datasets.length) {
-                                        const dataset = data.datasets[0];
-                                        const total = dataset.data.reduce((a, b) => a + b, 0);
-                                        return data.labels.map((label, i) => {
-                                            const value = dataset.data[i];
-                                            const percentage = ((value / total) * 100).toFixed(1);
-                                            return {
-                                                text: `${label}: ${formatNumber(value, 0)} kWh (${percentage}%)`,
-                                                fillStyle: dataset.backgroundColor[i],
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
-                                    }
-                                    return [];
-                                }
-                            }
+                            display: false
                         },
                         tooltip: {
                             backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -2337,7 +2314,6 @@
                 tableBody.innerHTML = `
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
                         <td style="padding: 15px;">
-                            <span style="display: inline-block; width: 12px; height: 12px; background: rgba(239, 68, 68, 0.8); border-radius: 3px; margin-right: 8px;"></span>
                             <span style="color: #ffffff; font-weight: 600;">Peak</span>
                         </td>
                         <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: 1.1em;">${formatNumber(peakValue, 0)} kWh</td>
@@ -2345,7 +2321,6 @@
                     </tr>
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
                         <td style="padding: 15px;">
-                            <span style="display: inline-block; width: 12px; height: 12px; background: rgba(245, 158, 11, 0.8); border-radius: 3px; margin-right: 8px;"></span>
                             <span style="color: #ffffff; font-weight: 600;">Standard</span>
                         </td>
                         <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: 1.1em;">${formatNumber(standardValue, 0)} kWh</td>
@@ -2353,7 +2328,6 @@
                     </tr>
                     <tr>
                         <td style="padding: 15px;">
-                            <span style="display: inline-block; width: 12px; height: 12px; background: rgba(16, 185, 129, 0.8); border-radius: 3px; margin-right: 8px;"></span>
                             <span style="color: #ffffff; font-weight: 600;">Off-Peak</span>
                         </td>
                         <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: 1.1em;">${formatNumber(offPeakValue, 0)} kWh</td>
