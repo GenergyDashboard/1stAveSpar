@@ -1393,28 +1393,28 @@
                 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="label">Generation</div>
-                        <div class="value" id="daily-gen">--</div>
-                        <div class="subvalue">Expected: <span id="daily-gen-expected">--</span> kWh</div>
-                        <div class="performance" id="daily-gen-perf">--</div>
-                    </div>
-                    <div class="stat-card">
                         <div class="label">Load</div>
                         <div class="value" id="daily-load">--</div>
                         <div class="subvalue">Expected: <span id="daily-load-expected">--</span> kWh</div>
                         <div class="performance" id="daily-load-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">PV Coverage</div>
-                        <div class="value" id="pv-coverage">--</div>
-                        <div class="subvalue">Expected: <span id="pv-coverage-expected">--</span>%</div>
-                        <div class="performance" id="pv-coverage-perf">--</div>
+                        <div class="label">Generation</div>
+                        <div class="value" id="daily-gen">--</div>
+                        <div class="subvalue">Expected: <span id="daily-gen-expected">--</span> kWh</div>
+                        <div class="performance" id="daily-gen-perf">--</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Grid</div>
                         <div class="value" id="daily-grid">--</div>
                         <div class="subvalue">Expected: <span id="daily-grid-expected">--</span> kWh</div>
                         <div class="performance" id="daily-grid-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">PV Coverage</div>
+                        <div class="value" id="pv-coverage">--</div>
+                        <div class="subvalue">Expected: <span id="pv-coverage-expected">--</span>%</div>
+                        <div class="performance" id="pv-coverage-perf">--</div>
                     </div>
                 </div>
                 
@@ -1505,10 +1505,28 @@
                 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="label">Monthly Generation</div>
+                        <div class="label">Load</div>
+                        <div class="value" id="monthly-load">--</div>
+                        <div class="subvalue">Expected: <span id="monthly-load-expected">--</span> kWh</div>
+                        <div class="performance" id="monthly-load-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Generation</div>
                         <div class="value" id="monthly-gen">--</div>
                         <div class="subvalue">Expected: <span id="monthly-expected">--</span> kWh</div>
                         <div class="performance" id="monthly-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Grid</div>
+                        <div class="value" id="monthly-grid">--</div>
+                        <div class="subvalue">Expected: <span id="monthly-grid-expected">--</span> kWh</div>
+                        <div class="performance" id="monthly-grid-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">PV Coverage</div>
+                        <div class="value" id="monthly-coverage">--</div>
+                        <div class="subvalue">Expected: <span id="monthly-coverage-expected">--</span>%</div>
+                        <div class="performance" id="monthly-coverage-perf">--</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Target Progress</div>
@@ -1517,21 +1535,6 @@
                             <span id="monthly-actual-gen">--</span> kWh of <span id="monthly-target-gen">--</span> kWh
                         </div>
                         <div class="subvalue">Days with data: <span id="monthly-days-count">--</span></div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label" id="monthly-load-label">Load</div>
-                        <div class="value" id="monthly-load">--</div>
-                        <div class="subvalue"><span id="monthly-load-expected">--</span> kWh</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label">PV Coverage</div>
-                        <div class="value" id="monthly-coverage">--</div>
-                        <div class="subvalue">% of Load covered by PV</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label" id="monthly-grid-label">Grid Coverage</div>
-                        <div class="value" id="monthly-grid">--</div>
-                        <div class="subvalue"><span id="monthly-grid-pct">--</span> of Load</div>
                     </div>
                 </div>
                 
@@ -1599,36 +1602,41 @@
                 
                 <div class="stats-grid">
                     <div class="stat-card">
-    <div class="label">Total Generation</div>
-    <div class="value" id="lifetime-gen">--</div>
-</div>
-                    <div class="stat-card">
-    <div class="label">System Capacity</div>
-    <div class="value" id="system-cap">71.59</div>
-</div>
-<div class="stat-card">
-    <div class="label">Days Active</div>
-    <div class="value" id="lifetime-days">--</div>
-</div>
-<div class="stat-card">
-    <div class="label">Lifetime Performance</div>
-    <div class="value" id="lifetime-perf">--</div>
-    <div class="subvalue"><span id="lifetime-perf-diff">--</span> kWh <span id="lifetime-perf-status">--</span></div>
-</div>
-                    <div class="stat-card">
-                        <div class="label" id="lifetime-load-label">Load</div>
+                        <div class="label">Load</div>
                         <div class="value" id="lifetime-load">--</div>
-                        <div class="subvalue">Total power consumption</div>
+                        <div class="subvalue">Expected: <span id="lifetime-load-expected">--</span> kWh</div>
+                        <div class="performance" id="lifetime-load-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Lifetime PV Coverage</div>
-                        <div class="value" id="lifetime-coverage">--</div>
-                        <div class="subvalue">% of Load covered by PV</div>
+                        <div class="label">Generation</div>
+                        <div class="value" id="lifetime-gen">--</div>
+                        <div class="subvalue">Expected: <span id="lifetime-gen-expected">--</span> kWh</div>
+                        <div class="performance" id="lifetime-gen-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label" id="lifetime-grid-label">Grid Coverage</div>
+                        <div class="label">Grid</div>
                         <div class="value" id="lifetime-grid">--</div>
-                        <div class="subvalue"><span id="lifetime-grid-pct">--</span> of Load</div>
+                        <div class="subvalue">Expected: <span id="lifetime-grid-expected">--</span> kWh</div>
+                        <div class="performance" id="lifetime-grid-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">PV Coverage</div>
+                        <div class="value" id="lifetime-coverage">--</div>
+                        <div class="subvalue">Expected: <span id="lifetime-coverage-expected">--</span>%</div>
+                        <div class="performance" id="lifetime-coverage-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Lifetime Performance</div>
+                        <div class="value" id="lifetime-perf">--</div>
+                        <div class="subvalue"><span id="lifetime-perf-diff">--</span> kWh <span id="lifetime-perf-status">--</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Days Active</div>
+                        <div class="value" id="lifetime-days">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">System Capacity</div>
+                        <div class="value" id="system-cap">71.59 kWp</div>
                     </div>
                 </div>
                 
@@ -2868,14 +2876,9 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
     fetch(predictionsPath)
         .then(response => response.json())
         .then(predictionsData => {
-            // Initialize accumulators for the month
+            // Initialize hourly accumulators for the month
             const monthlyHourlySum = new Array(24).fill(0);
             const monthlyHourlyCount = new Array(24).fill(0);
-            
-            // Accumulators for predicted Load and Grid monthly averages
-            let predictedLoadSum = 0;
-            let predictedGridSum = 0;
-            let predictedDaysCount = 0;
             
             // Get all days in the selected month from predictions
             if (predictionsData.daily_predictions) {
@@ -2883,27 +2886,16 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     .filter(date => date.startsWith(monthKey))
                     .forEach(date => {
                         const dayPredictions = predictionsData.daily_predictions[date];
-                        
-                        // Calculate PV hourly averages
                         if (dayPredictions.pv_kw) {
                             dayPredictions.pv_kw.forEach((gen, hour) => {
                                 monthlyHourlySum[hour] += gen;
                                 if (gen > 0) monthlyHourlyCount[hour]++;
                             });
                         }
-                        
-                        // Calculate Load and Grid monthly averages (for straight lines)
-                        if (dayPredictions.load_kw && dayPredictions.grid_kw) {
-                            const dailyLoad = dayPredictions.load_kw.reduce((sum, val) => sum + val, 0) / 24;
-                            const dailyGrid = dayPredictions.grid_kw.reduce((sum, val) => sum + val, 0) / 24;
-                            predictedLoadSum += dailyLoad;
-                            predictedGridSum += dailyGrid;
-                            predictedDaysCount++;
-                        }
                     });
             }
             
-            // Calculate average for each hour (PV)
+            // Calculate average for each hour
             for (let hour = 0; hour < 24; hour++) {
                 if (monthlyHourlyCount[hour] > 0) {
                     full24HourData.predicted[hour] = monthlyHourlySum[hour] / monthlyHourlyCount[hour];
@@ -2912,42 +2904,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 }
             }
             
-            // Calculate predicted monthly average Load/Grid (straight lines)
-            const predictedAvgLoad = predictedDaysCount > 0 ? predictedLoadSum / predictedDaysCount : 0;
-            const predictedAvgGrid = predictedDaysCount > 0 ? predictedGridSum / predictedDaysCount : 0;
-            
-            // Calculate actual month-to-date average Load/Grid (straight lines)
-            let actualLoadSum = 0;
-            let actualGridSum = 0;
-            let actualDaysCount = 0;
-            
-            if (dashboardData && dashboardData.daily_records) {
-                dashboardData.daily_records
-                    .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
-                    .forEach(record => {
-                        if (record.hourly_data && record.hourly_data.length > 0) {
-                            const dailyLoad = record.hourly_data.reduce((sum, h) => sum + (h.load_kw || 0), 0) / record.hourly_data.length;
-                            const dailyGrid = record.hourly_data.reduce((sum, h) => sum + Math.abs(h.grid_kw || 0), 0) / record.hourly_data.length;
-                            actualLoadSum += dailyLoad;
-                            actualGridSum += dailyGrid;
-                            actualDaysCount++;
-                        }
-                    });
-            }
-            
-            const actualAvgLoad = actualDaysCount > 0 ? actualLoadSum / actualDaysCount : avgLoad;
-            const actualAvgGrid = actualDaysCount > 0 ? actualGridSum / actualDaysCount : avgGrid;
-            
-            // Create straight lines for Load and Grid
-            full24HourData.predictedLoad = new Array(24).fill(predictedAvgLoad);
-            full24HourData.predictedGrid = new Array(24).fill(predictedAvgGrid);
-            full24HourData.actualLoad = new Array(24).fill(actualAvgLoad);
-            full24HourData.actualGrid = new Array(24).fill(actualAvgGrid);
-            
             console.log(`  📊 Predicted line uses monthly hourly average from predictions file`);
             console.log(`     Month: ${monthKey}, Days with predictions: ${monthlyHourlyCount.filter(c => c > 0).length} hours averaged`);
-            console.log(`     Predicted Avg Load: ${predictedAvgLoad.toFixed(2)} kW, Grid: ${predictedAvgGrid.toFixed(2)} kW`);
-            console.log(`     Actual MTD Avg Load: ${actualAvgLoad.toFixed(2)} kW, Grid: ${actualAvgGrid.toFixed(2)} kW`);
             
             // Continue with chart rendering
             finishChartRendering();
@@ -3009,8 +2967,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     fill: false
                 },
                 {
-                    label: 'Actual Load (MTD Avg)',
-                    data: full24HourData.actualLoad || full24HourData.load,
+                    label: 'Avg Load (kW)',
+                    data: full24HourData.load,
                     type: 'line',
                     borderColor: '#ef4444',
                     backgroundColor: 'transparent',
@@ -3021,38 +2979,13 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     order: 0
                 },
                 {
-                    label: 'Predicted Load (Monthly Avg)',
-                    data: full24HourData.predictedLoad || full24HourData.load,
-                    type: 'line',
-                    borderColor: '#ef4444',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    tension: 0,
-                    yAxisID: 'y',
-                    order: 0
-                },
-                {
-                    label: 'Actual Grid (MTD Avg)',
-                    data: full24HourData.actualGrid || full24HourData.grid,
+                    label: 'Avg Grid (kW)',
+                    data: full24HourData.grid,
                     type: 'line',
                     borderColor: '#f97316',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
-                    pointRadius: 0,
-                    tension: 0,
-                    yAxisID: 'y',
-                    order: 0
-                },
-                {
-                    label: 'Predicted Grid (Monthly Avg)',
-                    data: full24HourData.predictedGrid || full24HourData.grid,
-                    type: 'line',
-                    borderColor: '#f97316',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
+                    borderDash: [3, 3],
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
