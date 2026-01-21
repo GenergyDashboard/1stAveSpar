@@ -3624,14 +3624,14 @@ async function loadLifetimeMonthlyBreakdown() {
         
         // Build arrays with nulls to prevent connecting lines across months
         let index = 0;
-        monthKeys.forEach(monthKey => {
+        monthKeys.forEach((monthKey, i) => {
             const [year, month] = monthKey.split('-').map(Number);
             const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
             monthLabels.push(monthName);
             monthGeneration.push(monthlyData[monthKey].generation);
             monthIrradiation.push(monthlyData[monthKey].irradiation);
             
-            // Actual Load/Grid from monthlyData
+            // Actual Load/Grid from monthlyData - add null after each value except last
             monthActualLoad.push(monthlyData[monthKey].load);
             monthActualGrid.push(monthlyData[monthKey].grid);
             
@@ -3824,12 +3824,12 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderColor: '#ef4444',
                         backgroundColor: 'transparent',
                         borderWidth: 3,
-                        pointRadius: 0,
+                        pointRadius: 6,
+                        pointStyle: 'line',
+                        pointBorderWidth: 3,
+                        pointBorderColor: '#ef4444',
                         tension: 0,
-                        spanGaps: false,
-                        segment: {
-                            borderDash: []
-                        },
+                        showLine: false,
                         yAxisID: 'y1',
                         order: 0
                     },
@@ -3840,10 +3840,13 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderColor: '#ef4444',
                         backgroundColor: 'transparent',
                         borderWidth: 2,
+                        pointRadius: 6,
+                        pointStyle: 'line',
+                        pointBorderWidth: 2,
+                        pointBorderColor: '#ef4444',
                         borderDash: [5, 5],
-                        pointRadius: 0,
                         tension: 0,
-                        spanGaps: false,
+                        showLine: false,
                         yAxisID: 'y1',
                         order: 0
                     },
@@ -3854,12 +3857,12 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderColor: '#f97316',
                         backgroundColor: 'transparent',
                         borderWidth: 3,
-                        pointRadius: 0,
+                        pointRadius: 6,
+                        pointStyle: 'line',
+                        pointBorderWidth: 3,
+                        pointBorderColor: '#f97316',
                         tension: 0,
-                        spanGaps: false,
-                        segment: {
-                            borderDash: []
-                        },
+                        showLine: false,
                         yAxisID: 'y1',
                         order: 0
                     },
@@ -3870,10 +3873,13 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderColor: '#f97316',
                         backgroundColor: 'transparent',
                         borderWidth: 2,
+                        pointRadius: 6,
+                        pointStyle: 'line',
+                        pointBorderWidth: 2,
+                        pointBorderColor: '#f97316',
                         borderDash: [5, 5],
-                        pointRadius: 0,
                         tension: 0,
-                        spanGaps: false,
+                        showLine: false,
                         yAxisID: 'y1',
                         order: 0
                     }
