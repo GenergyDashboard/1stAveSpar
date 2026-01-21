@@ -816,8 +816,9 @@
         }
 
         .tou-item {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 140px 1fr auto;
+            gap: 20px;
             align-items: center;
             padding: 15px 20px;
             background: rgba(0, 0, 0, 0.3);
@@ -1578,7 +1579,7 @@
                 <!-- Combined TOU Breakdown & Savings Card -->
                 <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
-                        <div class="label">⚡ Lifetime TOU Breakdown & Savings</div>
+                        <div class="label">Lifetime TOU Breakdown & Savings</div>
                         <div class="tou-breakdown">
                             <div class="tou-item">
                                 <span class="tou-label peak">Peak</span>
@@ -2139,7 +2140,12 @@
                         backgroundColor: 'rgba(255, 215, 0, 0.1)',
                         borderWidth: 3,
                         fill: true,
-                        tension: 0.4
+                        tension: 0.4,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: 'rgba(255, 215, 0, 1)',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
@@ -2172,9 +2178,16 @@
                             display: false
                         },
                         tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            titleFont: { size: 16, weight: 'bold' },
+                            bodyFont: { size: 18 },
+                            padding: 15,
+                            displayColors: false,
                             callbacks: {
                                 label: function(context) {
-                                    return 'Total Savings: R ' + formatNumber(context.parsed.y, 2);
+                                    return 'Total: R ' + formatNumber(context.parsed.y, 0);
                                 }
                             }
                         }
@@ -2184,17 +2197,31 @@
         }
         
         function loadFinancialTouPieChart() {
-            if (!dashboardData || !dashboardData.lifetime_summary) return;
+            if (!dashboardData || !dashboardData.lifetime_summary) {
+                console.warn('No dashboard data or lifetime summary for TOU pie chart');
+                return;
+            }
             
             const ctx = document.getElementById('financialTouPieChart').getContext('2d');
             const lifetime = dashboardData.lifetime_summary;
             const tou = lifetime.tou_breakdown;
             
-            if (!tou) return;
+            console.log('TOU Pie Chart - tou_breakdown:', tou);
+            
+            if (!tou) {
+                console.warn('No TOU breakdown data available');
+                return;
+            }
             
             if (financialTouPieChart) {
                 financialTouPieChart.destroy();
             }
+            
+            const peakValue = tou.peak_kwh || 0;
+            const standardValue = tou.standard_kwh || 0;
+            const offPeakValue = tou.off_peak_kwh || 0;
+            
+            console.log(`TOU values - Peak: ${peakValue}, Standard: ${standardValue}, Off-Peak: ${offPeakValue}`);
             
             financialTouPieChart = new Chart(ctx, {
                 type: 'doughnut',
@@ -2343,14 +2370,14 @@
 async function updateDatePickerRange() {
     try {
         const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
-        const response = await fetch(historyPath);
+        const dashboardPath = `${basePath}dashboard_data.json`.replace('//', '/');
+        const response = await fetch(dashboardPath);
         
         if (response.ok) {
-            const historyData = await response.json();
+            const dashboardData = await response.json();
             
-            if (historyData.hourly_records && Object.keys(historyData.hourly_records).length > 0) {
-                const availableDates = Object.keys(historyData.hourly_records).sort();
+            if (dashboardData.daily_records && dashboardData.daily_records.length > 0) {
+                const availableDates = dashboardData.daily_records.map(r => r.date).sort();
                 const minDate = availableDates[0];
                 const today = new Date().toISOString().split('T')[0];
                 
