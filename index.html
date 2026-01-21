@@ -3563,20 +3563,31 @@ async function loadLifetimeMonthlyBreakdown() {
         // ALWAYS get EXPECTED data from predictions
         console.log(`   Loading predictions for expected Load/Grid...`);
         let expectedTotalLoad = 0, expectedTotalGrid = 0;
+        const monthlyExpectedData = {}; // Store per-month expected values
+        
         try {
             const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
             const predictionsResponse = await fetch(predictionsPath);
             if (predictionsResponse.ok) {
                 const predictionsData = await predictionsResponse.json();
                 
-                // Calculate expected Load and Grid for each day
+                // Calculate expected Load and Grid for each day and accumulate by month
                 dashData.daily_records.forEach(record => {
                     const dateKey = record.date;
+                    const monthKey = record.date.substring(0, 7);
+                    
+                    if (!monthlyExpectedData[monthKey]) {
+                        monthlyExpectedData[monthKey] = { load: 0, grid: 0 };
+                    }
                     
                     if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
                         const dayData = predictionsData.daily_predictions[dateKey];
                         const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
                         const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                        
+                        monthlyExpectedData[monthKey].load += dailyLoad;
+                        monthlyExpectedData[monthKey].grid += dailyGrid;
+                        
                         expectedTotalLoad += dailyLoad;
                         expectedTotalGrid += dailyGrid;
                     }
@@ -3605,18 +3616,33 @@ async function loadLifetimeMonthlyBreakdown() {
         const monthGeneration = [];
         const monthExpected = [];
         const monthIrradiation = [];
-        const monthLoad = [];
-        const monthGrid = [];
+        const monthActualLoad = [];
+        const monthActualGrid = [];
+        const monthExpectedLoad = [];
+        const monthExpectedGrid = [];
         const monthPerformance = [];
         
+        // Build arrays with nulls to prevent connecting lines across months
+        let index = 0;
         monthKeys.forEach(monthKey => {
             const [year, month] = monthKey.split('-').map(Number);
             const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
             monthLabels.push(monthName);
             monthGeneration.push(monthlyData[monthKey].generation);
             monthIrradiation.push(monthlyData[monthKey].irradiation);
-            monthLoad.push(monthlyData[monthKey].load);
-            monthGrid.push(monthlyData[monthKey].grid);
+            
+            // Actual Load/Grid from monthlyData
+            monthActualLoad.push(monthlyData[monthKey].load);
+            monthActualGrid.push(monthlyData[monthKey].grid);
+            
+            // Expected Load/Grid from predictions
+            if (monthlyExpectedData[monthKey]) {
+                monthExpectedLoad.push(monthlyExpectedData[monthKey].load);
+                monthExpectedGrid.push(monthlyExpectedData[monthKey].grid);
+            } else {
+                monthExpectedLoad.push(0);
+                monthExpectedGrid.push(0);
+            }
             
             // Calculate expected value with degradation
             const monthPadded = month.toString().padStart(2, '0');
@@ -3793,19 +3819,23 @@ async function loadLifetimeMonthlyBreakdown() {
                     },
                     {
                         label: 'Actual Load (kWh)',
-                        data: monthLoad,
+                        data: monthActualLoad,
                         type: 'line',
                         borderColor: '#ef4444',
                         backgroundColor: 'transparent',
-                        borderWidth: 2,
+                        borderWidth: 3,
                         pointRadius: 0,
                         tension: 0,
+                        spanGaps: false,
+                        segment: {
+                            borderDash: []
+                        },
                         yAxisID: 'y1',
                         order: 0
                     },
                     {
                         label: 'Expected Load (kWh)',
-                        data: monthLoad,
+                        data: monthExpectedLoad,
                         type: 'line',
                         borderColor: '#ef4444',
                         backgroundColor: 'transparent',
@@ -3813,24 +3843,29 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderDash: [5, 5],
                         pointRadius: 0,
                         tension: 0,
+                        spanGaps: false,
                         yAxisID: 'y1',
                         order: 0
                     },
                     {
                         label: 'Actual Grid (kWh)',
-                        data: monthGrid,
+                        data: monthActualGrid,
                         type: 'line',
                         borderColor: '#f97316',
                         backgroundColor: 'transparent',
-                        borderWidth: 2,
+                        borderWidth: 3,
                         pointRadius: 0,
                         tension: 0,
+                        spanGaps: false,
+                        segment: {
+                            borderDash: []
+                        },
                         yAxisID: 'y1',
                         order: 0
                     },
                     {
                         label: 'Expected Grid (kWh)',
-                        data: monthGrid,
+                        data: monthExpectedGrid,
                         type: 'line',
                         borderColor: '#f97316',
                         backgroundColor: 'transparent',
@@ -3838,6 +3873,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderDash: [5, 5],
                         pointRadius: 0,
                         tension: 0,
+                        spanGaps: false,
                         yAxisID: 'y1',
                         order: 0
                     }
