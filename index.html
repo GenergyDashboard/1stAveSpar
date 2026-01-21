@@ -3217,86 +3217,92 @@ async function loadMonthlyData() {
             targetPerfEl.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
         }
         
-        // Calculate Load and Grid for the month based on data mode
-        let monthlyLoad = 0;
-        let monthlyGrid = 0;
+        // Calculate Load and Grid for the month - ALWAYS get both Actual and Expected
+        let actualLoad = 0, actualGrid = 0, expectedLoad = 0, expectedGrid = 0;
         
-        console.log(`📊 Monthly Load/Grid calculation - Mode: ${currentDataMode}`);
+        console.log(`📊 Monthly Load/Grid calculation`);
         
-        if (currentDataMode === 'actual') {
-            // ACTUAL MODE: Sum from daily records
-            monthlyLoad = monthRecords.reduce((sum, day) => sum + (day.actual_load_kwh || 0), 0);
-            monthlyGrid = monthRecords.reduce((sum, day) => sum + (day.actual_grid_kwh || 0), 0);
-            console.log(`  ✅ ACTUAL Monthly Load: ${monthlyLoad.toFixed(2)} kWh, Grid: ${monthlyGrid.toFixed(2)} kWh`);
-            console.log(`     From ${monthRecords.length} daily records`);
-            console.log(`     Sample record: ${JSON.stringify({
-                date: monthRecords[0].date,
-                load: monthRecords[0].actual_load_kwh,
-                grid: monthRecords[0].actual_grid_kwh
-            })}`);
-        } else {
-            // EXPECTED MODE: Load from predictions_2025_2044.min.json
-            console.log(`  Loading predictions for expected Load/Grid...`);
-            try {
-                const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
-                const predictionsResponse = await fetch(predictionsPath);
+        // Get ACTUAL Load and Grid from daily records
+        actualLoad = monthRecords.reduce((sum, day) => sum + (day.actual_load_kwh || 0), 0);
+        actualGrid = monthRecords.reduce((sum, day) => sum + (day.actual_grid_kwh || 0), 0);
+        console.log(`  ✅ ACTUAL Monthly Load: ${actualLoad.toFixed(2)} kWh, Grid: ${actualGrid.toFixed(2)} kWh`);
+        
+        // Get EXPECTED Load and Grid from predictions
+        console.log(`  Loading predictions for expected Load/Grid...`);
+        try {
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            const predictionsResponse = await fetch(predictionsPath);
+            
+            if (predictionsResponse.ok) {
+                const predictionsData = await predictionsResponse.json();
                 
-                if (predictionsResponse.ok) {
-                    const predictionsData = await predictionsResponse.json();
-                    
-                    // Sum Load and Grid for each day in the month
-                    monthRecords.forEach(record => {
-                        const dateKey = record.date;
-                        if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
-                            const dayData = predictionsData.daily_predictions[dateKey];
-                            const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                            const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
-                            monthlyLoad += dailyLoad;
-                            monthlyGrid += dailyGrid;
-                        }
-                    });
-                    console.log(`  ✅ EXPECTED Monthly Load: ${monthlyLoad.toFixed(2)} kWh, Grid: ${monthlyGrid.toFixed(2)} kWh (from predictions)`);
-                    console.log(`     From ${monthRecords.length} days of predictions`);
-                } else {
-                    console.warn(`  ⚠️ Predictions response not OK: ${predictionsResponse.status}`);
-                    // Fallback calculation
-                    monthlyLoad = monthlyGen * 1.5;
-                    monthlyGrid = monthlyLoad - monthlyGen;
-                    console.log(`  Using fallback calculation: Load=${monthlyLoad.toFixed(2)}, Grid=${monthlyGrid.toFixed(2)}`);
-                }
-            } catch (error) {
-                console.error(`  ❌ Error loading predictions:`, error);
-                // Fallback calculation
-                monthlyLoad = monthlyGen * 1.5;
-                monthlyGrid = monthlyLoad - monthlyGen;
-                console.log(`  Using fallback calculation: Load=${monthlyLoad.toFixed(2)}, Grid=${monthlyGrid.toFixed(2)}`);
+                // Sum Load and Grid for each day in the month from predictions
+                monthRecords.forEach(record => {
+                    const dateKey = record.date;
+                    if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                        const dayData = predictionsData.daily_predictions[dateKey];
+                        const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                        expectedLoad += dailyLoad;
+                        expectedGrid += dailyGrid;
+                    }
+                });
+                console.log(`  ✅ EXPECTED Monthly Load: ${expectedLoad.toFixed(2)} kWh, Grid: ${expectedGrid.toFixed(2)} kWh (from predictions)`);
+            } else {
+                console.warn(`  ⚠️ Predictions not available, using estimate`);
+                expectedLoad = monthlyGen * 1.5;
+                expectedGrid = expectedLoad - monthlyGen;
             }
+        } catch (error) {
+            console.error(`  ❌ Error loading predictions:`, error);
+            expectedLoad = monthlyGen * 1.5;
+            expectedGrid = expectedLoad - monthlyGen;
         }
         
-        // Calculate PV Coverage and Grid Coverage
-        const pvCoverage = monthlyLoad > 0 ? ((monthlyGen / monthlyLoad) * 100) : 0;
-        const gridCoverage = monthlyLoad > 0 ? ((monthlyGrid / monthlyLoad) * 100) : 0;
+        // Calculate PV Coverage
+        const actualPVCoverage = actualLoad > 0 ? ((monthlyGen / actualLoad) * 100) : 0;
+        const expectedPVCoverage = expectedLoad > 0 ? ((monthlyGen / expectedLoad) * 100) : 0;
         
-        // Update labels based on current data mode
-        const modeLabel = currentDataMode === 'actual' ? 'Actual' : 'Expected';
-        document.getElementById('monthly-load-label').textContent = `${modeLabel} Load`;
-        document.getElementById('monthly-grid-label').textContent = `${modeLabel} Grid Coverage`;
+        // Calculate % differences
+        const loadPerf = expectedLoad > 0 ? ((actualLoad / expectedLoad) * 100) : 0;
+        const gridPerf = expectedGrid > 0 ? ((actualGrid / expectedGrid) * 100) : 0;
+        const pvCoveragePerf = expectedPVCoverage > 0 ? ((actualPVCoverage / expectedPVCoverage) * 100) : 0;
         
-        // Update Load/Grid/Coverage displays
-        document.getElementById('monthly-load').textContent = formatNumber(monthlyLoad);
-        document.getElementById('monthly-load-expected').textContent = formatNumber(monthlyLoad);
-        document.getElementById('monthly-grid').textContent = formatNumber(monthlyGrid);
-        document.getElementById('monthly-grid-pct').textContent = gridCoverage.toFixed(1) + '%';
-        document.getElementById('monthly-coverage').textContent = pvCoverage.toFixed(1) + '%';
+        // Update Load display
+        document.getElementById('monthly-load').textContent = formatNumber(actualLoad);
+        document.getElementById('monthly-load-expected').textContent = formatNumber(expectedLoad);
+        const monthlyLoadPerfEl = document.getElementById('monthly-load-perf');
+        if (monthlyLoadPerfEl) {
+            monthlyLoadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
+            monthlyLoadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
+        }
         
-        updateMonthlyChart(monthRecords, selectedMonthYear);
+        // Update Grid display
+        document.getElementById('monthly-grid').textContent = formatNumber(actualGrid);
+        document.getElementById('monthly-grid-expected').textContent = formatNumber(expectedGrid);
+        const monthlyGridPerfEl = document.getElementById('monthly-grid-perf');
+        if (monthlyGridPerfEl) {
+            monthlyGridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
+            monthlyGridPerfEl.className = 'performance ' + (gridPerf <= 100 ? 'positive' : 'negative');
+        }
+        
+        // Update PV Coverage display
+        document.getElementById('monthly-coverage').textContent = actualPVCoverage.toFixed(1) + '%';
+        document.getElementById('monthly-coverage-expected').textContent = expectedPVCoverage.toFixed(1);
+        const monthlyCoveragePerfEl = document.getElementById('monthly-coverage-perf');
+        if (monthlyCoveragePerfEl) {
+            monthlyCoveragePerfEl.textContent = `${pvCoveragePerf.toFixed(1)}% of expected`;
+            monthlyCoveragePerfEl.className = 'performance ' + (pvCoveragePerf >= 100 ? 'positive' : 'negative');
+        }
+        
+        updateMonthlyChart(monthRecords, selectedMonthYear, actualLoad, actualGrid, expectedLoad, expectedGrid);
         
     } catch (error) {
         console.error('Error loading monthly data:', error);
     }
 }
 
-function updateMonthlyChart(records, selectedMonthYear) {
+function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, expectedLoad, expectedGrid) {
     const ctx = document.getElementById('monthlyChart').getContext('2d');
     if (monthlyChart) monthlyChart.destroy();
     
@@ -3351,57 +3357,27 @@ function updateMonthlyChart(records, selectedMonthYear) {
                 return 0;
             });
             
-            // Fetch Load and Grid data based on current mode
-            const loadData = [];
-            const gridData = [];
+            // Calculate daily averages from monthly totals
+            const daysCount = records.length;
+            const actualAvgLoadPerDay = daysCount > 0 ? actualLoad / daysCount : 0;
+            const actualAvgGridPerDay = daysCount > 0 ? actualGrid / daysCount : 0;
+            const expectedAvgLoadPerDay = daysCount > 0 ? expectedLoad / daysCount : 0;
+            const expectedAvgGridPerDay = daysCount > 0 ? expectedGrid / daysCount : 0;
             
-            if (currentDataMode === 'actual') {
-                // ACTUAL MODE: Use actual data from daily records
-                records.forEach(record => {
-                    loadData.push(record.actual_load_kwh || 0);
-                    gridData.push(record.actual_grid_kwh || 0);
-                });
-                console.log(`📊 Monthly Chart using ACTUAL data: avg load=${(loadData.reduce((a,b)=>a+b,0)/loadData.length).toFixed(2)} kWh/day`);
-            } else {
-                // EXPECTED MODE: Use predictions
-                console.log(`   Fetching Load/Grid from predictions for ${records.length} days...`);
-                let daysFound = 0;
-                records.forEach(record => {
-                    const dateKey = record.date;
-                    
-                    if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
-                        const dayData = predictionsData.daily_predictions[dateKey];
-                        const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
-                        loadData.push(dailyLoad);
-                        gridData.push(dailyGrid);
-                        daysFound++;
-                    } else {
-                        console.warn(`   ⚠️ No prediction for ${dateKey}`);
-                        loadData.push(0);
-                        gridData.push(0);
-                    }
-                });
-                console.log(`   Found predictions for ${daysFound}/${records.length} days`);
-                console.log(`📊 Monthly Chart using EXPECTED data: avg load=${(loadData.reduce((a,b)=>a+b,0)/loadData.length).toFixed(2)} kWh/day`);
-            }
+            // Create straight lines (same value for all days)
+            const actualLoadLine = new Array(daysCount).fill(actualAvgLoadPerDay);
+            const actualGridLine = new Array(daysCount).fill(actualAvgGridPerDay);
+            const expectedLoadLine = new Array(daysCount).fill(expectedAvgLoadPerDay);
+            const expectedGridLine = new Array(daysCount).fill(expectedAvgGridPerDay);
             
-            // Calculate averages for Load and Grid
-            const totalLoad = loadData.reduce((sum, val) => sum + val, 0);
-            const totalGrid = gridData.reduce((sum, val) => sum + val, 0);
-            const avgLoad = loadData.length > 0 ? totalLoad / loadData.length : 0;
-            const avgGrid = gridData.length > 0 ? totalGrid / gridData.length : 0;
+            console.log(`📊 Monthly Chart - Straight line averages:`);
+            console.log(`   Actual: Load=${actualAvgLoadPerDay.toFixed(2)} kWh/day, Grid=${actualAvgGridPerDay.toFixed(2)} kWh/day`);
+            console.log(`   Expected: Load=${expectedAvgLoadPerDay.toFixed(2)} kWh/day, Grid=${expectedAvgGridPerDay.toFixed(2)} kWh/day`);
             
-            console.log(`   Final averages: avgLoad=${avgLoad.toFixed(2)} kWh/day, avgGrid=${avgGrid.toFixed(2)} kWh/day`);
-            
-            // Create arrays with average values
-            const avgLoadLine = new Array(records.length).fill(avgLoad);
-            const avgGridLine = new Array(records.length).fill(avgGrid);
-            
-            // Recreate chart with Load and Grid data
+            // Recreate chart with Load and Grid straight lines
             if (monthlyChart) monthlyChart.destroy();
-            const modeLabel = currentDataMode === 'actual' ? '' : 'Expected ';
-            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, avgLoadLine, avgGridLine, modeLabel);
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, 
+                actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine);
         })
         .catch(error => {
             console.error('❌ Failed to load predictions:', error.message || error);
@@ -3410,11 +3386,13 @@ function updateMonthlyChart(records, selectedMonthYear) {
             // Create chart without Load/Grid data
             const emptyIrradiation = new Array(records.length).fill(0);
             const emptyLine = new Array(records.length).fill(0);
-            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, emptyIrradiation, emptyLine, emptyLine, 'Expected ');
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, emptyIrradiation, 
+                emptyLine, emptyLine, emptyLine, emptyLine);
         });
 }
 
-function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, loadData, gridData, modeLabel = 'Expected ') {
+function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, 
+    actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine) {
     // Scale irradiation to match PV generation scale for visual comparison
     const maxGen = Math.max(...records.map(d => d.generation_kwh));
     const maxIrr = Math.max(...irradiationData);
@@ -3449,8 +3427,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     order: 2
                 },
                 {
-                    label: `Avg ${modeLabel}Load (kWh)`,
-                    data: loadData.length > 0 ? loadData : records.map(() => 0),
+                    label: 'Actual Load (Avg)',
+                    data: actualLoadLine,
                     type: 'line',
                     borderColor: '#ef4444',
                     backgroundColor: 'transparent',
@@ -3461,13 +3439,38 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     order: 1
                 },
                 {
-                    label: `Avg ${modeLabel}Grid (kWh)`,
-                    data: gridData.length > 0 ? gridData : records.map(() => 0),
+                    label: 'Expected Load (Avg)',
+                    data: expectedLoadLine,
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 1
+                },
+                {
+                    label: 'Actual Grid (Avg)',
+                    data: actualGridLine,
                     type: 'line',
                     borderColor: '#f97316',
                     backgroundColor: 'transparent',
                     borderWidth: 3,
-                    borderDash: [3, 3],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 0
+                },
+                {
+                    label: 'Expected Grid (Avg)',
+                    data: expectedGridLine,
+                    type: 'line',
+                    borderColor: '#f97316',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
