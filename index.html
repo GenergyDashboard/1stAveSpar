@@ -3596,63 +3596,56 @@ async function loadLifetimeMonthlyBreakdown() {
             monthlyData[monthKey].irradiation += (record.irradiation_wh_m2 || 0);
             monthlyData[monthKey].days += 1;
             
-            // Add Load and Grid based on currentDataMode
-            if (currentDataMode === 'actual') {
-                // ACTUAL MODE: Use actual data from daily records
-                monthlyData[monthKey].load += (record.actual_load_kwh || 0);
-                monthlyData[monthKey].grid += (record.actual_grid_kwh || 0);
-            }
+            // ALWAYS collect ACTUAL data
+            monthlyData[monthKey].load += (record.actual_load_kwh || 0);
+            monthlyData[monthKey].grid += (record.actual_grid_kwh || 0);
         });
         
-        console.log(`📊 Lifetime Load/Grid - Mode: ${currentDataMode}`);
+        console.log(`📊 Lifetime Load/Grid calculation`);
         console.log(`   Total months: ${Object.keys(monthlyData).length}`);
         
-        // For EXPECTED mode, load predictions to calculate Load and Grid
-        if (currentDataMode === 'expected') {
-            console.log(`   Loading predictions for expected Load/Grid...`);
-            try {
-                const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
-                const predictionsResponse = await fetch(predictionsPath);
-                if (predictionsResponse.ok) {
-                    const predictionsData = await predictionsResponse.json();
+        // Store actual totals
+        const actualTotalLoad = Object.values(monthlyData).reduce((sum, month) => sum + month.load, 0);
+        const actualTotalGrid = Object.values(monthlyData).reduce((sum, month) => sum + month.grid, 0);
+        
+        // ALWAYS get EXPECTED data from predictions
+        console.log(`   Loading predictions for expected Load/Grid...`);
+        let expectedTotalLoad = 0, expectedTotalGrid = 0;
+        try {
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            const predictionsResponse = await fetch(predictionsPath);
+            if (predictionsResponse.ok) {
+                const predictionsData = await predictionsResponse.json();
+                
+                // Calculate expected Load and Grid for each day
+                dashData.daily_records.forEach(record => {
+                    const dateKey = record.date;
                     
-                    // Calculate Load and Grid for each month from predictions
-                    dashData.daily_records.forEach(record => {
-                        const monthKey = record.date.substring(0, 7);
-                        const dateKey = record.date;
-                        
-                        if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
-                            const dayData = predictionsData.daily_predictions[dateKey];
-                            const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
-                            const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
-                            if (monthlyData[monthKey]) {
-                                monthlyData[monthKey].load += dailyLoad;
-                                monthlyData[monthKey].grid += dailyGrid;
-                            }
-                        }
-                    });
-                    console.log(`   ✅ EXPECTED Lifetime Load/Grid from predictions`);
-                } else {
-                    console.warn(`   ⚠️ Predictions response not OK: ${predictionsResponse.status}`);
-                    // Fallback calculation for expected mode
-                    Object.keys(monthlyData).forEach(monthKey => {
-                        monthlyData[monthKey].load = monthlyData[monthKey].generation * 1.5;
-                        monthlyData[monthKey].grid = monthlyData[monthKey].load - monthlyData[monthKey].generation;
-                    });
-                    console.log(`   Using fallback calculation`);
-                }
-            } catch (error) {
-                console.error(`   ❌ Error loading predictions:`, error);
-                // Fallback calculation
-                Object.keys(monthlyData).forEach(monthKey => {
-                    monthlyData[monthKey].load = monthlyData[monthKey].generation * 1.5;
-                    monthlyData[monthKey].grid = monthlyData[monthKey].load - monthlyData[monthKey].generation;
+                    if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                        const dayData = predictionsData.daily_predictions[dateKey];
+                        const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                        expectedTotalLoad += dailyLoad;
+                        expectedTotalGrid += dailyGrid;
+                    }
                 });
+                console.log(`   ✅ EXPECTED Lifetime Load: ${expectedTotalLoad.toFixed(2)} kWh, Grid: ${expectedTotalGrid.toFixed(2)} kWh`);
+            } else {
+                console.warn(`   ⚠️ Predictions response not OK: ${predictionsResponse.status}`);
+                // Fallback calculation
+                expectedTotalLoad = totalGeneration * 1.5;
+                expectedTotalGrid = expectedTotalLoad - totalGeneration;
                 console.log(`   Using fallback calculation`);
             }
-        } else {
-            console.log(`   ✅ ACTUAL Lifetime Load/Grid from daily records`);
+        } catch (error) {
+            console.error(`   ❌ Error loading predictions:`, error);
+            // Fallback calculation
+            expectedTotalLoad = totalGeneration * 1.5;
+            expectedTotalGrid = expectedTotalLoad - totalGeneration;
+            console.log(`   Using fallback calculation`);
         }
+        
+        console.log(`   ✅ ACTUAL Lifetime Load: ${actualTotalLoad.toFixed(2)} kWh, Grid: ${actualTotalGrid.toFixed(2)} kWh`);
         
         // Calculate expected values and performance for each month
         const monthKeys = Object.keys(monthlyData).sort();
@@ -3736,20 +3729,51 @@ async function loadLifetimeMonthlyBreakdown() {
         const lifetimeStatus = lifetimeDifference >= 0 ? 'ahead' : 'behind';
         
         // Calculate lifetime Load and Grid totals
-        const totalLoad = Object.values(monthlyData).reduce((sum, month) => sum + month.load, 0);
-        const totalGrid = Object.values(monthlyData).reduce((sum, month) => sum + month.grid, 0);
+        const totalLoad = actualTotalLoad;
+        const totalGrid = actualTotalGrid;
         const lifetimeCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100).toFixed(1) : 0;
-        const lifetimeGridCoverage = (100 - parseFloat(lifetimeCoverage)).toFixed(1);
+        const expectedLifetimeCoverage = expectedTotalLoad > 0 ? ((lifetimeExpected / expectedTotalLoad) * 100).toFixed(1) : 0;
         
-        // Update labels based on current data mode
-        const modeLabel = currentDataMode === 'actual' ? 'Actual' : 'Expected';
-        document.getElementById('lifetime-load-label').textContent = `${modeLabel} Load`;
-        document.getElementById('lifetime-grid-label').textContent = `${modeLabel} Grid Coverage`;
+        // Calculate % differences
+        const loadPerf = expectedTotalLoad > 0 ? ((actualTotalLoad / expectedTotalLoad) * 100) : 0;
+        const gridPerf = expectedTotalGrid > 0 ? ((actualTotalGrid / expectedTotalGrid) * 100) : 0;
+        const coveragePerf = expectedLifetimeCoverage > 0 ? ((parseFloat(lifetimeCoverage) / parseFloat(expectedLifetimeCoverage)) * 100) : 0;
         
-        document.getElementById('lifetime-load').textContent = formatNumber(totalLoad);
-        document.getElementById('lifetime-grid').textContent = formatNumber(totalGrid);
-        document.getElementById('lifetime-grid-pct').textContent = lifetimeGridCoverage + '%';
+        // Update Load display
+        document.getElementById('lifetime-load').textContent = formatNumber(actualTotalLoad);
+        document.getElementById('lifetime-load-expected').textContent = formatNumber(expectedTotalLoad);
+        const lifetimeLoadPerfEl = document.getElementById('lifetime-load-perf');
+        if (lifetimeLoadPerfEl) {
+            lifetimeLoadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
+            lifetimeLoadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
+        }
+        
+        // Update Grid display
+        document.getElementById('lifetime-grid').textContent = formatNumber(actualTotalGrid);
+        document.getElementById('lifetime-grid-expected').textContent = formatNumber(expectedTotalGrid);
+        const lifetimeGridPerfEl = document.getElementById('lifetime-grid-perf');
+        if (lifetimeGridPerfEl) {
+            lifetimeGridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
+            lifetimeGridPerfEl.className = 'performance ' + (gridPerf <= 100 ? 'positive' : 'negative');
+        }
+        
+        // Update PV Coverage display
         document.getElementById('lifetime-coverage').textContent = lifetimeCoverage + '%';
+        document.getElementById('lifetime-coverage-expected').textContent = expectedLifetimeCoverage;
+        const lifetimeCoveragePerfEl = document.getElementById('lifetime-coverage-perf');
+        if (lifetimeCoveragePerfEl) {
+            lifetimeCoveragePerfEl.textContent = `${coveragePerf.toFixed(1)}% of expected`;
+            lifetimeCoveragePerfEl.className = 'performance ' + (coveragePerf >= 100 ? 'positive' : 'negative');
+        }
+        
+        // Update Generation display
+        document.getElementById('lifetime-gen').textContent = formatNumber(totalGeneration);
+        document.getElementById('lifetime-gen-expected').textContent = formatNumber(lifetimeExpected);
+        const lifetimeGenPerfEl = document.getElementById('lifetime-gen-perf');
+        if (lifetimeGenPerfEl) {
+            lifetimeGenPerfEl.textContent = `${lifetimePerformance.toFixed(1)}% of expected`;
+            lifetimeGenPerfEl.className = 'performance ' + (lifetimePerformance >= 100 ? 'positive' : 'negative');
+        }
         
         document.getElementById('lifetime-perf').textContent = formatNumber(lifetimePerformance);
         document.getElementById('lifetime-perf-diff').textContent = formatNumber(Math.abs(lifetimeDifference));
