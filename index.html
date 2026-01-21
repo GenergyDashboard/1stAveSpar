@@ -2642,97 +2642,27 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
     genPerf.textContent = `${performance.toFixed(1)}% of expected`;
     genPerf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
     
-    // Calculate Load, Grid, and PV Coverage based on data mode
-    let totalLoad, totalGrid, loadData, gridData;
+    // ALWAYS calculate ACTUAL Load/Grid from real data
+    const actualLoadData = data.map(d => d.load_kw || 0);
+    const actualGridData = data.map(d => Math.abs(d.grid_kw || 0));
     
-    if (currentDataMode === 'actual') {
-        // ACTUAL MODE: Use real Load/Grid from XLS scraper data
-        // The hourly_data has load_kw and grid_kw from the scraper
-        loadData = data.map(d => d.load_kw || 0);
-        gridData = data.map(d => Math.abs(d.grid_kw || 0)); // Absolute value since grid can be negative
-        
-        // Use aggregated values from dailyRecord if available (more accurate)
-        if (dailyRecord && dailyRecord.actual_load_kwh) {
-            totalLoad = dailyRecord.actual_load_kwh;
-        } else {
-            // Fallback: sum from hourly data
-            totalLoad = loadData.reduce((sum, val) => sum + val, 0);
-        }
-        
-        if (dailyRecord && dailyRecord.actual_grid_kwh) {
-            totalGrid = dailyRecord.actual_grid_kwh;
-        } else {
-            // Fallback: sum from hourly data
-            totalGrid = gridData.reduce((sum, val) => sum + val, 0);
-        }
-        
-        console.log(`ACTUAL Load: ${totalLoad.toFixed(2)} kWh, Grid: ${totalGrid.toFixed(2)} kWh`);
-        
-        // Continue with display updates
-        finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate);
-        
+    let actualTotalLoad, actualTotalGrid;
+    if (dailyRecord && dailyRecord.actual_load_kwh) {
+        actualTotalLoad = dailyRecord.actual_load_kwh;
     } else {
-        // EXPECTED MODE: Load from predictions_2025_2044.min.json
-        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-        const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
-        
-        fetch(predictionsPath)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Predictions file not found');
-                }
-                return response.json();
-            })
-            .then(predictionsData => {
-                if (predictionsData.daily_predictions && predictionsData.daily_predictions[selectedDate]) {
-                    const dayPredictions = predictionsData.daily_predictions[selectedDate];
-                    
-                    // Use predicted Load and Grid from predictions file
-                    loadData = dayPredictions.load_kw || [];
-                    gridData = dayPredictions.grid_kw || [];
-                    
-                    totalLoad = loadData.reduce((sum, val) => sum + val, 0);
-                    totalGrid = gridData.reduce((sum, val) => sum + val, 0);
-                    
-                    console.log(`EXPECTED Load: ${totalLoad.toFixed(2)} kWh, Grid: ${totalGrid.toFixed(2)} kWh (from predictions)`);
-                } else {
-                    // Fallback if predictions not available for this date
-                    console.warn(`No predictions found for ${selectedDate}, using fallback calculation`);
-                    const typicalLoadRatio = 1.5;
-                    const expectedLoad = totalGeneration * typicalLoadRatio;
-                    const expectedGrid = expectedLoad - totalGeneration;
-                    
-                    loadData = pvData.map(gen => gen * typicalLoadRatio);
-                    gridData = pvData.map(gen => gen * (typicalLoadRatio - 1));
-                    
-                    totalLoad = expectedLoad;
-                    totalGrid = expectedGrid;
-                }
-                
-                // Continue with display updates
-                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate);
-            })
-            .catch(error => {
-                console.warn('Could not load predictions:', error);
-                // Fallback calculation
-                const typicalLoadRatio = 1.5;
-                const expectedLoad = totalGeneration * typicalLoadRatio;
-                const expectedGrid = expectedLoad - totalGeneration;
-                
-                loadData = pvData.map(gen => gen * typicalLoadRatio);
-                gridData = pvData.map(gen => gen * (typicalLoadRatio - 1));
-                
-                totalLoad = expectedLoad;
-                totalGrid = expectedGrid;
-                
-                console.log(`EXPECTED Load: ${totalLoad.toFixed(2)} kWh, Grid: ${totalGrid.toFixed(2)} kWh (fallback)`);
-                
-                // Continue with display updates
-                finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate);
-            });
-        
-        return; // Exit early, async completion will call finishDailyViewUpdate
+        actualTotalLoad = actualLoadData.reduce((sum, val) => sum + val, 0);
     }
+    
+    if (dailyRecord && dailyRecord.actual_grid_kwh) {
+        actualTotalGrid = dailyRecord.actual_grid_kwh;
+    } else {
+        actualTotalGrid = actualGridData.reduce((sum, val) => sum + val, 0);
+    }
+    
+    console.log(`ACTUAL Load: ${actualTotalLoad.toFixed(2)} kWh, Grid: ${actualTotalGrid.toFixed(2)} kWh`);
+    
+    // Continue with display updates - finishDailyViewUpdate will fetch expected values
+    finishDailyViewUpdate(actualTotalLoad, actualTotalGrid, actualLoadData, actualGridData, totalGeneration, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate);
 }
 
 // Helper function to complete the daily view update
@@ -2922,17 +2852,17 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 }
             }
             
-            // Calculate expected Load/Grid averages across all hours in month (straight lines)
-            let expectedLoadTotal = 0, expectedGridTotal = 0, expectedHoursCount = 0;
+            // Calculate expected Load/Grid averages - total sum / total count
+            let expectedLoadSum = 0, expectedGridSum = 0, expectedTotalCount = 0;
             for (let hour = 0; hour < 24; hour++) {
                 if (expectedLoadHourlyCount[hour] > 0) {
-                    expectedLoadTotal += expectedLoadHourlySum[hour] / expectedLoadHourlyCount[hour];
-                    expectedGridTotal += expectedGridHourlySum[hour] / expectedLoadHourlyCount[hour];
-                    expectedHoursCount++;
+                    expectedLoadSum += expectedLoadHourlySum[hour];
+                    expectedGridSum += expectedGridHourlySum[hour];
+                    expectedTotalCount += expectedLoadHourlyCount[hour];
                 }
             }
-            const expectedAvgLoad = expectedHoursCount > 0 ? expectedLoadTotal / expectedHoursCount : 0;
-            const expectedAvgGrid = expectedHoursCount > 0 ? expectedGridTotal / expectedHoursCount : 0;
+            const expectedAvgLoad = expectedTotalCount > 0 ? expectedLoadSum / expectedTotalCount : 0;
+            const expectedAvgGrid = expectedTotalCount > 0 ? expectedGridSum / expectedTotalCount : 0;
             
             // Calculate actual Load/Grid averages from all hourly data in month (straight lines)
             let actualLoadTotal = 0, actualGridTotal = 0, actualHoursCount = 0;
@@ -2961,8 +2891,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             console.log(`  📊 Predicted PV line uses monthly hourly average from predictions file`);
             console.log(`     Month: ${monthKey}, Days with predictions: ${monthlyHourlyCount.filter(c => c > 0).length} hours averaged`);
             console.log(`  📊 Load/Grid straight lines (hourly avg across entire month):`);
-            console.log(`     Expected Load: ${expectedAvgLoad.toFixed(2)} kW, Grid: ${expectedAvgGrid.toFixed(2)} kW`);
-            console.log(`     Actual Load: ${actualAvgLoad.toFixed(2)} kW, Grid: ${actualAvgGrid.toFixed(2)} kW`);
+            console.log(`     Expected Load: ${expectedAvgLoad.toFixed(2)} kW (${expectedTotalCount} hours), Grid: ${expectedAvgGrid.toFixed(2)} kW`);
+            console.log(`     Actual Load: ${actualAvgLoad.toFixed(2)} kW (${actualHoursCount} hours), Grid: ${actualAvgGrid.toFixed(2)} kW`);
             
             // Continue with chart rendering
             finishChartRendering();
