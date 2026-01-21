@@ -2880,22 +2880,40 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             const monthlyHourlySum = new Array(24).fill(0);
             const monthlyHourlyCount = new Array(24).fill(0);
             
+            // Initialize Load/Grid hourly accumulators for expected values
+            const expectedLoadHourlySum = new Array(24).fill(0);
+            const expectedGridHourlySum = new Array(24).fill(0);
+            const expectedLoadHourlyCount = new Array(24).fill(0);
+            
             // Get all days in the selected month from predictions
             if (predictionsData.daily_predictions) {
                 Object.keys(predictionsData.daily_predictions)
                     .filter(date => date.startsWith(monthKey))
                     .forEach(date => {
                         const dayPredictions = predictionsData.daily_predictions[date];
+                        
+                        // Calculate PV hourly averages
                         if (dayPredictions.pv_kw) {
                             dayPredictions.pv_kw.forEach((gen, hour) => {
                                 monthlyHourlySum[hour] += gen;
                                 if (gen > 0) monthlyHourlyCount[hour]++;
                             });
                         }
+                        
+                        // Calculate Load/Grid hourly sums for expected
+                        if (dayPredictions.load_kw && dayPredictions.grid_kw) {
+                            dayPredictions.load_kw.forEach((load, hour) => {
+                                expectedLoadHourlySum[hour] += load;
+                                expectedLoadHourlyCount[hour]++;
+                            });
+                            dayPredictions.grid_kw.forEach((grid, hour) => {
+                                expectedGridHourlySum[hour] += grid;
+                            });
+                        }
                     });
             }
             
-            // Calculate average for each hour
+            // Calculate average for each hour (PV)
             for (let hour = 0; hour < 24; hour++) {
                 if (monthlyHourlyCount[hour] > 0) {
                     full24HourData.predicted[hour] = monthlyHourlySum[hour] / monthlyHourlyCount[hour];
@@ -2904,8 +2922,47 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 }
             }
             
-            console.log(`  📊 Predicted line uses monthly hourly average from predictions file`);
+            // Calculate expected Load/Grid averages across all hours in month (straight lines)
+            let expectedLoadTotal = 0, expectedGridTotal = 0, expectedHoursCount = 0;
+            for (let hour = 0; hour < 24; hour++) {
+                if (expectedLoadHourlyCount[hour] > 0) {
+                    expectedLoadTotal += expectedLoadHourlySum[hour] / expectedLoadHourlyCount[hour];
+                    expectedGridTotal += expectedGridHourlySum[hour] / expectedLoadHourlyCount[hour];
+                    expectedHoursCount++;
+                }
+            }
+            const expectedAvgLoad = expectedHoursCount > 0 ? expectedLoadTotal / expectedHoursCount : 0;
+            const expectedAvgGrid = expectedHoursCount > 0 ? expectedGridTotal / expectedHoursCount : 0;
+            
+            // Calculate actual Load/Grid averages from all hourly data in month (straight lines)
+            let actualLoadTotal = 0, actualGridTotal = 0, actualHoursCount = 0;
+            if (dashboardData && dashboardData.daily_records) {
+                dashboardData.daily_records
+                    .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
+                    .forEach(record => {
+                        if (record.hourly_data && record.hourly_data.length > 0) {
+                            record.hourly_data.forEach(hourData => {
+                                actualLoadTotal += (hourData.load_kw || 0);
+                                actualGridTotal += Math.abs(hourData.grid_kw || 0);
+                                actualHoursCount++;
+                            });
+                        }
+                    });
+            }
+            const actualAvgLoad = actualHoursCount > 0 ? actualLoadTotal / actualHoursCount : avgLoad;
+            const actualAvgGrid = actualHoursCount > 0 ? actualGridTotal / actualHoursCount : avgGrid;
+            
+            // Create straight lines for Load and Grid (hourly averages)
+            full24HourData.predictedLoad = new Array(24).fill(expectedAvgLoad);
+            full24HourData.predictedGrid = new Array(24).fill(expectedAvgGrid);
+            full24HourData.actualLoad = new Array(24).fill(actualAvgLoad);
+            full24HourData.actualGrid = new Array(24).fill(actualAvgGrid);
+            
+            console.log(`  📊 Predicted PV line uses monthly hourly average from predictions file`);
             console.log(`     Month: ${monthKey}, Days with predictions: ${monthlyHourlyCount.filter(c => c > 0).length} hours averaged`);
+            console.log(`  📊 Load/Grid straight lines (hourly avg across entire month):`);
+            console.log(`     Expected Load: ${expectedAvgLoad.toFixed(2)} kW, Grid: ${expectedAvgGrid.toFixed(2)} kW`);
+            console.log(`     Actual Load: ${actualAvgLoad.toFixed(2)} kW, Grid: ${actualAvgGrid.toFixed(2)} kW`);
             
             // Continue with chart rendering
             finishChartRendering();
