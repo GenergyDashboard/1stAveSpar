@@ -1380,17 +1380,6 @@
                     <button class="btn btn-secondary" onclick="loadToday()">Today</button>
                 </div>
                 
-                <!-- Data Mode Toggle -->
-                <div class="data-mode-toggle">
-                    <span class="toggle-label">📊 Data View:</span>
-                    <button class="toggle-btn active" data-mode="expected" onclick="toggleDataMode('expected')">
-                        Expected Data
-                    </button>
-                    <button class="toggle-btn" data-mode="actual" onclick="toggleDataMode('actual')">
-                        Actual Data
-                    </button>
-                </div>
-                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="label">Load</div>
@@ -1421,7 +1410,7 @@
                 <!-- Combined TOU Breakdown & Savings Card -->
                 <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
-                        <div class="label">⚡ Time of Use Breakdown & Savings</div>
+                        <div class="label">Time of Use Breakdown & Savings</div>
                         <div class="tou-breakdown">
                             <div class="tou-item">
                                 <span class="tou-label peak">Peak</span>
@@ -1476,17 +1465,6 @@
                     <button class="btn btn-secondary" onclick="loadPast30Days()">Past 30 Days</button>
                 </div>
                 
-                <!-- Data Mode Toggle -->
-                <div class="data-mode-toggle">
-                    <span class="toggle-label">📊 Data View:</span>
-                    <button class="toggle-btn active" data-mode="expected" onclick="toggleDataMode('expected')">
-                        Expected Data
-                    </button>
-                    <button class="toggle-btn" data-mode="actual" onclick="toggleDataMode('actual')">
-                        Actual Data
-                    </button>
-                </div>
-                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="label">Load</div>
@@ -1525,7 +1503,7 @@
                 <!-- Combined TOU Breakdown & Savings Card -->
                 <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
-                        <div class="label">⚡ Time of Use Breakdown & Savings</div>
+                        <div class="label">Time of Use Breakdown & Savings</div>
                         <div class="tou-breakdown">
                             <div class="tou-item">
                                 <span class="tou-label peak">Peak</span>
@@ -1557,17 +1535,6 @@
             </div>
             
             <div id="lifetime-tab" class="tab-content">
-                <!-- Data Mode Toggle -->
-                <div class="data-mode-toggle">
-                    <span class="toggle-label">📊 Data View:</span>
-                    <button class="toggle-btn active" data-mode="expected" onclick="toggleDataMode('expected')">
-                        Expected Data
-                    </button>
-                    <button class="toggle-btn" data-mode="actual" onclick="toggleDataMode('actual')">
-                        Actual Data
-                    </button>
-                </div>
-                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="label">Load</div>
@@ -1668,17 +1635,6 @@
             
             <!-- Financial Overview Tab -->
             <div id="financial-tab" class="tab-content">
-                <!-- Data Mode Toggle -->
-                <div class="data-mode-toggle">
-                    <span class="toggle-label">📊 Data View:</span>
-                    <button class="toggle-btn active" data-mode="expected" onclick="toggleDataMode('expected')">
-                        Expected Data
-                    </button>
-                    <button class="toggle-btn" data-mode="actual" onclick="toggleDataMode('actual')">
-                        Actual Data
-                    </button>
-                </div>
-                
                 <!-- Hero Stats Grid -->
                 <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 30px;">
                     <!-- Total Lifetime Savings Hero Card -->
@@ -2396,13 +2352,13 @@ async function updateDatePickerRange() {
             if (historyData.hourly_records && Object.keys(historyData.hourly_records).length > 0) {
                 const availableDates = Object.keys(historyData.hourly_records).sort();
                 const minDate = availableDates[0];
-                const maxDate = availableDates[availableDates.length - 1];
+                const today = new Date().toISOString().split('T')[0];
                 
                 const dateInput = document.getElementById('dateSelector');
                 dateInput.min = minDate;
-                dateInput.max = maxDate;
+                dateInput.max = today;  // Always allow up to today
                 
-                console.log(`✓ Date picker range: ${minDate} to ${maxDate} (${availableDates.length} days available)`);
+                console.log(`✓ Date picker range: ${minDate} to ${today} (${availableDates.length} days with data)`);
             }
         }
     } catch (error) {
@@ -3774,6 +3730,46 @@ async function loadLifetimeMonthlyBreakdown() {
         const ctx = document.getElementById('lifetimeMonthlyChart').getContext('2d');
         if (lifetimeMonthlyChart) lifetimeMonthlyChart.destroy();
         
+        // Custom plugin to draw horizontal lines across each bar for Load/Grid
+        const horizontalLinesPlugin = {
+            id: 'horizontalLines',
+            afterDatasetsDraw: (chart) => {
+                const {ctx, chartArea, scales} = chart;
+                const {left, right} = chartArea;
+                const xScale = scales.x;
+                const y1Scale = scales.y1; // Load/Grid axis
+                
+                // Get bar width from the actual bar chart
+                const barWidth = chart.getDatasetMeta(0).data[0]?.width || 60;
+                const halfBarWidth = barWidth / 2;
+                
+                // Draw lines for Load/Grid datasets (datasets 3-6)
+                [
+                    {data: monthActualLoad, color: '#ef4444', width: 3, dash: []},
+                    {data: monthExpectedLoad, color: '#ef4444', width: 2, dash: [5, 5]},
+                    {data: monthActualGrid, color: '#f97316', width: 3, dash: []},
+                    {data: monthExpectedGrid, color: '#f97316', width: 2, dash: [5, 5]}
+                ].forEach((dataset, idx) => {
+                    dataset.data.forEach((value, i) => {
+                        if (value != null && value > 0) {
+                            const x = xScale.getPixelForValue(i);
+                            const y = y1Scale.getPixelForValue(value);
+                            
+                            ctx.save();
+                            ctx.strokeStyle = dataset.color;
+                            ctx.lineWidth = dataset.width;
+                            ctx.setLineDash(dataset.dash);
+                            ctx.beginPath();
+                            ctx.moveTo(x - halfBarWidth, y);
+                            ctx.lineTo(x + halfBarWidth, y);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    });
+                });
+            }
+        };
+        
         // Scale Performance to fit on primary axis with Generation
         // Performance is 0-150%, scale it to match generation range
         const maxGeneration = Math.max(...monthGeneration);
@@ -3781,6 +3777,7 @@ async function loadLifetimeMonthlyBreakdown() {
         
         lifetimeMonthlyChart = new Chart(ctx, {
             type: 'bar',
+            plugins: [horizontalLinesPlugin],
             data: {
                 labels: monthLabels,
                 datasets: [
