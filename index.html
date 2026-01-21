@@ -2620,6 +2620,13 @@
                 }
                 
                 // Generate CSV based on interval
+                console.log('📊 Report Generation:');
+                console.log('  Interval:', interval);
+                console.log('  Date range:', startDate, 'to', endDate);
+                console.log('  Fields:', selectedFields);
+                console.log('  Dashboard data available:', !!dashboardData);
+                console.log('  Predictions data available:', !!predData);
+                
                 let csvData;
                 switch(interval) {
                     case '5min':
@@ -2637,6 +2644,12 @@
                     case 'monthly':
                         csvData = await generateMonthlyReport(dashboardData, predData, startDate, endDate, selectedFields);
                         break;
+                }
+                
+                console.log('  CSV generated, length:', csvData?.length || 0);
+                
+                if (!csvData || csvData.length < 100) {
+                    throw new Error('Generated CSV is empty or too small. Check date range and data availability.');
                 }
                 
                 // Download CSV
@@ -2875,7 +2888,16 @@
             if (fields.includes('performance')) csv += ',Performance (%)';
             csv += '\n';
             
+            console.log('📊 Generating daily report:');
+            console.log('  Date range:', startDate, 'to', endDate);
+            console.log('  Total records available:', dashData.daily_records?.length || 0);
+            
             const records = dashData.daily_records.filter(r => r.date >= startDate && r.date <= endDate);
+            console.log('  Records in range:', records.length);
+            
+            if (records.length === 0) {
+                console.warn('⚠️ No records found in date range!');
+            }
             
             for (const record of records) {
                 let row = record.date;
@@ -2906,6 +2928,9 @@
                 }
                 csv += row + '\n';
             }
+            
+            console.log('  CSV length:', csv.length, 'characters');
+            console.log('  CSV preview:', csv.substring(0, 200));
             return csv;
         }
         
