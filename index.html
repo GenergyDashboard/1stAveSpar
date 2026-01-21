@@ -4234,12 +4234,30 @@ async function loadLifetimePerformanceLineChart() {
                 const avgDailyPrediction = dashboardData.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
                 const expectedForDays = avgDailyPrediction * monthlyData[monthKey].days;
                 
+                monthlyData[monthKey].expected = expectedForDays;
+                
                 const performance = expectedForDays > 0 ? (monthlyData[monthKey].generation / expectedForDays * 100) : 0;
                 monthPerformance.push(performance);
             } else {
                 monthPerformance.push(0);
+                monthlyData[monthKey].expected = 0;
             }
         });
+        
+        // Calculate CUMULATIVE performance
+        const cumulativePerformance = [];
+        let cumulativeGeneration = 0;
+        let cumulativeExpected = 0;
+        
+        monthKeys.forEach(monthKey => {
+            cumulativeGeneration += monthlyData[monthKey].generation;
+            cumulativeExpected += monthlyData[monthKey].expected;
+            
+            const cumPerf = cumulativeExpected > 0 ? (cumulativeGeneration / cumulativeExpected * 100) : 0;
+            cumulativePerformance.push(cumPerf);
+        });
+        
+        console.log('📊 Performance Line Chart - Cumulative Performance:', cumulativePerformance.map(p => p.toFixed(1) + '%').join(', '));
         
         // Create chart
         const ctx = document.getElementById('lifetimePerformanceLineChart').getContext('2d');
