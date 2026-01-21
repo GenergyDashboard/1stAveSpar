@@ -1418,45 +1418,29 @@
                     </div>
                 </div>
                 
-                <!-- TOU Breakdown & Savings Cards -->
-                <div class="stats-grid" style="grid-template-columns: 1fr 1.5fr; margin-top: 30px;">
-                    <!-- TOU Breakdown Card -->
+                <!-- Combined TOU Breakdown & Savings Card -->
+                <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
-                        <div class="label">⚡ Time of Use Breakdown</div>
+                        <div class="label">⚡ Time of Use Breakdown & Savings</div>
                         <div class="tou-breakdown">
                             <div class="tou-item">
                                 <span class="tou-label peak">Peak</span>
                                 <span class="tou-value" id="daily-tou-peak">--</span>
+                                <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-savings-peak">--</span></span>
                             </div>
                             <div class="tou-item">
                                 <span class="tou-label standard">Standard</span>
                                 <span class="tou-value" id="daily-tou-standard">--</span>
+                                <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-savings-standard">--</span></span>
                             </div>
                             <div class="tou-item">
                                 <span class="tou-label off-peak">Off-Peak</span>
                                 <span class="tou-value" id="daily-tou-off-peak">--</span>
+                                <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-savings-off-peak">--</span></span>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Today's Savings Card -->
-                    <div class="stat-card financial-card">
-                        <div class="label">💰 Today's Savings</div>
-                        <div class="value financial-value">
-                            <span class="currency">R</span> <span id="daily-total-savings">--</span>
-                        </div>
-                        <div class="savings-breakdown">
-                            <div class="savings-item">
-                                <span class="savings-period peak">Peak</span>
-                                <span class="savings-amount">R<span id="daily-savings-peak">--</span></span>
-                            </div>
-                            <div class="savings-item">
-                                <span class="savings-period standard">Standard</span>
-                                <span class="savings-amount">R<span id="daily-savings-standard">--</span></span>
-                            </div>
-                            <div class="savings-item">
-                                <span class="savings-period off-peak">Off-Peak</span>
-                                <span class="savings-amount">R<span id="daily-savings-off-peak">--</span></span>
+                            <div class="tou-item" style="border-top: 2px solid rgba(255,255,255,0.2); margin-top: 10px; padding-top: 10px; font-weight: bold;">
+                                <span class="tou-label">Total Savings</span>
+                                <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="daily-total-savings">--</span></span>
                             </div>
                         </div>
                     </div>
@@ -1538,45 +1522,29 @@
                     </div>
                 </div>
                 
-                <!-- TOU Breakdown & Savings Cards -->
-                <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 30px;">
-                    <!-- TOU Breakdown Card -->
+                <!-- Combined TOU Breakdown & Savings Card -->
+                <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
-                        <div class="label">⚡ Time of Use Breakdown</div>
+                        <div class="label">⚡ Time of Use Breakdown & Savings</div>
                         <div class="tou-breakdown">
                             <div class="tou-item">
                                 <span class="tou-label peak">Peak</span>
                                 <span class="tou-value" id="monthly-tou-peak">--</span>
+                                <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-savings-peak">--</span></span>
                             </div>
                             <div class="tou-item">
                                 <span class="tou-label standard">Standard</span>
                                 <span class="tou-value" id="monthly-tou-standard">--</span>
+                                <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-savings-standard">--</span></span>
                             </div>
                             <div class="tou-item">
                                 <span class="tou-label off-peak">Off-Peak</span>
                                 <span class="tou-value" id="monthly-tou-off-peak">--</span>
+                                <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-savings-off-peak">--</span></span>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Monthly Savings Card -->
-                    <div class="stat-card financial-card">
-                        <div class="label">💰 This Month's Savings</div>
-                        <div class="value financial-value">
-                            <span class="currency">R</span> <span id="monthly-total-savings">--</span>
-                        </div>
-                        <div class="savings-breakdown">
-                            <div class="savings-item">
-                                <span class="savings-period peak">Peak</span>
-                                <span class="savings-amount">R<span id="monthly-savings-peak">--</span></span>
-                            </div>
-                            <div class="savings-item">
-                                <span class="savings-period standard">Standard</span>
-                                <span class="savings-amount">R<span id="monthly-savings-standard">--</span></span>
-                            </div>
-                            <div class="savings-item">
-                                <span class="savings-period off-peak">Off-Peak</span>
-                                <span class="savings-amount">R<span id="monthly-savings-off-peak">--</span></span>
+                            <div class="tou-item" style="border-top: 2px solid rgba(255,255,255,0.2); margin-top: 10px; padding-top: 10px; font-weight: bold;">
+                                <span class="tou-label">Total Savings</span>
+                                <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="monthly-total-savings">--</span></span>
                             </div>
                         </div>
                     </div>
@@ -1640,45 +1608,29 @@
                     </div>
                 </div>
                 
-                <!-- TOU Breakdown & Savings Cards -->
-                <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 30px;">
-                    <!-- TOU Breakdown Card -->
+                <!-- Combined TOU Breakdown & Savings Card -->
+                <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
-                        <div class="label">⚡ Lifetime TOU Breakdown</div>
+                        <div class="label">⚡ Lifetime TOU Breakdown & Savings</div>
                         <div class="tou-breakdown">
                             <div class="tou-item">
                                 <span class="tou-label peak">Peak</span>
                                 <span class="tou-value" id="lifetime-tou-peak">--</span>
+                                <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-savings-peak">--</span></span>
                             </div>
                             <div class="tou-item">
                                 <span class="tou-label standard">Standard</span>
                                 <span class="tou-value" id="lifetime-tou-standard">--</span>
+                                <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-savings-standard">--</span></span>
                             </div>
                             <div class="tou-item">
                                 <span class="tou-label off-peak">Off-Peak</span>
                                 <span class="tou-value" id="lifetime-tou-off-peak">--</span>
+                                <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-savings-off-peak">--</span></span>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Lifetime Savings Card -->
-                    <div class="stat-card financial-card">
-                        <div class="label">💰 Lifetime Savings</div>
-                        <div class="value financial-value">
-                            <span class="currency">R</span> <span id="lifetime-total-savings">--</span>
-                        </div>
-                        <div class="savings-breakdown">
-                            <div class="savings-item">
-                                <span class="savings-period peak">Peak</span>
-                                <span class="savings-amount">R<span id="lifetime-savings-peak">--</span></span>
-                            </div>
-                            <div class="savings-item">
-                                <span class="savings-period standard">Standard</span>
-                                <span class="savings-amount">R<span id="lifetime-savings-standard">--</span></span>
-                            </div>
-                            <div class="savings-item">
-                                <span class="savings-period off-peak">Off-Peak</span>
-                                <span class="savings-amount">R<span id="lifetime-savings-off-peak">--</span></span>
+                            <div class="tou-item" style="border-top: 2px solid rgba(255,255,255,0.2); margin-top: 10px; padding-top: 10px; font-weight: bold;">
+                                <span class="tou-label">Total Savings</span>
+                                <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="lifetime-total-savings">--</span></span>
                             </div>
                         </div>
                     </div>
@@ -3840,15 +3792,39 @@ async function loadLifetimeMonthlyBreakdown() {
                         originalData: monthPerformance
                     },
                     {
+                        label: 'Actual Load (kWh)',
+                        data: monthLoad,
+                        type: 'line',
+                        borderColor: '#ef4444',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0,
+                        yAxisID: 'y1',
+                        order: 0
+                    },
+                    {
                         label: 'Expected Load (kWh)',
                         data: monthLoad,
                         type: 'line',
                         borderColor: '#ef4444',
                         backgroundColor: 'transparent',
                         borderWidth: 2,
-                        pointRadius: 3,
-                        pointBackgroundColor: '#ef4444',
-                        tension: 0.4,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0,
+                        yAxisID: 'y1',
+                        order: 0
+                    },
+                    {
+                        label: 'Actual Grid (kWh)',
+                        data: monthGrid,
+                        type: 'line',
+                        borderColor: '#f97316',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0,
                         yAxisID: 'y1',
                         order: 0
                     },
@@ -3859,10 +3835,9 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderColor: '#f97316',
                         backgroundColor: 'transparent',
                         borderWidth: 2,
-                        borderDash: [3, 3],
-                        pointRadius: 3,
-                        pointBackgroundColor: '#f97316',
-                        tension: 0.4,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0,
                         yAxisID: 'y1',
                         order: 0
                     }
