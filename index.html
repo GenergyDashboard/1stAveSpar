@@ -2202,7 +2202,13 @@
                 return;
             }
             
-            const ctx = document.getElementById('financialTouPieChart').getContext('2d');
+            const canvasElement = document.getElementById('financialTouPieChart');
+            if (!canvasElement) {
+                console.error('Canvas element financialTouPieChart not found!');
+                return;
+            }
+            
+            const ctx = canvasElement.getContext('2d');
             const lifetime = dashboardData.lifetime_summary;
             const tou = lifetime.tou_breakdown;
             
@@ -2298,6 +2304,8 @@
                     }
                 }
             });
+            
+            console.log('✓ TOU Pie Chart created successfully with data:', [peakValue, standardValue, offPeakValue]);
         }
         
         // End Phase 2 Functions
@@ -3657,6 +3665,21 @@ async function loadLifetimeMonthlyBreakdown() {
             }
         });
         
+        // Calculate CUMULATIVE performance for the performance line chart
+        const cumulativePerformance = [];
+        let cumulativeGeneration = 0;
+        let cumulativeExpected = 0;
+        
+        monthKeys.forEach((monthKey, idx) => {
+            cumulativeGeneration += monthGeneration[idx];
+            cumulativeExpected += monthExpected[idx];
+            
+            const cumPerf = cumulativeExpected > 0 ? (cumulativeGeneration / cumulativeExpected * 100) : 0;
+            cumulativePerformance.push(cumPerf);
+        });
+        
+        console.log('📊 Cumulative Performance calculated:', cumulativePerformance.map(p => p.toFixed(1) + '%').join(', '));
+        
         // Calculate lifetime performance
         const totalGeneration = monthGeneration.reduce((sum, val) => sum + val, 0);
         let totalExpected = 0;
@@ -4228,8 +4251,8 @@ async function loadLifetimePerformanceLineChart() {
                 labels: monthLabels,
                 datasets: [
                     {
-                        label: 'Performance (%)',
-                        data: monthPerformance,
+                        label: 'Cumulative Performance (%)',
+                        data: cumulativePerformance,
                         borderColor: '#FFD700',
                         backgroundColor: 'transparent',
                         borderWidth: 3,
