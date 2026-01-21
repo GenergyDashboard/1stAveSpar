@@ -1706,6 +1706,24 @@
                 <div class="chart-container">
                     <h3 class="chart-title">TOU Generation Distribution</h3>
                     <canvas id="financialTouPieChart" style="max-width: 600px; margin: 0 auto;"></canvas>
+                    
+                    <!-- TOU Data Table -->
+                    <div style="max-width: 600px; margin: 30px auto 0; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
+                                    <th style="text-align: left; padding: 12px; color: #ffffff; font-size: 1.1em;">Period</th>
+                                    <th style="text-align: right; padding: 12px; color: #ffffff; font-size: 1.1em;">Generation (kWh)</th>
+                                    <th style="text-align: right; padding: 12px; color: #ffffff; font-size: 1.1em;">Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tou-distribution-table">
+                                <tr>
+                                    <td colspan="3" style="padding: 12px; color: #aaaaaa; text-align: center;">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2306,6 +2324,48 @@
             });
             
             console.log('✓ TOU Pie Chart created successfully with data:', [peakValue, standardValue, offPeakValue]);
+            
+            // Populate the data table
+            const total = peakValue + standardValue + offPeakValue;
+            const tableBody = document.getElementById('tou-distribution-table');
+            
+            if (tableBody && total > 0) {
+                const peakPct = ((peakValue / total) * 100).toFixed(1);
+                const standardPct = ((standardValue / total) * 100).toFixed(1);
+                const offPeakPct = ((offPeakValue / total) * 100).toFixed(1);
+                
+                tableBody.innerHTML = `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <td style="padding: 15px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: rgba(239, 68, 68, 0.8); border-radius: 3px; margin-right: 8px;"></span>
+                            <span style="color: #ffffff; font-weight: 600;">Peak</span>
+                        </td>
+                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: 1.1em;">${formatNumber(peakValue, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffffff; font-weight: 600;">${peakPct}%</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <td style="padding: 15px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: rgba(245, 158, 11, 0.8); border-radius: 3px; margin-right: 8px;"></span>
+                            <span style="color: #ffffff; font-weight: 600;">Standard</span>
+                        </td>
+                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: 1.1em;">${formatNumber(standardValue, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffffff; font-weight: 600;">${standardPct}%</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: rgba(16, 185, 129, 0.8); border-radius: 3px; margin-right: 8px;"></span>
+                            <span style="color: #ffffff; font-weight: 600;">Off-Peak</span>
+                        </td>
+                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: 1.1em;">${formatNumber(offPeakValue, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffffff; font-weight: 600;">${offPeakPct}%</td>
+                    </tr>
+                    <tr style="border-top: 2px solid rgba(255,255,255,0.3); font-weight: bold;">
+                        <td style="padding: 15px; color: #ffffff; font-size: 1.1em;">Total</td>
+                        <td style="padding: 15px; text-align: right; color: #4ade80; font-weight: 700; font-size: 1.2em;">${formatNumber(total, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffffff;">100%</td>
+                    </tr>
+                `;
+            }
         }
         
         // End Phase 2 Functions
