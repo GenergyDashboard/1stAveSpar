@@ -3732,7 +3732,7 @@ async function loadLifetimeMonthlyBreakdown() {
         const totalLoad = actualTotalLoad;
         const totalGrid = actualTotalGrid;
         const lifetimeCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100).toFixed(1) : 0;
-        const expectedLifetimeCoverage = expectedTotalLoad > 0 ? ((lifetimeExpected / expectedTotalLoad) * 100).toFixed(1) : 0;
+        const expectedLifetimeCoverage = expectedTotalLoad > 0 ? ((totalExpected / expectedTotalLoad) * 100).toFixed(1) : 0;
         
         // Calculate % differences
         const loadPerf = expectedTotalLoad > 0 ? ((actualTotalLoad / expectedTotalLoad) * 100) : 0;
@@ -3768,10 +3768,10 @@ async function loadLifetimeMonthlyBreakdown() {
         
         // Update Generation display
         document.getElementById('lifetime-gen').textContent = formatNumber(totalGeneration);
-        document.getElementById('lifetime-gen-expected').textContent = formatNumber(lifetimeExpected);
+        document.getElementById('lifetime-gen-expected').textContent = formatNumber(totalExpected);
         const lifetimeGenPerfEl = document.getElementById('lifetime-gen-perf');
         if (lifetimeGenPerfEl) {
-            lifetimeGenPerfEl.textContent = `${lifetimePerformance.toFixed(1)}% of expected`;
+            lifetimeGenPerfEl.textContent = `${lifetimePerformance}% of expected`;
             lifetimeGenPerfEl.className = 'performance ' + (lifetimePerformance >= 100 ? 'positive' : 'negative');
         }
         
