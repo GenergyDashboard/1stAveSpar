@@ -1393,16 +1393,22 @@
                 
                 <div class="stats-grid">
                     <div class="stat-card">
+                        <div class="label">Load</div>
+                        <div class="value" id="daily-load">--</div>
+                        <div class="subvalue">Expected: <span id="daily-load-expected">--</span> kWh</div>
+                        <div class="performance" id="daily-load-perf">--</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="label">Generation</div>
                         <div class="value" id="daily-gen">--</div>
                         <div class="subvalue">Expected: <span id="daily-gen-expected">--</span> kWh</div>
                         <div class="performance" id="daily-gen-perf">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Load</div>
-                        <div class="value" id="daily-load">--</div>
-                        <div class="subvalue">Expected: <span id="daily-load-expected">--</span> kWh</div>
-                        <div class="performance" id="daily-load-perf">--</div>
+                        <div class="label">Grid</div>
+                        <div class="value" id="daily-grid">--</div>
+                        <div class="subvalue">Expected: <span id="daily-grid-expected">--</span> kWh</div>
+                        <div class="performance" id="daily-grid-perf">--</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">PV Coverage</div>
@@ -1410,7 +1416,7 @@
                         <div class="subvalue">Expected: <span id="pv-coverage-expected">--</span>%</div>
                         <div class="performance" id="pv-coverage-perf">--</div>
                     </div>
-                    <div class="stat-card">
+
                         <div class="label">Grid</div>
                         <div class="value" id="daily-grid">--</div>
                         <div class="subvalue">Expected: <span id="daily-grid-expected">--</span> kWh</div>
@@ -2985,30 +2991,6 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             labels: allHours,
             datasets: [
                 {
-                    label: 'PV Generation (kW)',
-                    data: full24HourData.pv,
-                    type: 'bar',
-                    backgroundColor: '#4ade80',
-                    borderColor: '#22c55e',
-                    borderWidth: 1,
-                    yAxisID: 'y',
-                    order: 2
-                },
-                {
-                    label: 'Predicted (Monthly Avg)',
-                    data: full24HourData.predicted,
-                    type: 'line',
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    tension: 0.4,
-                    yAxisID: 'y',
-                    order: 1,
-                    fill: false
-                },
-                {
                     label: 'Actual Load (MTD Avg)',
                     data: full24HourData.actualLoad || full24HourData.load,
                     type: 'line',
@@ -3018,7 +3000,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
-                    order: 0
+                    order: 1
                 },
                 {
                     label: 'Predicted Load (Monthly Avg)',
@@ -3031,7 +3013,31 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
-                    order: 0
+                    order: 1
+                },
+                {
+                    label: 'PV Generation (kW)',
+                    data: full24HourData.pv,
+                    type: 'bar',
+                    backgroundColor: '#4ade80',
+                    borderColor: '#22c55e',
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                    order: 3
+                },
+                {
+                    label: 'Predicted (Monthly Avg)',
+                    data: full24HourData.predicted,
+                    type: 'line',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 2,
+                    fill: false
                 },
                 {
                     label: 'Actual Grid (MTD Avg)',
