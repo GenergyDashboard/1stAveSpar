@@ -4004,6 +4004,12 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 }
             }
             
+            console.log(`  📊 Expected Load MTD calculation:`);
+            console.log(`     Dates included: ${Object.keys(predictionsData.daily_predictions).filter(date => date.startsWith(monthKey) && date <= selectedDate).length}`);
+            console.log(`     Hour counts:`, expectedLoadHourlyCount.slice(5, 15));
+            console.log(`     Expected Load values (hours 5-14):`, expectedLoadHourly.slice(5, 15).map(v => v.toFixed(2)));
+            console.log(`     Expected Grid values (hours 5-14):`, expectedGridHourly.slice(5, 15).map(v => v.toFixed(2)));
+            
             console.log(`  📊 Expected Load count per hour:`, expectedLoadHourlyCount.map((c, h) => `${h}:${c}`).filter((_, h) => h < 6 || (h >= 12 && h < 18)));
             console.log(`  📊 Expected Load sample values (hours 5-10):`, expectedLoadHourly.slice(5, 11).map(v => v.toFixed(2)));
             console.log(`  📊 Expected Grid sample values (hours 5-10):`, expectedGridHourly.slice(5, 11).map(v => v.toFixed(2)));
@@ -4056,10 +4062,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             // Debug logging
             console.log(`  📊 Actual Load/Grid data points per hour:`, [...actualLoadHourlyCount]);
             console.log(`  📊 Expected Load/Grid data points per hour:`, [...expectedLoadHourlyCount]);
-            console.log(`  📊 Sample actual Load values (hours 0-5):`, actualLoadHourly.slice(0, 6).map(v => v.toFixed(2)));
-            console.log(`  📊 Sample expected Load values (hours 0-5):`, expectedLoadHourly.slice(0, 6).map(v => v.toFixed(2)));
-            console.log(`  📊 Sample actual Load values (hours 12-17):`, actualLoadHourly.slice(12, 18).map(v => v.toFixed(2)));
-            console.log(`  📊 Sample expected Load values (hours 12-17):`, expectedLoadHourly.slice(12, 18).map(v => v.toFixed(2)));
+            console.log(`  📊 Actual Load values (hours 5-14):`, actualLoadHourly.slice(5, 15).map(v => v === null ? 'null' : v.toFixed(2)));
+            console.log(`  📊 Actual Grid values (hours 5-14):`, actualGridHourly.slice(5, 15).map(v => v === null ? 'null' : v.toFixed(2)));
             
             // Create curves for Load and Grid
             full24HourData.predictedLoad = expectedLoadHourly;
