@@ -2831,7 +2831,13 @@
                 console.log('  First record date:', records[0].date);
                 console.log('  First record has hourly_data:', !!records[0].hourly_data);
                 if (records[0].hourly_data) {
-                    console.log('  Sample hourly_data keys:', Object.keys(records[0].hourly_data).slice(0, 5));
+                    const keys = Object.keys(records[0].hourly_data);
+                    console.log('  Sample hourly_data keys:', keys.slice(0, 5));
+                    console.log('  Total hourly_data keys:', keys.length);
+                    // Check first hour structure
+                    const firstKey = keys[0];
+                    console.log('  First hour key:', firstKey, 'type:', typeof firstKey);
+                    console.log('  First hour data:', records[0].hourly_data[firstKey]);
                 }
             }
             
@@ -2843,9 +2849,22 @@
                     continue;
                 }
                 
+                console.log('  Processing', date, '- hourly_data has', Object.keys(record.hourly_data).length, 'keys');
+                
                 for (let hour = 0; hour < 24; hour++) {
                     const hourData = record.hourly_data[hour];
-                    if (!hourData || !hourData.intervals_5min) continue;
+                    if (!hourData) {
+                        if (hour === 0) console.log('    Hour', hour, '- no data');
+                        continue;
+                    }
+                    if (!hourData.intervals_5min) {
+                        if (hour === 0) console.log('    Hour', hour, '- no intervals_5min');
+                        continue;
+                    }
+                    
+                    if (hour === 0 || hour === 12) {
+                        console.log('    Hour', hour, '- has', hourData.intervals_5min.length, 'intervals');
+                    }
                     
                     const timestamp = `${date} ${hour.toString().padStart(2, '0')}:00:00`;
                     const intervals = hourData.intervals_5min;
