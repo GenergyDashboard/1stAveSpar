@@ -2751,11 +2751,14 @@
                         }
                     }
                     
-                    console.log(`  Header at row ${headerIdx}, processing ${data.length - headerIdx - 1} data rows`);
+                    console.log(`  Header at row ${headerIdx}`);
                     
-                    // Debug: show what's in the first data row
-                    if (data[headerIdx + 1]) {
-                        console.log(`  First data row (${data[headerIdx + 1].length} columns):`, data[headerIdx + 1].slice(0, 6));
+                    // Debug: show header row and first 3 data rows
+                    console.log(`  Header row:`, data[headerIdx]);
+                    for (let debugIdx = 1; debugIdx <= 3; debugIdx++) {
+                        if (data[headerIdx + debugIdx]) {
+                            console.log(`  Data row ${debugIdx}:`, data[headerIdx + debugIdx]);
+                        }
                     }
                     
                     // Process data rows
