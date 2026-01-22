@@ -2688,48 +2688,114 @@
             if (fields.includes('performance')) csv += ',Performance (%)';
             csv += '\n';
             
-            const records = dashData.daily_records.filter(r => r.date >= startDate && r.date <= endDate);
+            console.log('📊 Generating 5-minute report:');
+            console.log('  Attempting to load generation_history.json for raw data...');
             
+            // Try to load generation_history.json which might have 5-minute intervals
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+            
+            let historyData;
+            try {
+                const response = await fetch(historyPath);
+                if (!response.ok) {
+                    throw new Error('Could not load generation_history.json');
+                }
+                historyData = await response.json();
+                console.log('  ✓ Loaded generation_history.json');
+            } catch (err) {
+                console.error('  ✗ Failed to load generation_history:', err);
+                let errorCsv = '5-Minute Interval Data Not Available\n';
+                errorCsv += 'Could not load generation_history.json\n';
+                errorCsv += 'Error: ' + err.message + '\n';
+                return errorCsv;
+            }
+            
+            // Check structure
+            console.log('  History data structure:', Object.keys(historyData));
+            
+            const records = historyData.daily_records?.filter(r => r.date >= startDate && r.date <= endDate) || [];
+            console.log('  Records in range:', records.length);
+            
+            if (records.length === 0) {
+                return '5-Minute Data: No records found in date range\n';
+            }
+            
+            let rowCount = 0;
             for (const record of records) {
                 const date = record.date;
-                if (!record.hourly_data) continue;
                 
-                for (let hour = 0; hour < 24; hour++) {
-                    const hourData = record.hourly_data[hour];
-                    if (!hourData || !hourData.intervals_5min) continue;
+                // Check if this record has hourly_data with intervals_5min
+                if (!record.hourly_data || !Array.isArray(record.hourly_data)) {
+                    console.log('  No hourly_data array for', date);
+                    continue;
+                }
+                
+                // Check first hour for structure
+                if (record.hourly_data.length > 0 && rowCount === 0) {
+                    const firstHour = record.hourly_data[0];
+                    console.log('  First hour keys:', Object.keys(firstHour));
+                    if (firstHour.intervals_5min) {
+                        console.log('  ✓ Found intervals_5min with', firstHour.intervals_5min.length, 'intervals');
+                    } else {
+                        console.log('  ✗ No intervals_5min found');
+                    }
+                }
+                
+                // Iterate through hours
+                record.hourly_data.forEach((hourData, hourIndex) => {
+                    if (!hourData.intervals_5min || !Array.isArray(hourData.intervals_5min)) {
+                        return; // Skip this hour
+                    }
                     
-                    const intervals = hourData.intervals_5min;
-                    for (let i = 0; i < intervals.length; i++) {
-                        const interval = intervals[i];
-                        const minute = i * 5;
-                        const timestamp = `${date} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
+                    // Iterate through 5-minute intervals
+                    hourData.intervals_5min.forEach((interval, intervalIndex) => {
+                        const minute = intervalIndex * 5;
+                        
+                        // Use actual timestamp if available
+                        let timestamp = interval.timestamp || interval.time;
+                        if (!timestamp) {
+                            timestamp = `${date} ${hourIndex.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
+                        } else if (!timestamp.includes(date)) {
+                            timestamp = `${date} ${timestamp}`;
+                        }
                         
                         let row = timestamp;
-                        if (fields.includes('generation')) row += `,${(interval.generation_kw || 0).toFixed(3)}`;
+                        if (fields.includes('generation')) row += `,${(interval.generation_kw || interval.pv_kw || 0).toFixed(3)}`;
                         if (fields.includes('predicted_generation')) {
-                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hourIndex] || 0;
                             row += `,${pred.toFixed(3)}`;
                         }
                         if (fields.includes('load')) row += `,${(interval.load_kw || 0).toFixed(3)}`;
                         if (fields.includes('predicted_load')) {
-                            const pred = predData?.daily_predictions?.[date]?.load_kw?.[hour] || 0;
+                            const pred = predData?.daily_predictions?.[date]?.load_kw?.[hourIndex] || 0;
                             row += `,${pred.toFixed(3)}`;
                         }
-                        if (fields.includes('grid')) row += `,${(interval.grid_kw || 0).toFixed(3)}`;
+                        if (fields.includes('grid')) row += `,${Math.abs(interval.grid_kw || 0).toFixed(3)}`;
                         if (fields.includes('predicted_grid')) {
-                            const pred = predData?.daily_predictions?.[date]?.grid_kw?.[hour] || 0;
-                            row += `,${pred.toFixed(3)}`;
+                            const pred = predData?.daily_predictions?.[date]?.grid_kw?.[hourIndex] || 0;
+                            row += `,${Math.abs(pred).toFixed(3)}`;
                         }
                         if (fields.includes('irradiation')) row += `,${(interval.irradiation_wm2 || 0).toFixed(1)}`;
                         if (fields.includes('performance')) {
-                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
-                            const perf = pred > 0 ? ((interval.generation_kw || 0) / pred * 100) : 0;
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hourIndex] || 0;
+                            const gen = interval.generation_kw || interval.pv_kw || 0;
+                            const perf = pred > 0 ? (gen / pred * 100) : 0;
                             row += `,${perf.toFixed(1)}`;
                         }
                         csv += row + '\n';
-                    }
-                }
+                        rowCount++;
+                    });
+                });
             }
+            
+            console.log('  Total 5-min intervals:', rowCount);
+            console.log('  CSV length:', csv.length);
+            
+            if (rowCount === 0) {
+                return '5-Minute Interval Data Not Available\nThe data source does not contain 5-minute intervals.\n';
+            }
+            
             return csv;
         }
         
@@ -2745,34 +2811,68 @@
             if (fields.includes('performance')) csv += ',Performance (%)';
             csv += '\n';
             
-            const records = dashData.daily_records.filter(r => r.date >= startDate && r.date <= endDate);
+            console.log('📊 Generating 15-minute report:');
+            console.log('  Attempting to load generation_history.json for raw data...');
             
+            // Try to load generation_history.json which might have 5-minute intervals
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+            
+            let historyData;
+            try {
+                const response = await fetch(historyPath);
+                if (!response.ok) {
+                    throw new Error('Could not load generation_history.json');
+                }
+                historyData = await response.json();
+                console.log('  ✓ Loaded generation_history.json');
+            } catch (err) {
+                console.error('  ✗ Failed to load generation_history:', err);
+                let errorCsv = '15-Minute Interval Data Not Available\n';
+                errorCsv += 'Could not load generation_history.json\n';
+                errorCsv += 'Error: ' + err.message + '\n';
+                return errorCsv;
+            }
+            
+            const records = historyData.daily_records?.filter(r => r.date >= startDate && r.date <= endDate) || [];
+            console.log('  Records in range:', records.length);
+            
+            if (records.length === 0) {
+                return '15-Minute Data: No records found in date range\n';
+            }
+            
+            let rowCount = 0;
             for (const record of records) {
                 const date = record.date;
-                if (!record.hourly_data) continue;
                 
-                for (let hour = 0; hour < 24; hour++) {
-                    const hourData = record.hourly_data[hour];
-                    if (!hourData || !hourData.intervals_5min) continue;
+                if (!record.hourly_data || !Array.isArray(record.hourly_data)) {
+                    continue;
+                }
+                
+                // Iterate through hours
+                record.hourly_data.forEach((hourData, hourIndex) => {
+                    if (!hourData.intervals_5min || !Array.isArray(hourData.intervals_5min)) {
+                        return; // Skip this hour
+                    }
                     
-                    const intervals = hourData.intervals_5min;
-                    // Create 4 x 15-minute intervals per hour
+                    // Aggregate into 4 x 15-minute intervals per hour
                     for (let i = 0; i < 4; i++) {
                         const minute = i * 15;
-                        const timestamp = `${date} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
+                        const timestamp = `${date} ${hourIndex.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
                         
                         let gen = 0, load = 0, grid = 0, irr = 0, count = 0;
-                        // Sum 3 x 5-minute intervals
-                        for (let j = 0; j < 3 && (i * 3 + j) < intervals.length; j++) {
-                            const interval = intervals[i * 3 + j];
-                            gen += interval.generation_kw || 0;
+                        
+                        // Sum 3 x 5-minute intervals (intervals i*3, i*3+1, i*3+2)
+                        for (let j = 0; j < 3 && (i * 3 + j) < hourData.intervals_5min.length; j++) {
+                            const interval = hourData.intervals_5min[i * 3 + j];
+                            gen += interval.generation_kw || interval.pv_kw || 0;
                             load += interval.load_kw || 0;
-                            grid += interval.grid_kw || 0;
+                            grid += Math.abs(interval.grid_kw || 0);
                             irr += interval.irradiation_wm2 || 0;
                             count++;
                         }
                         
-                        // Convert kW to kWh: avg kW * 0.25 hours
+                        // Convert to kWh: average kW * 0.25 hours
                         gen = count > 0 ? (gen / count) * 0.25 : 0;
                         load = count > 0 ? (load / count) * 0.25 : 0;
                         grid = count > 0 ? (grid / count) * 0.25 : 0;
@@ -2781,30 +2881,39 @@
                         let row = timestamp;
                         if (fields.includes('generation')) row += `,${gen.toFixed(3)}`;
                         if (fields.includes('predicted_generation')) {
-                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hourIndex] || 0;
                             row += `,${(pred * 0.25).toFixed(3)}`;
                         }
                         if (fields.includes('load')) row += `,${load.toFixed(3)}`;
                         if (fields.includes('predicted_load')) {
-                            const pred = predData?.daily_predictions?.[date]?.load_kw?.[hour] || 0;
+                            const pred = predData?.daily_predictions?.[date]?.load_kw?.[hourIndex] || 0;
                             row += `,${(pred * 0.25).toFixed(3)}`;
                         }
                         if (fields.includes('grid')) row += `,${grid.toFixed(3)}`;
                         if (fields.includes('predicted_grid')) {
-                            const pred = predData?.daily_predictions?.[date]?.grid_kw?.[hour] || 0;
-                            row += `,${(pred * 0.25).toFixed(3)}`;
+                            const pred = predData?.daily_predictions?.[date]?.grid_kw?.[hourIndex] || 0;
+                            row += `,${(Math.abs(pred) * 0.25).toFixed(3)}`;
                         }
                         if (fields.includes('irradiation')) row += `,${irr.toFixed(1)}`;
                         if (fields.includes('performance')) {
-                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hourIndex] || 0;
                             const predKwh = pred * 0.25;
                             const perf = predKwh > 0 ? (gen / predKwh * 100) : 0;
                             row += `,${perf.toFixed(1)}`;
                         }
                         csv += row + '\n';
+                        rowCount++;
                     }
-                }
+                });
             }
+            
+            console.log('  Total 15-min intervals:', rowCount);
+            console.log('  CSV length:', csv.length);
+            
+            if (rowCount === 0) {
+                return '15-Minute Interval Data Not Available\nThe data source does not contain 5-minute intervals to aggregate.\n';
+            }
+            
             return csv;
         }
         
