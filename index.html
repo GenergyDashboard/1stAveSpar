@@ -3985,9 +3985,16 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             // Get expected Load/Grid from predictions file (MTD average per hour)
             // Calculate average for each hour across all MTD days
             if (predictionsData && predictionsData.daily_predictions) {
+                let datesIncluded = 0;
+                let datesSkipped = 0;
+                
                 for (const [date, dayPred] of Object.entries(predictionsData.daily_predictions)) {
                     // Only include dates from start of month up to selected date (MTD)
-                    if (date.startsWith(`${year}-${monthKey}`) && date <= selectedDate) {
+                    const matchesMonth = date.startsWith(`${year}-${monthKey}`);
+                    const beforeOrEqualSelected = date <= selectedDate;
+                    
+                    if (matchesMonth && beforeOrEqualSelected) {
+                        datesIncluded++;
                         if (dayPred.load_kw && Array.isArray(dayPred.load_kw)) {
                             dayPred.load_kw.forEach((val, hour) => {
                                 if (hour < 24) {
@@ -4004,8 +4011,12 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                                 }
                             });
                         }
+                    } else if (matchesMonth) {
+                        datesSkipped++;
                     }
                 }
+                
+                console.log(`  📊 Expected Load/Grid: Included ${datesIncluded} MTD days, skipped ${datesSkipped} future days`);
             }
             
             // Calculate averages for each hour
@@ -4021,10 +4032,12 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             }
             
             // Debug logging
-            console.log(`  📊 Actual Load/Grid data points per hour:`, actualLoadHourlyCount);
-            console.log(`  📊 Expected Load/Grid data points per hour:`, expectedLoadHourlyCount);
-            console.log(`  📊 Sample actual Load values:`, actualLoadHourly.slice(0, 6));
-            console.log(`  📊 Sample expected Load values:`, expectedLoadHourly.slice(0, 6));
+            console.log(`  📊 Actual Load/Grid data points per hour:`, [...actualLoadHourlyCount]);
+            console.log(`  📊 Expected Load/Grid data points per hour:`, [...expectedLoadHourlyCount]);
+            console.log(`  📊 Sample actual Load values (hours 0-5):`, actualLoadHourly.slice(0, 6).map(v => v.toFixed(2)));
+            console.log(`  📊 Sample expected Load values (hours 0-5):`, expectedLoadHourly.slice(0, 6).map(v => v.toFixed(2)));
+            console.log(`  📊 Sample actual Load values (hours 12-17):`, actualLoadHourly.slice(12, 18).map(v => v.toFixed(2)));
+            console.log(`  📊 Sample expected Load values (hours 12-17):`, expectedLoadHourly.slice(12, 18).map(v => v.toFixed(2)));
             
             // Create curves for Load and Grid (hourly curves, not straight lines)
             full24HourData.predictedLoad = expectedLoadHourly;
