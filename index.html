@@ -4005,26 +4005,31 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             }
             
             console.log(`  📊 Expected Load count per hour:`, expectedLoadHourlyCount.map((c, h) => `${h}:${c}`).filter((_, h) => h < 6 || (h >= 12 && h < 18)));
+            console.log(`  📊 Expected Load sample values (hours 5-10):`, expectedLoadHourly.slice(5, 11).map(v => v.toFixed(2)));
+            console.log(`  📊 Expected Grid sample values (hours 5-10):`, expectedGridHourly.slice(5, 11).map(v => v.toFixed(2)));
             
             if (dashboardData && dashboardData.daily_records) {
                 // Get actual hourly Load/Grid for MTD
-                // Only include hours where there's actual data (load_kw > 0)
+                // Process all hourly_data that exists (only during generation hours)
                 dashboardData.daily_records
                     .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
                     .forEach(record => {
                         if (record.hourly_data && Array.isArray(record.hourly_data)) {
                             record.hourly_data.forEach((hourData, hourIndex) => {
-                                if (hourIndex < 24) {
+                                if (hourIndex < 24 && hourData) {
                                     const loadVal = hourData.load_kw || 0;
-                                    const gridVal = Math.abs(hourData.grid_kw || 0);
+                                    const gridVal = hourData.grid_kw || 0;
                                     
-                                    // Only include hours with actual data (load > 0 means generation occurred)
+                                    // Only count Load if it has a real value (> 0)
                                     if (loadVal > 0) {
                                         actualLoadHourly[hourIndex] += loadVal;
                                         actualLoadHourlyCount[hourIndex]++;
                                     }
-                                    if (gridVal > 0) {
-                                        actualGridHourly[hourIndex] += gridVal;
+                                    
+                                    // Only count Grid if it has a real value (!= 0)
+                                    // Grid can be positive (importing) or negative (exporting)
+                                    if (gridVal !== 0 && Math.abs(gridVal) > 0.01) {
+                                        actualGridHourly[hourIndex] += Math.abs(gridVal);
                                         actualGridHourlyCount[hourIndex]++;
                                     }
                                 }
@@ -4037,11 +4042,14 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             for (let hour = 0; hour < 24; hour++) {
                 if (actualLoadHourlyCount[hour] > 0) {
                     actualLoadHourly[hour] = actualLoadHourly[hour] / actualLoadHourlyCount[hour];
+                } else {
+                    actualLoadHourly[hour] = null;  // null = Chart.js skips this point
+                }
+                
+                if (actualGridHourlyCount[hour] > 0) {
                     actualGridHourly[hour] = actualGridHourly[hour] / actualGridHourlyCount[hour];
                 } else {
-                    // Leave as null/undefined so chart doesn't draw for hours with no data
-                    actualLoadHourly[hour] = null;
-                    actualGridHourly[hour] = null;
+                    actualGridHourly[hour] = null;  // null = Chart.js skips this point
                 }
             }
             
@@ -4127,6 +4135,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     borderWidth: 2,
                     pointRadius: 0,
                     tension: 0.4,
+                    spanGaps: false,  // Don't draw lines through null values
                     yAxisID: 'y',
                     order: 0
                 },
@@ -4152,6 +4161,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     borderWidth: 2,
                     pointRadius: 0,
                     tension: 0.4,
+                    spanGaps: false,  // Don't draw lines through null values
                     yAxisID: 'y',
                     order: 0
                 },
