@@ -3983,14 +3983,15 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             }
             
             // Get expected Load/Grid from predictions file (MTD average per hour)
-            // For each hour (0-23), average all occurrences of that hour across all MTD days
+            // IMPORTANT: Only include hours where we have actual data to compare
             if (predictionsData && predictionsData.daily_predictions) {
                 for (const [date, dayPred] of Object.entries(predictionsData.daily_predictions)) {
                     // Only include dates from start of month up to selected date (MTD)
                     if (date.startsWith(`${year}-${monthKey}`) && date <= selectedDate) {
                         if (dayPred.load_kw && Array.isArray(dayPred.load_kw)) {
                             dayPred.load_kw.forEach((val, hour) => {
-                                if (hour < 24) {
+                                // Only include this hour if we have actual data for it
+                                if (hour < 24 && actualLoadHourlyCount[hour] > 0) {
                                     expectedLoadHourly[hour] += val;
                                     expectedLoadHourlyCount[hour]++;
                                 }
@@ -3998,7 +3999,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                         }
                         if (dayPred.grid_kw && Array.isArray(dayPred.grid_kw)) {
                             dayPred.grid_kw.forEach((val, hour) => {
-                                if (hour < 24) {
+                                // Only include this hour if we have actual data for it
+                                if (hour < 24 && actualGridHourlyCount[hour] > 0) {
                                     expectedGridHourly[hour] += Math.abs(val);
                                     expectedGridHourlyCount[hour]++;
                                 }
