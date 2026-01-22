@@ -4018,29 +4018,17 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 // First, identify which hours have PV generation across MTD
                 const hoursWithGeneration = new Set();
                 
-                let debugLogged = false;
-                
                 dashboardData.daily_records
                     .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
                     .forEach(record => {
                         if (record.hourly_data && Array.isArray(record.hourly_data)) {
-                            record.hourly_data.forEach((hourData, hourIndex) => {
-                                // Debug: log first day's early hours to see structure
-                                if (!debugLogged && hourIndex <= 8) {
-                                    console.log(`  Hour ${hourIndex}:`, {
-                                        keys: Object.keys(hourData),
-                                        generation_kw: hourData.generation_kw,
-                                        pv_kw: hourData.pv_kw,
-                                        load_kw: hourData.load_kw,
-                                        grid_kw: hourData.grid_kw
-                                    });
-                                    if (hourIndex === 8) debugLogged = true;
-                                }
-                                
-                                // Check if this hour has actual PV generation
+                            record.hourly_data.forEach((hourData) => {
+                                // Use the 'time' field to get the actual hour, not the array index!
+                                const actualHour = parseInt(hourData.time.split(':')[0]);
                                 const pvVal = hourData.generation_kw || 0;
+                                
                                 if (pvVal > 0.1) {
-                                    hoursWithGeneration.add(hourIndex);
+                                    hoursWithGeneration.add(actualHour);
                                 }
                             });
                         }
@@ -4053,22 +4041,25 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
                     .forEach(record => {
                         if (record.hourly_data && Array.isArray(record.hourly_data)) {
-                            record.hourly_data.forEach((hourData, hourIndex) => {
+                            record.hourly_data.forEach((hourData) => {
+                                // Use the 'time' field to get the actual hour!
+                                const actualHour = parseInt(hourData.time.split(':')[0]);
+                                
                                 // Only include this hour if it's in our generation hours set
-                                if (hoursWithGeneration.has(hourIndex) && hourData) {
+                                if (hoursWithGeneration.has(actualHour)) {
                                     const loadVal = hourData.load_kw || 0;
                                     const gridVal = hourData.grid_kw || 0;
                                     
                                     // Count Load if it has a value
                                     if (loadVal > 0) {
-                                        actualLoadHourly[hourIndex] += loadVal;
-                                        actualLoadHourlyCount[hourIndex]++;
+                                        actualLoadHourly[actualHour] += loadVal;
+                                        actualLoadHourlyCount[actualHour]++;
                                     }
                                     
                                     // Count Grid if it has a value
                                     if (Math.abs(gridVal) > 0.01) {
-                                        actualGridHourly[hourIndex] += Math.abs(gridVal);
-                                        actualGridHourlyCount[hourIndex]++;
+                                        actualGridHourly[actualHour] += Math.abs(gridVal);
+                                        actualGridHourlyCount[actualHour]++;
                                     }
                                 }
                             });
