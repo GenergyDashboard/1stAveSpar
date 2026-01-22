@@ -3983,15 +3983,14 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             }
             
             // Get expected Load/Grid from predictions file (MTD average per hour)
-            // IMPORTANT: Only include hours where we have actual data to compare
+            // Calculate average for each hour across all MTD days
             if (predictionsData && predictionsData.daily_predictions) {
                 for (const [date, dayPred] of Object.entries(predictionsData.daily_predictions)) {
                     // Only include dates from start of month up to selected date (MTD)
                     if (date.startsWith(`${year}-${monthKey}`) && date <= selectedDate) {
                         if (dayPred.load_kw && Array.isArray(dayPred.load_kw)) {
                             dayPred.load_kw.forEach((val, hour) => {
-                                // Only include this hour if we have actual data for it
-                                if (hour < 24 && actualLoadHourlyCount[hour] > 0) {
+                                if (hour < 24) {
                                     expectedLoadHourly[hour] += val;
                                     expectedLoadHourlyCount[hour]++;
                                 }
@@ -3999,8 +3998,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                         }
                         if (dayPred.grid_kw && Array.isArray(dayPred.grid_kw)) {
                             dayPred.grid_kw.forEach((val, hour) => {
-                                // Only include this hour if we have actual data for it
-                                if (hour < 24 && actualGridHourlyCount[hour] > 0) {
+                                if (hour < 24) {
                                     expectedGridHourly[hour] += Math.abs(val);
                                     expectedGridHourlyCount[hour]++;
                                 }
@@ -4021,6 +4019,12 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     expectedGridHourly[hour] = expectedGridHourly[hour] / expectedGridHourlyCount[hour];
                 }
             }
+            
+            // Debug logging
+            console.log(`  📊 Actual Load/Grid data points per hour:`, actualLoadHourlyCount);
+            console.log(`  📊 Expected Load/Grid data points per hour:`, expectedLoadHourlyCount);
+            console.log(`  📊 Sample actual Load values:`, actualLoadHourly.slice(0, 6));
+            console.log(`  📊 Sample expected Load values:`, expectedLoadHourly.slice(0, 6));
             
             // Create curves for Load and Grid (hourly curves, not straight lines)
             full24HourData.predictedLoad = expectedLoadHourly;
