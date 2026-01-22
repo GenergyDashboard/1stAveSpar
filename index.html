@@ -2732,25 +2732,38 @@
                     
                     filesLoaded++;
                     
-                    // Find the actual header row (contains "Timestamp" or similar)
-                    let headerIndex = -1;
+                    // Log first few lines to understand structure
+                    console.log(`  File ${date} has ${lines.length} lines, first 5 lines:`);
+                    for (let i = 0; i < Math.min(5, lines.length); i++) {
+                        const preview = lines[i].substring(0, 100);
+                        console.log(`    Line ${i}: ${preview}`);
+                    }
+                    
+                    // Find the actual header row (contains tab-separated columns starting with timestamp-like field)
+                    // Or just start from a reasonable row if we can't find header
+                    let dataStartIndex = 0;
+                    
+                    // Try to find header with "Timestamp" or start of data
                     for (let i = 0; i < Math.min(10, lines.length); i++) {
-                        const line = lines[i].toLowerCase();
-                        if (line.includes('timestamp') || line.includes('time')) {
-                            headerIndex = i;
+                        const parts = lines[i].split('\t');
+                        // Check if this looks like a data row (first column looks like a timestamp)
+                        if (parts.length >= 5 && parts[0].match(/\d{4}-\d{2}-\d{2}|\d{2}:\d{2}/)) {
+                            dataStartIndex = i;
+                            console.log(`  ✓ Found data starting at row ${i}`);
                             break;
                         }
                     }
                     
-                    if (headerIndex === -1) {
-                        console.log(`  ⚠️ No header found in ${date}`);
-                        continue;
+                    if (dataStartIndex === 0) {
+                        // Fallback: assume data starts after row 4 (skip typical metadata)
+                        dataStartIndex = Math.min(4, lines.length - 1);
+                        console.log(`  Using fallback: starting at row ${dataStartIndex}`);
                     }
                     
-                    console.log(`  ✓ Loaded ${date} - header at row ${headerIndex}, ${lines.length - headerIndex - 1} data rows`);
+                    console.log(`  Processing ${lines.length - dataStartIndex} data rows from ${date}`);
                     
-                    // Process data rows (skip header)
-                    for (let i = headerIndex + 1; i < lines.length; i++) {
+                    // Process data rows
+                    for (let i = dataStartIndex; i < lines.length; i++) {
                         const parts = lines[i].split('\t');
                         if (parts.length < 7) continue;
                         
