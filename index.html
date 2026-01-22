@@ -3925,11 +3925,6 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             const monthlyHourlySum = new Array(24).fill(0);
             const monthlyHourlyCount = new Array(24).fill(0);
             
-            // Initialize Load/Grid hourly accumulators for expected values
-            const expectedLoadHourlySum = new Array(24).fill(0);
-            const expectedGridHourlySum = new Array(24).fill(0);
-            const expectedLoadHourlyCount = new Array(24).fill(0);
-            
             // Get all days in the selected month from predictions
             if (predictionsData.daily_predictions) {
                 Object.keys(predictionsData.daily_predictions)
@@ -3937,22 +3932,11 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     .forEach(date => {
                         const dayPredictions = predictionsData.daily_predictions[date];
                         
-                        // Calculate PV hourly averages
+                        // Calculate PV hourly averages (full month for PV)
                         if (dayPredictions.pv_kw) {
                             dayPredictions.pv_kw.forEach((gen, hour) => {
                                 monthlyHourlySum[hour] += gen;
                                 if (gen > 0) monthlyHourlyCount[hour]++;
-                            });
-                        }
-                        
-                        // Calculate Load/Grid hourly sums for expected
-                        if (dayPredictions.load_kw && dayPredictions.grid_kw) {
-                            dayPredictions.load_kw.forEach((load, hour) => {
-                                expectedLoadHourlySum[hour] += load;
-                                expectedLoadHourlyCount[hour]++;
-                            });
-                            dayPredictions.grid_kw.forEach((grid, hour) => {
-                                expectedGridHourlySum[hour] += grid;
                             });
                         }
                     });
