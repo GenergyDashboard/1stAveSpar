@@ -2839,7 +2839,12 @@
                 
                 // hourly_data is an array of hour objects
                 record.hourly_data.forEach((hourData, hourIndex) => {
-                    const timestamp = `${date} ${hourIndex.toString().padStart(2, '0')}:00:00`;
+                    // Use actual timestamp if available, otherwise construct it
+                    let timestamp = hourData.timestamp || hourData.time;
+                    if (!timestamp) {
+                        // Fallback: construct from date and index
+                        timestamp = `${date} ${hourIndex.toString().padStart(2, '0')}:00:00`;
+                    }
                     
                     // Get kW values (already hourly averages)
                     const gen = hourData.pv_kw || hourData.generation_kw || 0;
