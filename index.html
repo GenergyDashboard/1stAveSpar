@@ -3982,74 +3982,90 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     });
             }
             
-            // Get expected Load/Grid from predictions file (MTD average per hour)
-            // Calculate average for each hour across all MTD days
-            if (predictionsData && predictionsData.daily_predictions) {
-                let datesIncluded = 0;
-                let datesSkipped = 0;
-                
-                for (const [date, dayPred] of Object.entries(predictionsData.daily_predictions)) {
-                    // Only include dates from start of month up to selected date (MTD)
-                    const matchesMonth = date.startsWith(`${year}-${monthKey}`);
-                    const beforeOrEqualSelected = date <= selectedDate;
+            // Load full predictions file for Load/Grid MTD data
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            const fullPredictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            
+            fetch(fullPredictionsPath)
+                .then(response => response.json())
+                .then(fullPredictionsData => {
+                    // Get expected Load/Grid from predictions file (MTD average per hour)
+                    if (fullPredictionsData && fullPredictionsData.daily_predictions) {
+                        let datesIncluded = 0;
+                        let datesSkipped = 0;
+                        
+                        for (const [date, dayPred] of Object.entries(fullPredictionsData.daily_predictions)) {
+                            // Only include dates from start of month up to selected date (MTD)
+                            const matchesMonth = date.startsWith(`${year}-${monthKey}`);
+                            const beforeOrEqualSelected = date <= selectedDate;
+                            
+                            if (matchesMonth && beforeOrEqualSelected) {
+                                datesIncluded++;
+                                if (dayPred.load_kw && Array.isArray(dayPred.load_kw)) {
+                                    dayPred.load_kw.forEach((val, hour) => {
+                                        if (hour < 24) {
+                                            expectedLoadHourly[hour] += val;
+                                            expectedLoadHourlyCount[hour]++;
+                                        }
+                                    });
+                                }
+                                if (dayPred.grid_kw && Array.isArray(dayPred.grid_kw)) {
+                                    dayPred.grid_kw.forEach((val, hour) => {
+                                        if (hour < 24) {
+                                            expectedGridHourly[hour] += Math.abs(val);
+                                            expectedGridHourlyCount[hour]++;
+                                        }
+                                    });
+                                }
+                            } else if (matchesMonth) {
+                                datesSkipped++;
+                            }
+                        }
+                        
+                        console.log(`  📊 Expected Load/Grid: Included ${datesIncluded} MTD days, skipped ${datesSkipped} future days`);
+                    }
                     
-                    if (matchesMonth && beforeOrEqualSelected) {
-                        datesIncluded++;
-                        if (dayPred.load_kw && Array.isArray(dayPred.load_kw)) {
-                            dayPred.load_kw.forEach((val, hour) => {
-                                if (hour < 24) {
-                                    expectedLoadHourly[hour] += val;
-                                    expectedLoadHourlyCount[hour]++;
-                                }
-                            });
-                        }
-                        if (dayPred.grid_kw && Array.isArray(dayPred.grid_kw)) {
-                            dayPred.grid_kw.forEach((val, hour) => {
-                                if (hour < 24) {
-                                    expectedGridHourly[hour] += Math.abs(val);
-                                    expectedGridHourlyCount[hour]++;
-                                }
-                            });
-                        }
-                    } else if (matchesMonth) {
-                        datesSkipped++;
+                    // Calculate averages and continue
+                    finalizeCurves();
+                })
+                .catch(err => {
+                    console.error('  ✗ Failed to load full predictions file:', err);
+                    finalizeCurves();
+                });
+            
+            function finalizeCurves() {
+                // Calculate averages for each hour
+                for (let hour = 0; hour < 24; hour++) {
+                    if (actualLoadHourlyCount[hour] > 0) {
+                        actualLoadHourly[hour] = actualLoadHourly[hour] / actualLoadHourlyCount[hour];
+                        actualGridHourly[hour] = actualGridHourly[hour] / actualGridHourlyCount[hour];
+                    }
+                    if (expectedLoadHourlyCount[hour] > 0) {
+                        expectedLoadHourly[hour] = expectedLoadHourly[hour] / expectedLoadHourlyCount[hour];
+                        expectedGridHourly[hour] = expectedGridHourly[hour] / expectedGridHourlyCount[hour];
                     }
                 }
                 
-                console.log(`  📊 Expected Load/Grid: Included ${datesIncluded} MTD days, skipped ${datesSkipped} future days`);
+                // Debug logging
+                console.log(`  📊 Actual Load/Grid data points per hour:`, [...actualLoadHourlyCount]);
+                console.log(`  📊 Expected Load/Grid data points per hour:`, [...expectedLoadHourlyCount]);
+                console.log(`  📊 Sample actual Load values (hours 0-5):`, actualLoadHourly.slice(0, 6).map(v => v.toFixed(2)));
+                console.log(`  📊 Sample expected Load values (hours 0-5):`, expectedLoadHourly.slice(0, 6).map(v => v.toFixed(2)));
+                console.log(`  📊 Sample actual Load values (hours 12-17):`, actualLoadHourly.slice(12, 18).map(v => v.toFixed(2)));
+                console.log(`  📊 Sample expected Load values (hours 12-17):`, expectedLoadHourly.slice(12, 18).map(v => v.toFixed(2)));
+                
+                // Create curves for Load and Grid (hourly curves, not straight lines)
+                full24HourData.predictedLoad = expectedLoadHourly;
+                full24HourData.predictedGrid = expectedGridHourly;
+                full24HourData.actualLoad = actualLoadHourly;
+                full24HourData.actualGrid = actualGridHourly;
+                
+                console.log(`  📊 Predicted PV line uses monthly hourly average from predictions file`);
+                console.log(`     Month: ${monthKey}, Days with predictions: ${monthlyHourlyCount.filter(c => c > 0).length} hours averaged`);
+                console.log(`  📊 Load/Grid curves (both MTD for actual and expected):`);
+                console.log(`     Actual Load/Grid: MTD avg per hour from actual data`);
+                console.log(`     Expected Load/Grid: MTD avg per hour from predictions`);
             }
-            
-            // Calculate averages for each hour
-            for (let hour = 0; hour < 24; hour++) {
-                if (actualLoadHourlyCount[hour] > 0) {
-                    actualLoadHourly[hour] = actualLoadHourly[hour] / actualLoadHourlyCount[hour];
-                    actualGridHourly[hour] = actualGridHourly[hour] / actualGridHourlyCount[hour];
-                }
-                if (expectedLoadHourlyCount[hour] > 0) {
-                    expectedLoadHourly[hour] = expectedLoadHourly[hour] / expectedLoadHourlyCount[hour];
-                    expectedGridHourly[hour] = expectedGridHourly[hour] / expectedGridHourlyCount[hour];
-                }
-            }
-            
-            // Debug logging
-            console.log(`  📊 Actual Load/Grid data points per hour:`, [...actualLoadHourlyCount]);
-            console.log(`  📊 Expected Load/Grid data points per hour:`, [...expectedLoadHourlyCount]);
-            console.log(`  📊 Sample actual Load values (hours 0-5):`, actualLoadHourly.slice(0, 6).map(v => v.toFixed(2)));
-            console.log(`  📊 Sample expected Load values (hours 0-5):`, expectedLoadHourly.slice(0, 6).map(v => v.toFixed(2)));
-            console.log(`  📊 Sample actual Load values (hours 12-17):`, actualLoadHourly.slice(12, 18).map(v => v.toFixed(2)));
-            console.log(`  📊 Sample expected Load values (hours 12-17):`, expectedLoadHourly.slice(12, 18).map(v => v.toFixed(2)));
-            
-            // Create curves for Load and Grid (hourly curves, not straight lines)
-            full24HourData.predictedLoad = expectedLoadHourly;
-            full24HourData.predictedGrid = expectedGridHourly;
-            full24HourData.actualLoad = actualLoadHourly;
-            full24HourData.actualGrid = actualGridHourly;
-            
-            console.log(`  📊 Predicted PV line uses monthly hourly average from predictions file`);
-            console.log(`     Month: ${monthKey}, Days with predictions: ${monthlyHourlyCount.filter(c => c > 0).length} hours averaged`);
-            console.log(`  📊 Load/Grid curves (both MTD for actual and expected):`);
-            console.log(`     Actual Load/Grid: MTD avg per hour from actual data`);
-            console.log(`     Expected Load/Grid: MTD avg per hour from predictions`);
             
             // Continue with chart rendering
             finishChartRendering();
