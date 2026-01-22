@@ -2839,9 +2839,20 @@
                 
                 // hourly_data is an array of hour objects
                 record.hourly_data.forEach((hourData, hourIndex) => {
-                    // Use actual timestamp if available, otherwise construct it
-                    let timestamp = hourData.timestamp || hourData.time;
-                    if (!timestamp) {
+                    // Use actual time if available, otherwise construct it from index
+                    let timeStr = hourData.timestamp || hourData.time;
+                    
+                    // If we have a time string, append it to the date
+                    // Otherwise construct time from hourIndex
+                    let timestamp;
+                    if (timeStr && timeStr.includes(':')) {
+                        // timeStr is just the time part (e.g., "05:00" or "05:00:00")
+                        timestamp = `${date} ${timeStr}`;
+                        // Ensure it has seconds
+                        if (timeStr.split(':').length === 2) {
+                            timestamp += ':00';
+                        }
+                    } else {
                         // Fallback: construct from date and index
                         timestamp = `${date} ${hourIndex.toString().padStart(2, '0')}:00:00`;
                     }
