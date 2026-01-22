@@ -2857,8 +2857,13 @@
                         if (hour === 0) console.log('    Hour', hour, '- no data');
                         continue;
                     }
+                    
+                    if (hour === 0) {
+                        console.log('    Hour', hour, 'data structure:', Object.keys(hourData));
+                    }
+                    
                     if (!hourData.intervals_5min) {
-                        if (hour === 0) console.log('    Hour', hour, '- no intervals_5min');
+                        if (hour === 0) console.log('    Hour', hour, '- no intervals_5min, keys:', Object.keys(hourData));
                         continue;
                     }
                     
