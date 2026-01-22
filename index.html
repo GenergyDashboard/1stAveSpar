@@ -3313,7 +3313,7 @@
             {
                 item: "Solar Panel Manufacturer's Warranty",
                 startDate: "2025-11-18",
-                durationMonths: 12, // 12 months
+                durationMonths: 12 * 12, // 12 years (corrected from 12 months)
                 color: "#f59e0b"
             },
             {
@@ -3967,47 +3967,84 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 }
             }
             
-            // Calculate expected Load/Grid averages - total sum / total count
-            let expectedLoadSum = 0, expectedGridSum = 0, expectedTotalCount = 0;
-            for (let hour = 0; hour < 24; hour++) {
-                if (expectedLoadHourlyCount[hour] > 0) {
-                    expectedLoadSum += expectedLoadHourlySum[hour];
-                    expectedGridSum += expectedGridHourlySum[hour];
-                    expectedTotalCount += expectedLoadHourlyCount[hour];
-                }
-            }
-            const expectedAvgLoad = expectedTotalCount > 0 ? expectedLoadSum / expectedTotalCount : 0;
-            const expectedAvgGrid = expectedTotalCount > 0 ? expectedGridSum / expectedTotalCount : 0;
+            // Calculate actual Load/Grid hourly curves (MTD average per hour)
+            const actualLoadHourly = new Array(24).fill(0);
+            const actualGridHourly = new Array(24).fill(0);
+            const actualLoadHourlyCount = new Array(24).fill(0);
+            const actualGridHourlyCount = new Array(24).fill(0);
             
-            // Calculate actual Load/Grid averages from all hourly data in month (straight lines)
-            let actualLoadTotal = 0, actualGridTotal = 0, actualHoursCount = 0;
+            // Calculate expected Load/Grid hourly curves (monthly average per hour)
+            const expectedLoadHourly = new Array(24).fill(0);
+            const expectedGridHourly = new Array(24).fill(0);
+            const expectedLoadHourlyCount = new Array(24).fill(0);
+            const expectedGridHourlyCount = new Array(24).fill(0);
+            
             if (dashboardData && dashboardData.daily_records) {
+                // Get actual hourly Load/Grid for MTD
                 dashboardData.daily_records
                     .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
                     .forEach(record => {
-                        if (record.hourly_data && record.hourly_data.length > 0) {
-                            record.hourly_data.forEach(hourData => {
-                                actualLoadTotal += (hourData.load_kw || 0);
-                                actualGridTotal += Math.abs(hourData.grid_kw || 0);
-                                actualHoursCount++;
+                        if (record.hourly_data && Array.isArray(record.hourly_data)) {
+                            record.hourly_data.forEach((hourData, hourIndex) => {
+                                if (hourIndex < 24) {
+                                    actualLoadHourly[hourIndex] += (hourData.load_kw || 0);
+                                    actualGridHourly[hourIndex] += Math.abs(hourData.grid_kw || 0);
+                                    actualLoadHourlyCount[hourIndex]++;
+                                    actualGridHourlyCount[hourIndex]++;
+                                }
                             });
                         }
                     });
             }
-            const actualAvgLoad = actualHoursCount > 0 ? actualLoadTotal / actualHoursCount : avgLoad;
-            const actualAvgGrid = actualHoursCount > 0 ? actualGridTotal / actualHoursCount : avgGrid;
             
-            // Create straight lines for Load and Grid (hourly averages)
-            full24HourData.predictedLoad = new Array(24).fill(expectedAvgLoad);
-            full24HourData.predictedGrid = new Array(24).fill(expectedAvgGrid);
-            full24HourData.actualLoad = new Array(24).fill(actualAvgLoad);
-            full24HourData.actualGrid = new Array(24).fill(actualAvgGrid);
+            // Get expected Load/Grid from predictions file (MTD average per hour, not full month)
+            if (predictionsData && predictionsData.daily_predictions) {
+                for (const [date, dayPred] of Object.entries(predictionsData.daily_predictions)) {
+                    // Only include dates from start of month up to selected date (MTD)
+                    if (date.startsWith(`${year}-${monthKey}`) && date <= selectedDate) {
+                        if (dayPred.load_kw && Array.isArray(dayPred.load_kw)) {
+                            dayPred.load_kw.forEach((val, hour) => {
+                                if (hour < 24) {
+                                    expectedLoadHourly[hour] += val;
+                                    expectedLoadHourlyCount[hour]++;
+                                }
+                            });
+                        }
+                        if (dayPred.grid_kw && Array.isArray(dayPred.grid_kw)) {
+                            dayPred.grid_kw.forEach((val, hour) => {
+                                if (hour < 24) {
+                                    expectedGridHourly[hour] += Math.abs(val);
+                                    expectedGridHourlyCount[hour]++;
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Calculate averages for each hour
+            for (let hour = 0; hour < 24; hour++) {
+                if (actualLoadHourlyCount[hour] > 0) {
+                    actualLoadHourly[hour] = actualLoadHourly[hour] / actualLoadHourlyCount[hour];
+                    actualGridHourly[hour] = actualGridHourly[hour] / actualGridHourlyCount[hour];
+                }
+                if (expectedLoadHourlyCount[hour] > 0) {
+                    expectedLoadHourly[hour] = expectedLoadHourly[hour] / expectedLoadHourlyCount[hour];
+                    expectedGridHourly[hour] = expectedGridHourly[hour] / expectedGridHourlyCount[hour];
+                }
+            }
+            
+            // Create curves for Load and Grid (hourly curves, not straight lines)
+            full24HourData.predictedLoad = expectedLoadHourly;
+            full24HourData.predictedGrid = expectedGridHourly;
+            full24HourData.actualLoad = actualLoadHourly;
+            full24HourData.actualGrid = actualGridHourly;
             
             console.log(`  📊 Predicted PV line uses monthly hourly average from predictions file`);
             console.log(`     Month: ${monthKey}, Days with predictions: ${monthlyHourlyCount.filter(c => c > 0).length} hours averaged`);
-            console.log(`  📊 Load/Grid straight lines (hourly avg across entire month):`);
-            console.log(`     Expected Load: ${expectedAvgLoad.toFixed(2)} kW (${expectedTotalCount} hours), Grid: ${expectedAvgGrid.toFixed(2)} kW`);
-            console.log(`     Actual Load: ${actualAvgLoad.toFixed(2)} kW (${actualHoursCount} hours), Grid: ${actualAvgGrid.toFixed(2)} kW`);
+            console.log(`  📊 Load/Grid curves (both MTD for actual and expected):`);
+            console.log(`     Actual Load/Grid: MTD avg per hour from actual data`);
+            console.log(`     Expected Load/Grid: MTD avg per hour from predictions`);
             
             // Continue with chart rendering
             finishChartRendering();
@@ -4076,12 +4113,12 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     pointRadius: 0,
-                    tension: 0,
+                    tension: 0.4,
                     yAxisID: 'y',
                     order: 0
                 },
                 {
-                    label: 'Expected Load (Monthly Avg)',
+                    label: 'Expected Load (MTD Avg)',
                     data: full24HourData.predictedLoad || full24HourData.load,
                     type: 'line',
                     borderColor: '#ef4444',
@@ -4089,7 +4126,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     borderWidth: 2,
                     borderDash: [5, 5],
                     pointRadius: 0,
-                    tension: 0,
+                    tension: 0.4,
                     yAxisID: 'y',
                     order: 0
                 },
@@ -4101,12 +4138,12 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     pointRadius: 0,
-                    tension: 0,
+                    tension: 0.4,
                     yAxisID: 'y',
                     order: 0
                 },
                 {
-                    label: 'Expected Grid (Monthly Avg)',
+                    label: 'Expected Grid (MTD Avg)',
                     data: full24HourData.predictedGrid || full24HourData.grid,
                     type: 'line',
                     borderColor: '#f97316',
@@ -4114,7 +4151,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     borderWidth: 2,
                     borderDash: [5, 5],
                     pointRadius: 0,
-                    tension: 0,
+                    tension: 0.4,
                     yAxisID: 'y',
                     order: 0
                 }
