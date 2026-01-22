@@ -2905,14 +2905,31 @@
                     
                     if (data.length < 2) continue;
                     
-                    // Find header
-                    let headerIdx = 0;
-                    for (let i = 0; i < Math.min(10, data.length); i++) {
+                    // Find the actual data table header (same as 5-min report)
+                    let headerIdx = -1;
+                    for (let i = 0; i < data.length; i++) {
                         const row = data[i];
-                        if (row && row[0] && String(row[0]).toLowerCase().includes('time')) {
-                            headerIdx = i;
-                            break;
+                        if (row && row.length >= 5) {
+                            const rowStr = JSON.stringify(row).toLowerCase();
+                            if (rowStr.includes('time') && (rowStr.includes('pv') || rowStr.includes('load'))) {
+                                headerIdx = i;
+                                break;
+                            }
                         }
+                    }
+                    
+                    if (headerIdx === -1) continue;
+                    
+                    // Identify column indices
+                    const headers = data[headerIdx];
+                    let timeCol = -1, pvCol = -1, loadCol = -1, gridCol = -1;
+                    
+                    for (let c = 0; c < headers.length; c++) {
+                        const h = String(headers[c]).toLowerCase();
+                        if (h.includes('time')) timeCol = c;
+                        if (h.includes('pv')) pvCol = c;
+                        if (h.includes('load')) loadCol = c;
+                        if (h.includes('grid')) gridCol = c;
                     }
                     
                     // Aggregate into 15-minute buckets
@@ -2922,34 +2939,24 @@
                         const row = data[i];
                         if (!row || row.length < 5) continue;
                         
-                        let timestamp = row[0];
+                        let time = timeCol >= 0 ? row[timeCol] : null;
+                        if (!time) continue;
                         
-                        // Skip/construct if timestamp is missing
-                        if (!timestamp || timestamp === '' || timestamp === 'Number') {
-                            const minutesFromStart = (i - headerIdx - 1) * 5;
-                            const hours = Math.floor(minutesFromStart / 60);
-                            const minutes = minutesFromStart % 60;
-                            timestamp = `${date} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
-                        }
-                        // Handle Excel date serial
-                        else if (typeof timestamp === 'number') {
-                            const excelEpoch = new Date(1899, 11, 30);
-                            const jsDate = new Date(excelEpoch.getTime() + timestamp * 86400000);
-                            const year = jsDate.getFullYear();
-                            const month = (jsDate.getMonth() + 1).toString().padStart(2, '0');
-                            const day = jsDate.getDate().toString().padStart(2, '0');
-                            const hours = jsDate.getHours().toString().padStart(2, '0');
-                            const minutes = jsDate.getMinutes().toString().padStart(2, '0');
-                            const seconds = jsDate.getSeconds().toString().padStart(2, '0');
-                            timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-                        }
-                        // Prepend date if missing
-                        else if (typeof timestamp === 'string' && !timestamp.includes(date)) {
-                            timestamp = `${date} ${timestamp}`;
+                        // Build timestamp
+                        let timestamp;
+                        if (typeof time === 'string') {
+                            timestamp = `${date} ${time}`;
+                        } else if (typeof time === 'number') {
+                            const hours = Math.floor(time * 24);
+                            const minutes = Math.floor((time * 24 * 60) % 60);
+                            const seconds = Math.floor((time * 24 * 60 * 60) % 60);
+                            timestamp = `${date} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        } else {
+                            continue;
                         }
                         
                         // Parse timestamp to get 15-min bucket
-                        const timeStr = String(timestamp).split(' ')[1] || '00:00:00';
+                        const timeStr = timestamp.split(' ')[1] || '00:00:00';
                         const [hourStr, minStr] = timeStr.split(':');
                         const hour = parseInt(hourStr) || 0;
                         const minute = parseInt(minStr) || 0;
@@ -2958,18 +2965,17 @@
                         const bucketKey = `${date} ${hour.toString().padStart(2, '0')}:${bucket15.toString().padStart(2, '0')}:00`;
                         
                         if (!buckets[bucketKey]) {
-                            buckets[bucketKey] = { pv: [], load: [], grid: [], irr: [], hour: hour };
+                            buckets[bucketKey] = { pv: [], load: [], grid: [], hour: hour };
                         }
                         
-                        const pvKw = parseFloat(row[1]) || 0;
-                        const loadKw = parseFloat(row[2]) || 0;
-                        const gridKw = parseFloat(row[3]) || 0;
-                        const irradiation = parseFloat(row[4]) || 0;
+                        // Get values and convert W to kW
+                        const pvW = pvCol >= 0 ? (parseFloat(row[pvCol]) || 0) : 0;
+                        const loadW = loadCol >= 0 ? (parseFloat(row[loadCol]) || 0) : 0;
+                        const gridW = gridCol >= 0 ? (parseFloat(row[gridCol]) || 0) : 0;
                         
-                        buckets[bucketKey].pv.push(pvKw);
-                        buckets[bucketKey].load.push(loadKw);
-                        buckets[bucketKey].grid.push(Math.abs(gridKw));
-                        buckets[bucketKey].irr.push(irradiation);
+                        buckets[bucketKey].pv.push(pvW / 1000);
+                        buckets[bucketKey].load.push(loadW / 1000);
+                        buckets[bucketKey].grid.push(Math.abs(gridW) / 1000);
                     }
                     
                     // Output aggregated 15-min intervals
@@ -2981,7 +2987,6 @@
                         const avgPv = bucket.pv.reduce((a,b) => a+b, 0) / bucket.pv.length;
                         const avgLoad = bucket.load.reduce((a,b) => a+b, 0) / bucket.load.length;
                         const avgGrid = bucket.grid.reduce((a,b) => a+b, 0) / bucket.grid.length;
-                        const avgIrr = bucket.irr.reduce((a,b) => a+b, 0) / bucket.irr.length;
                         
                         const pvKwh = avgPv * 0.25;
                         const loadKwh = avgLoad * 0.25;
@@ -3003,7 +3008,7 @@
                             const pred = predData?.daily_predictions?.[date]?.grid_kw?.[bucket.hour] || 0;
                             csvRow += `,${(Math.abs(pred) * 0.25).toFixed(3)}`;
                         }
-                        if (fields.includes('irradiation')) csvRow += `,${avgIrr.toFixed(1)}`;
+                        if (fields.includes('irradiation')) csvRow += `,0`;
                         if (fields.includes('performance')) {
                             const pred = predData?.daily_predictions?.[date]?.pv_kw?.[bucket.hour] || 0;
                             const predKwh = pred * 0.25;
