@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1st Avenue Spar: Solar Generation</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS for parsing Excel files in browser -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -2689,11 +2691,11 @@
             csv += '\n';
             
             console.log('📊 Generating 5-minute report:');
-            console.log('  Loading individual daily files from /data/daily/...');
+            console.log('  Using SheetJS to parse Excel files...');
             
             const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
             
-            // Get list of dates in range
+            // Get list of dates
             const dateList = [];
             let currentDate = new Date(startDate);
             const endDateObj = new Date(endDate);
@@ -2707,116 +2709,117 @@
             
             let rowCount = 0;
             let filesLoaded = 0;
-            let filesFailed = 0;
             
             for (const date of dateList) {
-                // Try to load the daily file: /data/daily/YYYY-MM-DD.xls
                 const dailyFilePath = `${basePath}data/daily/${date}.xls`.replace('//', '/');
                 
                 try {
                     const response = await fetch(dailyFilePath);
                     if (!response.ok) {
                         console.log(`  ⚠️ No file for ${date}`);
-                        filesFailed++;
                         continue;
                     }
                     
-                    // Parse as text (it's actually tab-separated, not real Excel)
-                    const text = await response.text();
-                    const lines = text.trim().split('\n');
+                    // Get as array buffer for SheetJS
+                    const arrayBuffer = await response.arrayBuffer();
                     
-                    if (lines.length < 2) {
-                        console.log(`  ⚠️ Empty file for ${date}`);
+                    // Parse Excel file
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    
+                    // Get first sheet
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    
+                    // Convert to JSON (array of arrays)
+                    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    if (data.length < 2) {
+                        console.log(`  ⚠️ Empty sheet for ${date}`);
                         continue;
                     }
                     
                     filesLoaded++;
+                    console.log(`  ✓ Loaded ${date} - ${data.length} rows`);
                     
-                    // Log first few lines to understand structure
-                    console.log(`  File ${date} has ${lines.length} lines, first 5 lines:`);
-                    for (let i = 0; i < Math.min(5, lines.length); i++) {
-                        const preview = lines[i].substring(0, 100);
-                        console.log(`    Line ${i}: ${preview}`);
-                    }
-                    
-                    // Find the actual header row (contains tab-separated columns starting with timestamp-like field)
-                    // Or just start from a reasonable row if we can't find header
-                    let dataStartIndex = 0;
-                    
-                    // Try to find header with "Timestamp" or start of data
-                    for (let i = 0; i < Math.min(10, lines.length); i++) {
-                        const parts = lines[i].split('\t');
-                        // Check if this looks like a data row (first column looks like a timestamp)
-                        if (parts.length >= 5 && parts[0].match(/\d{4}-\d{2}-\d{2}|\d{2}:\d{2}/)) {
-                            dataStartIndex = i;
-                            console.log(`  ✓ Found data starting at row ${i}`);
+                    // Find header row
+                    let headerIdx = 0;
+                    for (let i = 0; i < Math.min(10, data.length); i++) {
+                        const row = data[i];
+                        if (row && row[0] && String(row[0]).toLowerCase().includes('time')) {
+                            headerIdx = i;
                             break;
                         }
                     }
                     
-                    if (dataStartIndex === 0) {
-                        // Fallback: assume data starts after row 4 (skip typical metadata)
-                        dataStartIndex = Math.min(4, lines.length - 1);
-                        console.log(`  Using fallback: starting at row ${dataStartIndex}`);
-                    }
-                    
-                    console.log(`  Processing ${lines.length - dataStartIndex} data rows from ${date}`);
+                    console.log(`  Header at row ${headerIdx}, processing ${data.length - headerIdx - 1} data rows`);
                     
                     // Process data rows
-                    for (let i = dataStartIndex; i < lines.length; i++) {
-                        const parts = lines[i].split('\t');
-                        if (parts.length < 7) continue;
+                    for (let i = headerIdx + 1; i < data.length; i++) {
+                        const row = data[i];
+                        if (!row || row.length < 5) continue;
                         
-                        // Assuming format: Timestamp, PV(kW), Load(kW), Grid(kW), Irradiation, ?, ?
-                        const timestamp = parts[0];
-                        const pvKw = parseFloat(parts[1]) || 0;
-                        const loadKw = parseFloat(parts[2]) || 0;
-                        const gridKw = parseFloat(parts[3]) || 0;
-                        const irradiation = parseFloat(parts[4]) || 0;
+                        // Columns: Timestamp, PV(kW), Load(kW), Grid(kW), Irradiation
+                        let timestamp = row[0];
+                        const pvKw = parseFloat(row[1]) || 0;
+                        const loadKw = parseFloat(row[2]) || 0;
+                        const gridKw = parseFloat(row[3]) || 0;
+                        const irradiation = parseFloat(row[4]) || 0;
+                        
+                        // Handle Excel date serial numbers
+                        if (typeof timestamp === 'number') {
+                            // Excel serial date to JS date
+                            const excelEpoch = new Date(1899, 11, 30);
+                            const jsDate = new Date(excelEpoch.getTime() + timestamp * 86400000);
+                            const year = jsDate.getFullYear();
+                            const month = (jsDate.getMonth() + 1).toString().padStart(2, '0');
+                            const day = jsDate.getDate().toString().padStart(2, '0');
+                            const hours = jsDate.getHours().toString().padStart(2, '0');
+                            const minutes = jsDate.getMinutes().toString().padStart(2, '0');
+                            const seconds = jsDate.getSeconds().toString().padStart(2, '0');
+                            timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                        }
                         
                         // Get hour for predictions
-                        const timePart = timestamp.split(' ')[1] || '00:00:00';
-                        const hour = parseInt(timePart.split(':')[0]) || 0;
+                        const timeStr = String(timestamp).split(' ')[1] || '00:00:00';
+                        const hour = parseInt(timeStr.split(':')[0]) || 0;
                         
-                        let row = timestamp;
-                        if (fields.includes('generation')) row += `,${pvKw.toFixed(3)}`;
+                        let csvRow = timestamp;
+                        if (fields.includes('generation')) csvRow += `,${pvKw.toFixed(3)}`;
                         if (fields.includes('predicted_generation')) {
                             const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
-                            row += `,${pred.toFixed(3)}`;
+                            csvRow += `,${pred.toFixed(3)}`;
                         }
-                        if (fields.includes('load')) row += `,${loadKw.toFixed(3)}`;
+                        if (fields.includes('load')) csvRow += `,${loadKw.toFixed(3)}`;
                         if (fields.includes('predicted_load')) {
                             const pred = predData?.daily_predictions?.[date]?.load_kw?.[hour] || 0;
-                            row += `,${pred.toFixed(3)}`;
+                            csvRow += `,${pred.toFixed(3)}`;
                         }
-                        if (fields.includes('grid')) row += `,${Math.abs(gridKw).toFixed(3)}`;
+                        if (fields.includes('grid')) csvRow += `,${Math.abs(gridKw).toFixed(3)}`;
                         if (fields.includes('predicted_grid')) {
                             const pred = predData?.daily_predictions?.[date]?.grid_kw?.[hour] || 0;
-                            row += `,${Math.abs(pred).toFixed(3)}`;
+                            csvRow += `,${Math.abs(pred).toFixed(3)}`;
                         }
-                        if (fields.includes('irradiation')) row += `,${irradiation.toFixed(1)}`;
+                        if (fields.includes('irradiation')) csvRow += `,${irradiation.toFixed(1)}`;
                         if (fields.includes('performance')) {
                             const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
                             const perf = pred > 0 ? (pvKw / pred * 100) : 0;
-                            row += `,${perf.toFixed(1)}`;
+                            csvRow += `,${perf.toFixed(1)}`;
                         }
-                        csv += row + '\n';
+                        csv += csvRow + '\n';
                         rowCount++;
                     }
                     
                 } catch (err) {
                     console.error(`  ✗ Error loading ${date}:`, err.message);
-                    filesFailed++;
                 }
             }
             
-            console.log(`  Summary: ${filesLoaded} files loaded, ${filesFailed} failed, ${rowCount} rows`);
-            console.log('  CSV length:', csv.length);
+            console.log(`  Summary: ${filesLoaded} files loaded, ${rowCount} total rows`);
             
             if (rowCount === 0) {
                 let errorCsv = '5-Minute Interval Data Not Available\n';
-                errorCsv += `No daily files found in /data/daily/ for the date range.\n`;
-                errorCsv += `Tried dates: ${dateList.join(', ')}\n`;
+                errorCsv += 'No data could be extracted from Excel files.\n';
+                errorCsv += 'Check console for errors.\n';
                 return errorCsv;
             }
             
@@ -2836,7 +2839,7 @@
             csv += '\n';
             
             console.log('📊 Generating 15-minute report:');
-            console.log('  Loading individual daily files and aggregating to 15-min intervals...');
+            console.log('  Loading Excel files and aggregating to 15-min intervals...');
             
             const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
             
@@ -2859,83 +2862,109 @@
                     const response = await fetch(dailyFilePath);
                     if (!response.ok) continue;
                     
-                    const text = await response.text();
-                    const lines = text.trim().split('\n');
-                    if (lines.length < 2) continue;
+                    const arrayBuffer = await response.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                     
-                    // Group 5-minute intervals into 15-minute buckets
-                    const intervals15Min = {};
+                    if (data.length < 2) continue;
                     
-                    for (let i = 1; i < lines.length; i++) {
-                        const parts = lines[i].split('\t');
-                        if (parts.length < 7) continue;
+                    // Find header
+                    let headerIdx = 0;
+                    for (let i = 0; i < Math.min(10, data.length); i++) {
+                        const row = data[i];
+                        if (row && row[0] && String(row[0]).toLowerCase().includes('time')) {
+                            headerIdx = i;
+                            break;
+                        }
+                    }
+                    
+                    // Aggregate into 15-minute buckets
+                    const buckets = {}; // Key: "YYYY-MM-DD HH:MM:00"
+                    
+                    for (let i = headerIdx + 1; i < data.length; i++) {
+                        const row = data[i];
+                        if (!row || row.length < 5) continue;
                         
-                        const timestamp = parts[0];
-                        const pvKw = parseFloat(parts[1]) || 0;
-                        const loadKw = parseFloat(parts[2]) || 0;
-                        const gridKw = parseFloat(parts[3]) || 0;
-                        const irradiation = parseFloat(parts[4]) || 0;
+                        let timestamp = row[0];
                         
-                        // Round down to 15-minute bucket
-                        const timePart = timestamp.split(' ')[1] || '00:00:00';
-                        const [hourStr, minStr] = timePart.split(':');
+                        // Handle Excel date serial
+                        if (typeof timestamp === 'number') {
+                            const excelEpoch = new Date(1899, 11, 30);
+                            const jsDate = new Date(excelEpoch.getTime() + timestamp * 86400000);
+                            const year = jsDate.getFullYear();
+                            const month = (jsDate.getMonth() + 1).toString().padStart(2, '0');
+                            const day = jsDate.getDate().toString().padStart(2, '0');
+                            const hours = jsDate.getHours().toString().padStart(2, '0');
+                            const minutes = jsDate.getMinutes().toString().padStart(2, '0');
+                            const seconds = jsDate.getSeconds().toString().padStart(2, '0');
+                            timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                        }
+                        
+                        // Parse timestamp to get 15-min bucket
+                        const timeStr = String(timestamp).split(' ')[1] || '00:00:00';
+                        const [hourStr, minStr] = timeStr.split(':');
                         const hour = parseInt(hourStr) || 0;
                         const minute = parseInt(minStr) || 0;
                         const bucket15 = Math.floor(minute / 15) * 15;
                         
                         const bucketKey = `${date} ${hour.toString().padStart(2, '0')}:${bucket15.toString().padStart(2, '0')}:00`;
                         
-                        if (!intervals15Min[bucketKey]) {
-                            intervals15Min[bucketKey] = {
-                                pv: [], load: [], grid: [], irr: [], hour: hour
-                            };
+                        if (!buckets[bucketKey]) {
+                            buckets[bucketKey] = { pv: [], load: [], grid: [], irr: [], hour: hour };
                         }
                         
-                        intervals15Min[bucketKey].pv.push(pvKw);
-                        intervals15Min[bucketKey].load.push(loadKw);
-                        intervals15Min[bucketKey].grid.push(Math.abs(gridKw));
-                        intervals15Min[bucketKey].irr.push(irradiation);
+                        const pvKw = parseFloat(row[1]) || 0;
+                        const loadKw = parseFloat(row[2]) || 0;
+                        const gridKw = parseFloat(row[3]) || 0;
+                        const irradiation = parseFloat(row[4]) || 0;
+                        
+                        buckets[bucketKey].pv.push(pvKw);
+                        buckets[bucketKey].load.push(loadKw);
+                        buckets[bucketKey].grid.push(Math.abs(gridKw));
+                        buckets[bucketKey].irr.push(irradiation);
                     }
                     
-                    // Output aggregated 15-minute intervals
-                    const sortedKeys = Object.keys(intervals15Min).sort();
+                    // Output aggregated 15-min intervals
+                    const sortedKeys = Object.keys(buckets).sort();
                     for (const key of sortedKeys) {
-                        const data = intervals15Min[key];
+                        const bucket = buckets[key];
                         
                         // Average kW * 0.25 hours = kWh
-                        const avgPv = data.pv.reduce((a,b) => a+b, 0) / data.pv.length;
-                        const avgLoad = data.load.reduce((a,b) => a+b, 0) / data.load.length;
-                        const avgGrid = data.grid.reduce((a,b) => a+b, 0) / data.grid.length;
-                        const avgIrr = data.irr.reduce((a,b) => a+b, 0) / data.irr.length;
+                        const avgPv = bucket.pv.reduce((a,b) => a+b, 0) / bucket.pv.length;
+                        const avgLoad = bucket.load.reduce((a,b) => a+b, 0) / bucket.load.length;
+                        const avgGrid = bucket.grid.reduce((a,b) => a+b, 0) / bucket.grid.length;
+                        const avgIrr = bucket.irr.reduce((a,b) => a+b, 0) / bucket.irr.length;
                         
                         const pvKwh = avgPv * 0.25;
                         const loadKwh = avgLoad * 0.25;
                         const gridKwh = avgGrid * 0.25;
                         
-                        let row = key;
-                        if (fields.includes('generation')) row += `,${pvKwh.toFixed(3)}`;
+                        let csvRow = key;
+                        if (fields.includes('generation')) csvRow += `,${pvKwh.toFixed(3)}`;
                         if (fields.includes('predicted_generation')) {
-                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[data.hour] || 0;
-                            row += `,${(pred * 0.25).toFixed(3)}`;
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[bucket.hour] || 0;
+                            csvRow += `,${(pred * 0.25).toFixed(3)}`;
                         }
-                        if (fields.includes('load')) row += `,${loadKwh.toFixed(3)}`;
+                        if (fields.includes('load')) csvRow += `,${loadKwh.toFixed(3)}`;
                         if (fields.includes('predicted_load')) {
-                            const pred = predData?.daily_predictions?.[date]?.load_kw?.[data.hour] || 0;
-                            row += `,${(pred * 0.25).toFixed(3)}`;
+                            const pred = predData?.daily_predictions?.[date]?.load_kw?.[bucket.hour] || 0;
+                            csvRow += `,${(pred * 0.25).toFixed(3)}`;
                         }
-                        if (fields.includes('grid')) row += `,${gridKwh.toFixed(3)}`;
+                        if (fields.includes('grid')) csvRow += `,${gridKwh.toFixed(3)}`;
                         if (fields.includes('predicted_grid')) {
-                            const pred = predData?.daily_predictions?.[date]?.grid_kw?.[data.hour] || 0;
-                            row += `,${(Math.abs(pred) * 0.25).toFixed(3)}`;
+                            const pred = predData?.daily_predictions?.[date]?.grid_kw?.[bucket.hour] || 0;
+                            csvRow += `,${(Math.abs(pred) * 0.25).toFixed(3)}`;
                         }
-                        if (fields.includes('irradiation')) row += `,${avgIrr.toFixed(1)}`;
+                        if (fields.includes('irradiation')) csvRow += `,${avgIrr.toFixed(1)}`;
                         if (fields.includes('performance')) {
-                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[data.hour] || 0;
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[bucket.hour] || 0;
                             const predKwh = pred * 0.25;
                             const perf = predKwh > 0 ? (pvKwh / predKwh * 100) : 0;
-                            row += `,${perf.toFixed(1)}`;
+                            csvRow += `,${perf.toFixed(1)}`;
                         }
-                        csv += row + '\n';
+                        csv += csvRow + '\n';
                         rowCount++;
                     }
                     
@@ -2944,10 +2973,10 @@
                 }
             }
             
-            console.log('  Total 15-min intervals:', rowCount);
+            console.log(`  Total 15-min intervals: ${rowCount}`);
             
             if (rowCount === 0) {
-                return '15-Minute Interval Data Not Available\nNo daily files found for the date range.\n';
+                return '15-Minute Data: No data found\n';
             }
             
             return csv;
