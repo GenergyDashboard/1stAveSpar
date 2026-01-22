@@ -2731,10 +2731,26 @@
                     }
                     
                     filesLoaded++;
-                    console.log(`  ✓ Loaded ${date} (${lines.length - 1} rows)`);
                     
-                    // Skip header line
-                    for (let i = 1; i < lines.length; i++) {
+                    // Find the actual header row (contains "Timestamp" or similar)
+                    let headerIndex = -1;
+                    for (let i = 0; i < Math.min(10, lines.length); i++) {
+                        const line = lines[i].toLowerCase();
+                        if (line.includes('timestamp') || line.includes('time')) {
+                            headerIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (headerIndex === -1) {
+                        console.log(`  ⚠️ No header found in ${date}`);
+                        continue;
+                    }
+                    
+                    console.log(`  ✓ Loaded ${date} - header at row ${headerIndex}, ${lines.length - headerIndex - 1} data rows`);
+                    
+                    // Process data rows (skip header)
+                    for (let i = headerIndex + 1; i < lines.length; i++) {
                         const parts = lines[i].split('\t');
                         if (parts.length < 7) continue;
                         
