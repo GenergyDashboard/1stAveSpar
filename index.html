@@ -1426,6 +1426,7 @@
                 <button class="tab" onclick="switchClientTab('lifetime')">Lifetime Stats</button>
                 <button class="tab" onclick="switchClientTab('financial')">Financial Overview</button>
                 <button class="tab" onclick="switchClientTab('report')">📊 Report</button>
+                <button class="tab" onclick="switchClientTab('warranty')">🛡️ Warranty</button>
             </div>
             
             <div id="daily-tab" class="tab-content active">
@@ -1902,6 +1903,51 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Warranty Tab -->
+            <div id="warranty-tab" class="client-tab" style="display: none;">
+                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: 2.5em;">🛡️ System Warranty Overview</h2>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px;">
+                    <!-- Active Warranty Donut Chart -->
+                    <div class="card" style="padding: 30px;">
+                        <h3 style="color: #4ade80; margin-bottom: 20px; text-align: center;">Active Warranty</h3>
+                        <div style="height: 350px; display: flex; justify-content: center; align-items: center;">
+                            <canvas id="activeWarrantyChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Expired Warranty Donut Chart -->
+                    <div class="card" style="padding: 30px;">
+                        <h3 style="color: #ef4444; margin-bottom: 20px; text-align: center;">Expired Warranty</h3>
+                        <div style="height: 350px; display: flex; justify-content: center; align-items: center;">
+                            <canvas id="expiredWarrantyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Warranty Data Table -->
+                <div class="card" style="padding: 30px;">
+                    <h3 style="color: #FFD700; margin-bottom: 25px;">Warranty Details</h3>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: rgba(255, 215, 0, 0.1); border-bottom: 2px solid #FFD700;">
+                                    <th style="padding: 15px; text-align: left; color: #FFD700; font-weight: 600;">Item</th>
+                                    <th style="padding: 15px; text-align: left; color: #FFD700; font-weight: 600;">Start Date</th>
+                                    <th style="padding: 15px; text-align: center; color: #FFD700; font-weight: 600;">Duration (Months)</th>
+                                    <th style="padding: 15px; text-align: center; color: #FFD700; font-weight: 600;">End Date</th>
+                                    <th style="padding: 15px; text-align: center; color: #FFD700; font-weight: 600;">Days Remaining</th>
+                                    <th style="padding: 15px; text-align: center; color: #FFD700; font-weight: 600;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="warranty-table-body">
+                                <!-- Data populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="update-time">
@@ -2105,6 +2151,8 @@
                 if (!startInput.value || !endInput.value) {
                     setReportDateRange('thisMonth');
                 }
+            } else if (tab === 'warranty') {
+                loadWarrantyData();
             }
         }
         
@@ -3243,6 +3291,193 @@
                 csv += row + '\n';
             }
             return csv;
+        }
+        
+        // ============================================
+        // WARRANTY TAB FUNCTIONS
+        // ============================================
+        
+        const warrantyData = [
+            {
+                item: "Solar Panel Performance",
+                startDate: "2025-11-18",
+                durationMonths: 25 * 12, // 25 years
+                color: "#4ade80"
+            },
+            {
+                item: "Mounting Structure",
+                startDate: "2025-11-18",
+                durationMonths: 20 * 12, // 20 years
+                color: "#3b82f6"
+            },
+            {
+                item: "Solar Panel Manufacturer's Warranty",
+                startDate: "2025-11-18",
+                durationMonths: 12, // 12 months
+                color: "#f59e0b"
+            },
+            {
+                item: "Inverters",
+                startDate: "2025-11-18",
+                durationMonths: 10 * 12, // 10 years
+                color: "#8b5cf6"
+            },
+            {
+                item: "Monitoring Portal",
+                startDate: "2025-11-18",
+                durationMonths: 10 * 12, // 10 years
+                color: "#ec4899"
+            },
+            {
+                item: "Workmanship",
+                startDate: "2025-11-18",
+                durationMonths: 1 * 12, // 1 year
+                color: "#ef4444"
+            }
+        ];
+        
+        let activeWarrantyChart = null;
+        let expiredWarrantyChart = null;
+        
+        function calculateDaysRemaining(startDate, durationMonths) {
+            const start = new Date(startDate);
+            const end = new Date(start);
+            end.setMonth(end.getMonth() + durationMonths);
+            const today = new Date();
+            const diffTime = end - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return { diffDays, endDate: end };
+        }
+        
+        function loadWarrantyData() {
+            const today = new Date();
+            
+            // Separate active and expired warranties
+            const activeWarranties = [];
+            const expiredWarranties = [];
+            
+            warrantyData.forEach(item => {
+                const { diffDays, endDate } = calculateDaysRemaining(item.startDate, item.durationMonths);
+                const warrantyItem = {
+                    ...item,
+                    endDate: endDate,
+                    daysRemaining: diffDays,
+                    isActive: diffDays > 0
+                };
+                
+                if (diffDays > 0) {
+                    activeWarranties.push(warrantyItem);
+                } else {
+                    expiredWarranties.push(warrantyItem);
+                }
+            });
+            
+            // Create donut charts
+            createWarrantyDonutChart('activeWarrantyChart', activeWarranties, true);
+            createWarrantyDonutChart('expiredWarrantyChart', expiredWarranties, false);
+            
+            // Populate table
+            populateWarrantyTable([...activeWarranties, ...expiredWarranties]);
+        }
+        
+        function createWarrantyDonutChart(canvasId, warranties, isActive) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            
+            // Destroy existing chart
+            if (canvasId === 'activeWarrantyChart' && activeWarrantyChart) {
+                activeWarrantyChart.destroy();
+            }
+            if (canvasId === 'expiredWarrantyChart' && expiredWarrantyChart) {
+                expiredWarrantyChart.destroy();
+            }
+            
+            if (warranties.length === 0) {
+                ctx.parentElement.innerHTML = `
+                    <div style="text-align: center; color: #888; padding: 40px;">
+                        <p style="font-size: 1.2em;">No ${isActive ? 'expired' : 'active'} warranties</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const labels = warranties.map(w => w.item);
+            const data = warranties.map(w => isActive ? w.daysRemaining : Math.abs(w.daysRemaining));
+            const colors = warranties.map(w => w.color);
+            
+            const chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: '#1a1a1a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#ffffff',
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} days (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            if (canvasId === 'activeWarrantyChart') {
+                activeWarrantyChart = chart;
+            } else {
+                expiredWarrantyChart = chart;
+            }
+        }
+        
+        function populateWarrantyTable(warranties) {
+            const tbody = document.getElementById('warranty-table-body');
+            if (!tbody) return;
+            
+            // Sort by days remaining (descending)
+            warranties.sort((a, b) => b.daysRemaining - a.daysRemaining);
+            
+            tbody.innerHTML = warranties.map(w => {
+                const statusColor = w.isActive ? '#4ade80' : '#ef4444';
+                const statusText = w.isActive ? '✓ Active' : '✗ Expired';
+                const endDateStr = w.endDate.toISOString().split('T')[0];
+                const daysText = w.isActive ? 
+                    `${w.daysRemaining} days` : 
+                    `Expired ${Math.abs(w.daysRemaining)} days ago`;
+                
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                        <td style="padding: 15px; color: ${w.color}; font-weight: 500;">${w.item}</td>
+                        <td style="padding: 15px; color: #cccccc;">${w.startDate}</td>
+                        <td style="padding: 15px; text-align: center; color: #cccccc;">${w.durationMonths}</td>
+                        <td style="padding: 15px; text-align: center; color: #cccccc;">${endDateStr}</td>
+                        <td style="padding: 15px; text-align: center; color: ${statusColor}; font-weight: 600;">${daysText}</td>
+                        <td style="padding: 15px; text-align: center; color: ${statusColor}; font-weight: 600;">${statusText}</td>
+                    </tr>
+                `;
+            }).join('');
         }
         
         function createEnvCards(data, containerId) {
