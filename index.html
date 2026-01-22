@@ -2827,93 +2827,52 @@
             const records = dashData.daily_records.filter(r => r.date >= startDate && r.date <= endDate);
             console.log('  Records in range:', records.length);
             
-            if (records.length > 0) {
-                console.log('  First record date:', records[0].date);
-                console.log('  First record has hourly_data:', !!records[0].hourly_data);
-                if (records[0].hourly_data) {
-                    const keys = Object.keys(records[0].hourly_data);
-                    console.log('  Sample hourly_data keys:', keys.slice(0, 5));
-                    console.log('  Total hourly_data keys:', keys.length);
-                    // Check first hour structure
-                    const firstKey = keys[0];
-                    console.log('  First hour key:', firstKey, 'type:', typeof firstKey);
-                    console.log('  First hour data:', records[0].hourly_data[firstKey]);
-                }
-            }
-            
             let rowCount = 0;
             for (const record of records) {
                 const date = record.date;
-                if (!record.hourly_data) {
-                    console.warn('  ⚠️ No hourly_data for', date);
+                if (!record.hourly_data || !Array.isArray(record.hourly_data)) {
+                    console.warn('  ⚠️ No hourly_data array for', date);
                     continue;
                 }
                 
-                console.log('  Processing', date, '- hourly_data has', Object.keys(record.hourly_data).length, 'keys');
+                console.log('  Processing', date, '- hourly_data has', record.hourly_data.length, 'hours');
                 
-                for (let hour = 0; hour < 24; hour++) {
-                    const hourData = record.hourly_data[hour];
-                    if (!hourData) {
-                        if (hour === 0) console.log('    Hour', hour, '- no data');
-                        continue;
-                    }
+                // hourly_data is an array of hour objects
+                record.hourly_data.forEach((hourData, hourIndex) => {
+                    const timestamp = `${date} ${hourIndex.toString().padStart(2, '0')}:00:00`;
                     
-                    if (hour === 0) {
-                        console.log('    Hour', hour, 'data structure:', Object.keys(hourData));
-                    }
-                    
-                    if (!hourData.intervals_5min) {
-                        if (hour === 0) console.log('    Hour', hour, '- no intervals_5min, keys:', Object.keys(hourData));
-                        continue;
-                    }
-                    
-                    if (hour === 0 || hour === 12) {
-                        console.log('    Hour', hour, '- has', hourData.intervals_5min.length, 'intervals');
-                    }
-                    
-                    const timestamp = `${date} ${hour.toString().padStart(2, '0')}:00:00`;
-                    const intervals = hourData.intervals_5min;
-                    
-                    let gen = 0, load = 0, grid = 0, irr = 0, count = 0;
-                    for (const interval of intervals) {
-                        gen += interval.generation_kw || 0;
-                        load += interval.load_kw || 0;
-                        grid += interval.grid_kw || 0;
-                        irr += interval.irradiation_wm2 || 0;
-                        count++;
-                    }
-                    
-                    // Convert avg kW to kWh (1 hour period)
-                    gen = count > 0 ? (gen / count) * 1 : 0;
-                    load = count > 0 ? (load / count) * 1 : 0;
-                    grid = count > 0 ? (grid / count) * 1 : 0;
-                    irr = count > 0 ? irr / count : 0;
+                    // Get kW values (already hourly averages)
+                    const gen = hourData.pv_kw || hourData.generation_kw || 0;
+                    const load = hourData.load_kw || 0;
+                    const grid = Math.abs(hourData.grid_kw || 0);
+                    const irr = hourData.irradiation_wm2 || 0;
                     
                     let row = timestamp;
+                    // Values are already in kW, convert to kWh (kW * 1 hour)
                     if (fields.includes('generation')) row += `,${gen.toFixed(3)}`;
                     if (fields.includes('predicted_generation')) {
-                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
+                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hourIndex] || 0;
                         row += `,${pred.toFixed(3)}`;
                     }
                     if (fields.includes('load')) row += `,${load.toFixed(3)}`;
                     if (fields.includes('predicted_load')) {
-                        const pred = predData?.daily_predictions?.[date]?.load_kw?.[hour] || 0;
+                        const pred = predData?.daily_predictions?.[date]?.load_kw?.[hourIndex] || 0;
                         row += `,${pred.toFixed(3)}`;
                     }
                     if (fields.includes('grid')) row += `,${grid.toFixed(3)}`;
                     if (fields.includes('predicted_grid')) {
-                        const pred = predData?.daily_predictions?.[date]?.grid_kw?.[hour] || 0;
-                        row += `,${pred.toFixed(3)}`;
+                        const pred = predData?.daily_predictions?.[date]?.grid_kw?.[hourIndex] || 0;
+                        row += `,${Math.abs(pred).toFixed(3)}`;
                     }
                     if (fields.includes('irradiation')) row += `,${irr.toFixed(1)}`;
                     if (fields.includes('performance')) {
-                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
+                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hourIndex] || 0;
                         const perf = pred > 0 ? (gen / pred * 100) : 0;
                         row += `,${perf.toFixed(1)}`;
                     }
                     csv += row + '\n';
                     rowCount++;
-                }
+                });
             }
             
             console.log('  Total rows generated:', rowCount);
