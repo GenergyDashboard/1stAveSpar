@@ -4004,19 +4004,29 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 }
             }
             
+            console.log(`  📊 Expected Load count per hour:`, expectedLoadHourlyCount.map((c, h) => `${h}:${c}`).filter((_, h) => h < 6 || (h >= 12 && h < 18)));
+            
             if (dashboardData && dashboardData.daily_records) {
                 // Get actual hourly Load/Grid for MTD
-                // For each hour (0-23), average all occurrences of that hour across all MTD days
+                // Only include hours where there's actual data (load_kw > 0)
                 dashboardData.daily_records
                     .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
                     .forEach(record => {
                         if (record.hourly_data && Array.isArray(record.hourly_data)) {
                             record.hourly_data.forEach((hourData, hourIndex) => {
                                 if (hourIndex < 24) {
-                                    actualLoadHourly[hourIndex] += (hourData.load_kw || 0);
-                                    actualGridHourly[hourIndex] += Math.abs(hourData.grid_kw || 0);
-                                    actualLoadHourlyCount[hourIndex]++;
-                                    actualGridHourlyCount[hourIndex]++;
+                                    const loadVal = hourData.load_kw || 0;
+                                    const gridVal = Math.abs(hourData.grid_kw || 0);
+                                    
+                                    // Only include hours with actual data (load > 0 means generation occurred)
+                                    if (loadVal > 0) {
+                                        actualLoadHourly[hourIndex] += loadVal;
+                                        actualLoadHourlyCount[hourIndex]++;
+                                    }
+                                    if (gridVal > 0) {
+                                        actualGridHourly[hourIndex] += gridVal;
+                                        actualGridHourlyCount[hourIndex]++;
+                                    }
                                 }
                             });
                         }
@@ -4029,8 +4039,9 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     actualLoadHourly[hour] = actualLoadHourly[hour] / actualLoadHourlyCount[hour];
                     actualGridHourly[hour] = actualGridHourly[hour] / actualGridHourlyCount[hour];
                 } else {
-                    actualLoadHourly[hour] = 0;
-                    actualGridHourly[hour] = 0;
+                    // Leave as null/undefined so chart doesn't draw for hours with no data
+                    actualLoadHourly[hour] = null;
+                    actualGridHourly[hour] = null;
                 }
             }
             
