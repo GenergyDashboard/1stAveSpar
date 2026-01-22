@@ -2753,11 +2753,11 @@
                     
                     console.log(`  Header at row ${headerIdx}`);
                     
-                    // Debug: show header row and first 3 data rows
-                    console.log(`  Header row:`, data[headerIdx]);
+                    // Debug: show header row and first 3 data rows with actual contents
+                    console.log(`  Header row (${data[headerIdx]?.length || 0} cols):`, JSON.stringify(data[headerIdx]));
                     for (let debugIdx = 1; debugIdx <= 3; debugIdx++) {
                         if (data[headerIdx + debugIdx]) {
-                            console.log(`  Data row ${debugIdx}:`, data[headerIdx + debugIdx]);
+                            console.log(`  Data row ${debugIdx} (${data[headerIdx + debugIdx].length} cols):`, JSON.stringify(data[headerIdx + debugIdx]));
                         }
                     }
                     
