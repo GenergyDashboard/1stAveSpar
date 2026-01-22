@@ -4016,27 +4016,31 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             
             if (dashboardData && dashboardData.daily_records) {
                 // Get actual hourly Load/Grid for MTD
-                // Process all hourly_data that exists (only during generation hours)
+                // Only include hours where there's actual PV generation (for now)
                 dashboardData.daily_records
                     .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
                     .forEach(record => {
                         if (record.hourly_data && Array.isArray(record.hourly_data)) {
                             record.hourly_data.forEach((hourData, hourIndex) => {
                                 if (hourIndex < 24 && hourData) {
+                                    const pvVal = hourData.generation_kw || hourData.pv_kw || 0;
                                     const loadVal = hourData.load_kw || 0;
                                     const gridVal = hourData.grid_kw || 0;
                                     
-                                    // Only count Load if it has a real value (> 0)
-                                    if (loadVal > 0) {
-                                        actualLoadHourly[hourIndex] += loadVal;
-                                        actualLoadHourlyCount[hourIndex]++;
-                                    }
-                                    
-                                    // Only count Grid if it has a real value (!= 0)
-                                    // Grid can be positive (importing) or negative (exporting)
-                                    if (gridVal !== 0 && Math.abs(gridVal) > 0.01) {
-                                        actualGridHourly[hourIndex] += Math.abs(gridVal);
-                                        actualGridHourlyCount[hourIndex]++;
+                                    // Only include this hour if there's real PV generation (> 0.1 kW)
+                                    // This excludes nighttime hours with zero or minimal noise values
+                                    if (pvVal > 0.1) {
+                                        // Count Load if it has a value
+                                        if (loadVal > 0) {
+                                            actualLoadHourly[hourIndex] += loadVal;
+                                            actualLoadHourlyCount[hourIndex]++;
+                                        }
+                                        
+                                        // Count Grid if it has a value
+                                        if (Math.abs(gridVal) > 0.01) {
+                                            actualGridHourly[hourIndex] += Math.abs(gridVal);
+                                            actualGridHourlyCount[hourIndex]++;
+                                        }
                                     }
                                 }
                             });
