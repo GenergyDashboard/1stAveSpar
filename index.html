@@ -2820,11 +2820,28 @@
             if (fields.includes('performance')) csv += ',Performance (%)';
             csv += '\n';
             
-            const records = dashData.daily_records.filter(r => r.date >= startDate && r.date <= endDate);
+            console.log('📊 Generating hourly report:');
+            console.log('  Date range:', startDate, 'to', endDate);
+            console.log('  Total records:', dashData.daily_records?.length);
             
+            const records = dashData.daily_records.filter(r => r.date >= startDate && r.date <= endDate);
+            console.log('  Records in range:', records.length);
+            
+            if (records.length > 0) {
+                console.log('  First record date:', records[0].date);
+                console.log('  First record has hourly_data:', !!records[0].hourly_data);
+                if (records[0].hourly_data) {
+                    console.log('  Sample hourly_data keys:', Object.keys(records[0].hourly_data).slice(0, 5));
+                }
+            }
+            
+            let rowCount = 0;
             for (const record of records) {
                 const date = record.date;
-                if (!record.hourly_data) continue;
+                if (!record.hourly_data) {
+                    console.warn('  ⚠️ No hourly_data for', date);
+                    continue;
+                }
                 
                 for (let hour = 0; hour < 24; hour++) {
                     const hourData = record.hourly_data[hour];
@@ -2871,8 +2888,12 @@
                         row += `,${perf.toFixed(1)}`;
                     }
                     csv += row + '\n';
+                    rowCount++;
                 }
             }
+            
+            console.log('  Total rows generated:', rowCount);
+            console.log('  CSV length:', csv.length);
             return csv;
         }
         
