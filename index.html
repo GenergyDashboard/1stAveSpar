@@ -4018,11 +4018,25 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 // First, identify which hours have PV generation across MTD
                 const hoursWithGeneration = new Set();
                 
+                let debugLogged = false;
+                
                 dashboardData.daily_records
                     .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
                     .forEach(record => {
                         if (record.hourly_data && Array.isArray(record.hourly_data)) {
                             record.hourly_data.forEach((hourData, hourIndex) => {
+                                // Debug: log first day's early hours to see structure
+                                if (!debugLogged && hourIndex <= 8) {
+                                    console.log(`  Hour ${hourIndex}:`, {
+                                        keys: Object.keys(hourData),
+                                        generation_kw: hourData.generation_kw,
+                                        pv_kw: hourData.pv_kw,
+                                        load_kw: hourData.load_kw,
+                                        grid_kw: hourData.grid_kw
+                                    });
+                                    if (hourIndex === 8) debugLogged = true;
+                                }
+                                
                                 // Check if this hour has actual PV generation
                                 const pvVal = hourData.generation_kw || 0;
                                 if (pvVal > 0.1) {
@@ -4032,7 +4046,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                         }
                     });
                 
-                console.log(`  📊 Hours with PV generation:`, Array.from(hoursWithGeneration).sort((a,b) => a-b));
+                console.log(`  📊 Hours with PV generation (>0.1kW):`, Array.from(hoursWithGeneration).sort((a,b) => a-b));
                 
                 // Now collect actual Load/Grid ONLY for hours that have generation
                 dashboardData.daily_records
