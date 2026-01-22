@@ -3965,6 +3965,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             
             if (dashboardData && dashboardData.daily_records) {
                 // Get actual hourly Load/Grid for MTD
+                // For each hour (0-23), average all occurrences of that hour across all MTD days
                 dashboardData.daily_records
                     .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
                     .forEach(record => {
@@ -3981,7 +3982,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     });
             }
             
-            // Get expected Load/Grid from predictions file (MTD average per hour, not full month)
+            // Get expected Load/Grid from predictions file (MTD average per hour)
+            // For each hour (0-23), average all occurrences of that hour across all MTD days
             if (predictionsData && predictionsData.daily_predictions) {
                 for (const [date, dayPred] of Object.entries(predictionsData.daily_predictions)) {
                     // Only include dates from start of month up to selected date (MTD)
