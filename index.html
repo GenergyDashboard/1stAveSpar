@@ -2753,20 +2753,35 @@
                     
                     console.log(`  Header at row ${headerIdx}, processing ${data.length - headerIdx - 1} data rows`);
                     
+                    // Debug: show what's in the first data row
+                    if (data[headerIdx + 1]) {
+                        console.log(`  First data row (${data[headerIdx + 1].length} columns):`, data[headerIdx + 1].slice(0, 6));
+                    }
+                    
                     // Process data rows
                     for (let i = headerIdx + 1; i < data.length; i++) {
                         const row = data[i];
                         if (!row || row.length < 5) continue;
                         
                         // Columns: Timestamp, PV(kW), Load(kW), Grid(kW), Irradiation
+                        // But timestamp might be in column 0 or might need to be constructed
                         let timestamp = row[0];
-                        const pvKw = parseFloat(row[1]) || 0;
-                        const loadKw = parseFloat(row[2]) || 0;
-                        const gridKw = parseFloat(row[3]) || 0;
-                        const irradiation = parseFloat(row[4]) || 0;
                         
+                        // Skip if timestamp is missing/invalid
+                        if (!timestamp || timestamp === '' || timestamp === 'Number') {
+                            // Try to construct timestamp from date and row number
+                            // Assuming 5-minute intervals, row 1 = 00:00, row 2 = 00:05, etc.
+                            const minutesFromStart = (i - headerIdx - 1) * 5;
+                            const hours = Math.floor(minutesFromStart / 60);
+                            const minutes = minutesFromStart % 60;
+                            timestamp = `${date} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+                            
+                            if (i === headerIdx + 1) {
+                                console.log(`  No timestamp in column 0, constructing from row numbers`);
+                            }
+                        }
                         // Handle Excel date serial numbers
-                        if (typeof timestamp === 'number') {
+                        else if (typeof timestamp === 'number') {
                             // Excel serial date to JS date
                             const excelEpoch = new Date(1899, 11, 30);
                             const jsDate = new Date(excelEpoch.getTime() + timestamp * 86400000);
@@ -2778,6 +2793,15 @@
                             const seconds = jsDate.getSeconds().toString().padStart(2, '0');
                             timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
                         }
+                        // If it's a string that doesn't have the date, prepend it
+                        else if (typeof timestamp === 'string' && !timestamp.includes(date)) {
+                            timestamp = `${date} ${timestamp}`;
+                        }
+                        
+                        const pvKw = parseFloat(row[1]) || 0;
+                        const loadKw = parseFloat(row[2]) || 0;
+                        const gridKw = parseFloat(row[3]) || 0;
+                        const irradiation = parseFloat(row[4]) || 0;
                         
                         // Get hour for predictions
                         const timeStr = String(timestamp).split(' ')[1] || '00:00:00';
@@ -2889,8 +2913,15 @@
                         
                         let timestamp = row[0];
                         
+                        // Skip/construct if timestamp is missing
+                        if (!timestamp || timestamp === '' || timestamp === 'Number') {
+                            const minutesFromStart = (i - headerIdx - 1) * 5;
+                            const hours = Math.floor(minutesFromStart / 60);
+                            const minutes = minutesFromStart % 60;
+                            timestamp = `${date} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+                        }
                         // Handle Excel date serial
-                        if (typeof timestamp === 'number') {
+                        else if (typeof timestamp === 'number') {
                             const excelEpoch = new Date(1899, 11, 30);
                             const jsDate = new Date(excelEpoch.getTime() + timestamp * 86400000);
                             const year = jsDate.getFullYear();
@@ -2900,6 +2931,10 @@
                             const minutes = jsDate.getMinutes().toString().padStart(2, '0');
                             const seconds = jsDate.getSeconds().toString().padStart(2, '0');
                             timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                        }
+                        // Prepend date if missing
+                        else if (typeof timestamp === 'string' && !timestamp.includes(date)) {
+                            timestamp = `${date} ${timestamp}`;
                         }
                         
                         // Parse timestamp to get 15-min bucket
