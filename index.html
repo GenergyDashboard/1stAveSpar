@@ -4015,32 +4015,46 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             console.log(`  📊 Expected Grid sample values (hours 5-10):`, expectedGridHourly.slice(5, 11).map(v => v.toFixed(2)));
             
             if (dashboardData && dashboardData.daily_records) {
-                // Get actual hourly Load/Grid for MTD
-                // Only include hours where there's actual PV generation (for now)
+                // First, identify which hours have PV generation across MTD
+                const hoursWithGeneration = new Set();
+                
                 dashboardData.daily_records
                     .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
                     .forEach(record => {
                         if (record.hourly_data && Array.isArray(record.hourly_data)) {
                             record.hourly_data.forEach((hourData, hourIndex) => {
-                                if (hourIndex < 24 && hourData) {
-                                    const pvVal = hourData.generation_kw || hourData.pv_kw || 0;
+                                // Check if this hour has actual PV generation
+                                const pvVal = hourData.generation_kw || 0;
+                                if (pvVal > 0.1) {
+                                    hoursWithGeneration.add(hourIndex);
+                                }
+                            });
+                        }
+                    });
+                
+                console.log(`  📊 Hours with PV generation:`, Array.from(hoursWithGeneration).sort((a,b) => a-b));
+                
+                // Now collect actual Load/Grid ONLY for hours that have generation
+                dashboardData.daily_records
+                    .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
+                    .forEach(record => {
+                        if (record.hourly_data && Array.isArray(record.hourly_data)) {
+                            record.hourly_data.forEach((hourData, hourIndex) => {
+                                // Only include this hour if it's in our generation hours set
+                                if (hoursWithGeneration.has(hourIndex) && hourData) {
                                     const loadVal = hourData.load_kw || 0;
                                     const gridVal = hourData.grid_kw || 0;
                                     
-                                    // Only include this hour if there's real PV generation (> 0.1 kW)
-                                    // This excludes nighttime hours with zero or minimal noise values
-                                    if (pvVal > 0.1) {
-                                        // Count Load if it has a value
-                                        if (loadVal > 0) {
-                                            actualLoadHourly[hourIndex] += loadVal;
-                                            actualLoadHourlyCount[hourIndex]++;
-                                        }
-                                        
-                                        // Count Grid if it has a value
-                                        if (Math.abs(gridVal) > 0.01) {
-                                            actualGridHourly[hourIndex] += Math.abs(gridVal);
-                                            actualGridHourlyCount[hourIndex]++;
-                                        }
+                                    // Count Load if it has a value
+                                    if (loadVal > 0) {
+                                        actualLoadHourly[hourIndex] += loadVal;
+                                        actualLoadHourlyCount[hourIndex]++;
+                                    }
+                                    
+                                    // Count Grid if it has a value
+                                    if (Math.abs(gridVal) > 0.01) {
+                                        actualGridHourly[hourIndex] += Math.abs(gridVal);
+                                        actualGridHourlyCount[hourIndex]++;
                                     }
                                 }
                             });
