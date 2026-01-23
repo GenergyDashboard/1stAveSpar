@@ -495,6 +495,11 @@
             margin-bottom: 30px;
             position: relative;
             z-index: 10;
+            height: 500px;
+        }
+        
+        .chart-container canvas {
+            max-height: 440px !important;
         }
         
         .chart-title {
@@ -2266,7 +2271,7 @@
         // Configure Chart.js for mobile responsiveness
         if (typeof Chart !== 'undefined') {
             Chart.defaults.responsive = true;
-            Chart.defaults.maintainAspectRatio = false;
+            // Note: maintainAspectRatio is set per-chart to avoid conflicts
             
             // Detect if on mobile device
             const isMobile = window.innerWidth <= 768;
@@ -5486,6 +5491,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: {
                 mode: 'index',
                 intersect: false,
