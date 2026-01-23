@@ -1425,8 +1425,8 @@
                 <button class="tab" onclick="switchClientTab('monthly')">Monthly Overview</button>
                 <button class="tab" onclick="switchClientTab('lifetime')">Lifetime Stats</button>
                 <button class="tab" onclick="switchClientTab('financial')">Financial Overview</button>
-                <button class="tab" onclick="switchClientTab('report')">📊 Report</button>
-                <button class="tab" onclick="switchClientTab('warranty')">🛡️ Warranty</button>
+                <button class="tab" onclick="switchClientTab('report')">Report</button>
+                <button class="tab" onclick="switchClientTab('warranty')">Warranty</button>
             </div>
             
             <div id="daily-tab" class="tab-content active">
@@ -1785,7 +1785,7 @@
             <!-- Report Tab -->
             <div id="report-tab" class="tab-content">
                 <div class="section-header">
-                    <h2>📊 Data Export & Reporting</h2>
+                    <h2>Data Export & Reporting</h2>
                     <p style="color: #aaaaaa; font-size: 1.1em; margin-top: 10px;">Download generation data in various formats and time intervals</p>
                 </div>
                 
@@ -1906,7 +1906,7 @@
             
             <!-- Warranty Tab -->
             <div id="warranty-tab" class="tab-content">
-                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: 2.5em;">🛡️ System Warranty Overview</h2>
+                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: 2.5em;">System Warranty Overview</h2>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px;">
                     <!-- Active Warranty Donut Chart -->
@@ -3115,8 +3115,14 @@
                     // Use actual time if available, otherwise construct it from index
                     let timeStr = hourData.timestamp || hourData.time;
                     
+                    // Extract the actual hour from the time field
+                    let actualHour = hourIndex; // fallback to index
+                    if (timeStr && timeStr.includes(':')) {
+                        actualHour = parseInt(timeStr.split(':')[0]);
+                    }
+                    
                     // If we have a time string, append it to the date
-                    // Otherwise construct time from hourIndex
+                    // Otherwise construct time from actualHour
                     let timestamp;
                     if (timeStr && timeStr.includes(':')) {
                         // timeStr is just the time part (e.g., "05:00" or "05:00:00")
@@ -3126,8 +3132,8 @@
                             timestamp += ':00';
                         }
                     } else {
-                        // Fallback: construct from date and index
-                        timestamp = `${date} ${hourIndex.toString().padStart(2, '0')}:00:00`;
+                        // Fallback: construct from date and actualHour
+                        timestamp = `${date} ${actualHour.toString().padStart(2, '0')}:00:00`;
                     }
                     
                     // Get kW values (already hourly averages)
@@ -3140,22 +3146,22 @@
                     // Values are already in kW, convert to kWh (kW * 1 hour)
                     if (fields.includes('generation')) row += `,${gen.toFixed(3)}`;
                     if (fields.includes('predicted_generation')) {
-                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hourIndex] || 0;
+                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[actualHour] || 0;
                         row += `,${pred.toFixed(3)}`;
                     }
                     if (fields.includes('load')) row += `,${load.toFixed(3)}`;
                     if (fields.includes('predicted_load')) {
-                        const pred = predData?.daily_predictions?.[date]?.load_kw?.[hourIndex] || 0;
+                        const pred = predData?.daily_predictions?.[date]?.load_kw?.[actualHour] || 0;
                         row += `,${pred.toFixed(3)}`;
                     }
                     if (fields.includes('grid')) row += `,${grid.toFixed(3)}`;
                     if (fields.includes('predicted_grid')) {
-                        const pred = predData?.daily_predictions?.[date]?.grid_kw?.[hourIndex] || 0;
+                        const pred = predData?.daily_predictions?.[date]?.grid_kw?.[actualHour] || 0;
                         row += `,${Math.abs(pred).toFixed(3)}`;
                     }
                     if (fields.includes('irradiation')) row += `,${irr.toFixed(1)}`;
                     if (fields.includes('performance')) {
-                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hourIndex] || 0;
+                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[actualHour] || 0;
                         const perf = pred > 0 ? (gen / pred * 100) : 0;
                         row += `,${perf.toFixed(1)}`;
                     }
@@ -3967,8 +3973,19 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             
             // Get all MTD days from predictions and calculate Load/Grid averages per hour
             if (predictionsData.daily_predictions) {
+                // Determine if we're viewing a past month or current month
+                const today = new Date().toISOString().split('T')[0];
+                const currentMonthKey = today.substring(0, 7); // "2026-01"
+                const isPastMonth = monthKey < currentMonthKey;
+                
+                // For past months: use entire month
+                // For current month: use MTD (up to selected date)
+                const dateFilter = isPastMonth 
+                    ? (date => date.startsWith(monthKey))
+                    : (date => date.startsWith(monthKey) && date <= selectedDate);
+                
                 Object.keys(predictionsData.daily_predictions)
-                    .filter(date => date.startsWith(monthKey) && date <= selectedDate)
+                    .filter(dateFilter)
                     .forEach(date => {
                         const dayPredictions = predictionsData.daily_predictions[date];
                         
@@ -3988,6 +4005,9 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                             });
                         }
                     });
+                
+                console.log(`  📊 Expected Load/Grid calculation (${isPastMonth ? 'FULL MONTH' : 'MTD'}):`);
+                console.log(`     Month: ${monthKey}, Dates included: ${Object.keys(predictionsData.daily_predictions).filter(dateFilter).length}`);
             }
             
             // Calculate average for each hour (Expected Load/Grid)
@@ -4004,22 +4024,23 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 }
             }
             
-            console.log(`  📊 Expected Load MTD calculation:`);
-            console.log(`     Dates included: ${Object.keys(predictionsData.daily_predictions).filter(date => date.startsWith(monthKey) && date <= selectedDate).length}`);
-            console.log(`     Hour counts:`, expectedLoadHourlyCount.slice(5, 15));
-            console.log(`     Expected Load values (hours 5-14):`, expectedLoadHourly.slice(5, 15).map(v => v.toFixed(2)));
-            console.log(`     Expected Grid values (hours 5-14):`, expectedGridHourly.slice(5, 15).map(v => v.toFixed(2)));
-            
-            console.log(`  📊 Expected Load count per hour:`, expectedLoadHourlyCount.map((c, h) => `${h}:${c}`).filter((_, h) => h < 6 || (h >= 12 && h < 18)));
-            console.log(`  📊 Expected Load sample values (hours 5-10):`, expectedLoadHourly.slice(5, 11).map(v => v.toFixed(2)));
-            console.log(`  📊 Expected Grid sample values (hours 5-10):`, expectedGridHourly.slice(5, 11).map(v => v.toFixed(2)));
-            
             if (dashboardData && dashboardData.daily_records) {
-                // First, identify which hours have PV generation across MTD
+                // Determine if we're viewing a past month or current month
+                const today = new Date().toISOString().split('T')[0];
+                const currentMonthKey = today.substring(0, 7); // "2026-01"
+                const isPastMonth = monthKey < currentMonthKey;
+                
+                // For past months: use entire month
+                // For current month: use MTD (up to selected date)
+                const dateFilter = isPastMonth
+                    ? (record => record.date.startsWith(monthKey))
+                    : (record => record.date.startsWith(monthKey) && record.date <= selectedDate);
+                
+                // First, identify which hours have PV generation across the month
                 const hoursWithGeneration = new Set();
                 
                 dashboardData.daily_records
-                    .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
+                    .filter(dateFilter)
                     .forEach(record => {
                         if (record.hourly_data && Array.isArray(record.hourly_data)) {
                             record.hourly_data.forEach((hourData) => {
@@ -4034,11 +4055,12 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                         }
                     });
                 
-                console.log(`  📊 Hours with PV generation (>0.1kW):`, Array.from(hoursWithGeneration).sort((a,b) => a-b));
+                console.log(`  📊 Actual Load/Grid calculation (${isPastMonth ? 'FULL MONTH' : 'MTD'}):`);
+                console.log(`     Hours with PV generation (>0.1kW):`, Array.from(hoursWithGeneration).sort((a,b) => a-b));
                 
                 // Now collect actual Load/Grid ONLY for hours that have generation
                 dashboardData.daily_records
-                    .filter(record => record.date.startsWith(monthKey) && record.date <= selectedDate)
+                    .filter(dateFilter)
                     .forEach(record => {
                         if (record.hourly_data && Array.isArray(record.hourly_data)) {
                             record.hourly_data.forEach((hourData) => {
