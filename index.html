@@ -6251,7 +6251,28 @@ async function loadPast30Days() {
                     lastUpdate = new Date(dashboardData.last_updated);
                 }
                 
-                document.getElementById('last-update').textContent = lastUpdate.toLocaleString('en-ZA');
+                // Format the last update time in a friendly way
+                const now = new Date();
+                const today = now.toDateString();
+                const updateDate = lastUpdate.toDateString();
+                
+                let displayTime;
+                if (updateDate === today) {
+                    // Show "Today at HH:MM AM/PM"
+                    displayTime = `Today at ${now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+                } else {
+                    // Show full date and time
+                    displayTime = now.toLocaleString('en-ZA', { 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                    });
+                }
+                
+                document.getElementById('last-update').textContent = displayTime;
                 
                 // Handle yesterday's data - either from dashboard_data.json or calculate from today
                 const yesterdayGen = dashboardData.yesterday ? dashboardData.yesterday.generation_kwh : (dashboardData.today.generation_kwh * 0.95);
