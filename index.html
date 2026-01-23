@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- SheetJS for parsing Excel files in browser -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
     <style>
         * {
             margin: 0;
@@ -1905,25 +1905,16 @@
                     
                     <!-- Monthly Word Document Report -->
                     <div class="stat-card" style="padding: 30px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 2px solid rgba(255,215,0,0.3);">
-                        <h3 style="color: #FFD700; margin-bottom: 15px; font-size: 1.5em;">📄 Monthly Performance Report (Word Document)</h3>
-                        <p style="color: #aaaaaa; margin-bottom: 25px; font-size: 1.05em;">Generate a comprehensive monthly report with performance data, financial summary, and warranty status</p>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
-                            <div>
-                                <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">Report Month:</label>
-                                <input type="month" id="word-report-month" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
-                            </div>
-                            <div>
-                                <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">Report Type:</label>
-                                <select id="word-report-type" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
-                                    <option value="monthly">Monthly Report</option>
-                                    <option value="quarterly">Quarterly Report</option>
-                                </select>
-                            </div>
+                        <h3 style="color: #FFD700; margin-bottom: 15px; font-size: 1.8em;">Monthly Performance Report (Word Document)</h3>
+                        <p style="color: #aaaaaa; margin-bottom: 25px; font-size: 1.2em;">Generate a comprehensive monthly report with performance data, financial summary, and warranty status</p>
+                        <div style="margin-bottom: 25px;">
+                            <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px; font-size: 1.2em;">Report Month:</label>
+                            <input type="month" id="word-report-month" style="width: 100%; padding: 14px; font-size: 1.2em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
                         </div>
-                        <button onclick="generateWordReport()" class="btn" style="padding: 18px 50px; font-size: 1.3em; background: linear-gradient(135deg, #4ade80, #22c55e); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4);">
-                            📄 Generate Word Report
+                        <button onclick="generateWordReport()" class="btn" style="padding: 20px 60px; font-size: 1.4em; background: linear-gradient(135deg, #4ade80, #22c55e); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4);">
+                            Generate Word Report
                         </button>
-                        <div id="word-report-status" style="margin-top: 20px; font-size: 1.1em; color: #4ade80;"></div>
+                        <div id="word-report-status" style="margin-top: 20px; font-size: 1.2em; color: #4ade80;"></div>
                     </div>
                 </div>
             </div>
@@ -2755,11 +2746,18 @@
         async function generateWordReport() {
             const statusEl = document.getElementById('word-report-status');
             const monthInput = document.getElementById('word-report-month');
-            const reportType = document.getElementById('word-report-type').value;
             
             if (!monthInput.value) {
                 statusEl.textContent = '⚠️ Please select a report month';
                 statusEl.style.color = '#ff9800';
+                return;
+            }
+            
+            // Check if docx library is loaded
+            if (typeof window.docx === 'undefined') {
+                statusEl.textContent = '❌ Word document library not loaded. Please refresh the page.';
+                statusEl.style.color = '#ff4444';
+                console.error('docx library not available. window.docx:', typeof window.docx);
                 return;
             }
             
@@ -2775,14 +2773,14 @@
                 const monthData = await getMonthData(year, month);
                 
                 // Generate Word document
-                await createWordDocument(monthData, reportTitle, year, month, reportType);
+                await createWordDocument(monthData, reportTitle, year, month);
                 
                 statusEl.textContent = '✅ Word document generated successfully!';
                 statusEl.style.color = '#4ade80';
                 
             } catch (error) {
                 console.error('Word report generation error:', error);
-                statusEl.textContent = '❌ Error generating Word report';
+                statusEl.textContent = `❌ Error generating Word report: ${error.message}`;
                 statusEl.style.color = '#ff4444';
             }
         }
@@ -2838,105 +2836,112 @@
             };
         }
         
-        async function createWordDocument(data, title, year, month, reportType) {
+        async function createWordDocument(data, title, year, month) {
+            // Access docx from window since it's loaded via CDN
             const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
-                    AlignmentType, WidthType, BorderStyle, ShadingType, HeadingLevel } = docx;
+                    AlignmentType, WidthType, BorderStyle, ShadingType, HeadingLevel } = window.docx;
             
             const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
             
             // Create document sections
             const sections = [];
             
-            // Title page
+            // Title page - LARGER FONTS
             sections.push(
                 new Paragraph({
-                    text: "1st Avenue Spar",
-                    heading: HeadingLevel.TITLE,
+                    children: [new TextRun({ text: "1st Avenue Spar", size: 48, bold: true })],  // 24pt
                     alignment: AlignmentType.CENTER,
                     spacing: { before: 1440, after: 240 }
                 }),
                 new Paragraph({
-                    text: title,
-                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: title, size: 40, bold: true })],  // 20pt
                     alignment: AlignmentType.CENTER,
                     spacing: { after: 2880 }
                 })
             );
             
-            // 1. INTRODUCTION
+            // 1. INTRODUCTION - LARGER FONTS
             sections.push(
                 new Paragraph({
-                    text: "INTRODUCTION",
-                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "INTRODUCTION", size: 32, bold: true })],  // 16pt
                     spacing: { before: 480, after: 240 }
                 }),
                 new Paragraph({
                     children: [
                         new TextRun({
-                            text: `The following report contains a summary of the solar plant's performance for ${monthName} ${year}. The plant is monitored through the Genergy online portal, which provides real-time data on generation, load consumption, and grid usage.`
+                            text: `The following report contains a summary of the solar plant's performance for ${monthName} ${year}. The plant is monitored through the Genergy online portal, which provides real-time data on generation, load consumption, and grid usage.`,
+                            size: 24  // 12pt body text
                         })
                     ],
                     spacing: { after: 240 }
                 })
             );
             
-            // 2. OVERVIEW
+            // 2. OVERVIEW - LARGER FONTS
             sections.push(
                 new Paragraph({
-                    text: "OVERVIEW",
-                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "OVERVIEW", size: 32, bold: true })],  // 16pt
                     spacing: { before: 480, after: 240 }
                 }),
                 new Paragraph({
-                    text: `The table below provides a summary of ${monthName} ${year}'s generation values compared to expected performance:`,
+                    children: [new TextRun({ 
+                        text: `The table below provides a summary of ${monthName} ${year}'s generation values compared to expected performance:`,
+                        size: 24  // 12pt
+                    })],
                     spacing: { after: 240 }
                 })
             );
             
-            // Overview table
+            // Overview table - LARGER FONTS
             const overviewTable = new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 rows: [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ text: "Metric", bold: true })], shading: { fill: "FFD700" } }),
-                            new TableCell({ children: [new Paragraph({ text: "Value", bold: true })], shading: { fill: "FFD700" } })
+                            new TableCell({ 
+                                children: [new Paragraph({ children: [new TextRun({ text: "Metric", bold: true, size: 26 })] })],  // 13pt
+                                shading: { fill: "FFD700" } 
+                            }),
+                            new TableCell({ 
+                                children: [new Paragraph({ children: [new TextRun({ text: "Value", bold: true, size: 26 })] })],  // 13pt
+                                shading: { fill: "FFD700" } 
+                            })
                         ]
                     }),
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph("Total Generation")] }),
-                            new TableCell({ children: [new Paragraph(`${data.totalGeneration.toFixed(2)} kWh`)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Total Generation", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalGeneration.toFixed(2)} kWh`, size: 24 })] })] })
                         ]
                     }),
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph("Expected Generation")] }),
-                            new TableCell({ children: [new Paragraph(`${data.totalPredicted.toFixed(2)} kWh`)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Expected Generation", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalPredicted.toFixed(2)} kWh`, size: 24 })] })] })
                         ]
                     }),
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph("Performance")] }),
-                            new TableCell({ children: [new Paragraph(`${data.performance.toFixed(1)}%`)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Performance", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.performance.toFixed(1)}%`, size: 24 })] })] })
                         ]
                     }),
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph("Total Load")] }),
-                            new TableCell({ children: [new Paragraph(`${data.totalLoad.toFixed(2)} kWh`)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Total Load", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalLoad.toFixed(2)} kWh`, size: 24 })] })] })
                         ]
                     }),
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph("Grid Usage")] }),
-                            new TableCell({ children: [new Paragraph(`${data.totalGrid.toFixed(2)} kWh`)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Grid Usage", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalGrid.toFixed(2)} kWh`, size: 24 })] })] })
                         ]
                     }),
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph("Total Savings")] }),
-                            new TableCell({ children: [new Paragraph(`R ${formatNumber(data.totalSavings, 2)}`)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Total Savings", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `R ${formatNumber(data.totalSavings, 2)}`, size: 24 })] })] })
                         ]
                     })
                 ]
@@ -2946,8 +2951,7 @@
             // 3. PERFORMANCE FIGURES
             sections.push(
                 new Paragraph({
-                    text: "PERFORMANCE FIGURES",
-                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "PERFORMANCE FIGURES", size: 32, bold: true })],
                     spacing: { before: 480, after: 240 }
                 })
             );
@@ -2955,23 +2959,22 @@
             // 3.1 Daily Performance
             sections.push(
                 new Paragraph({
-                    text: "3.1 Daily Performance",
-                    heading: HeadingLevel.HEADING_2,
+                    children: [new TextRun({ text: "3.1 Daily Performance", size: 28, bold: true })],  // 14pt
                     spacing: { before: 360, after: 240 }
                 }),
                 new Paragraph({
-                    text: `Daily generation values for ${monthName} ${year}:`,
+                    children: [new TextRun({ text: `Daily generation values for ${monthName} ${year}:`, size: 24 })],
                     spacing: { after: 240 }
                 })
             );
             
-            // Daily performance table (first 10 days as sample)
+            // Daily performance table (first 10 days as sample) - LARGER FONTS
             const dailyRows = [
                 new TableRow({
                     children: [
-                        new TableCell({ children: [new Paragraph({ text: "Date", bold: true })], shading: { fill: "FFD700" } }),
-                        new TableCell({ children: [new Paragraph({ text: "Generation (kWh)", bold: true })], shading: { fill: "FFD700" } }),
-                        new TableCell({ children: [new Paragraph({ text: "Performance (%)", bold: true })], shading: { fill: "FFD700" } })
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Date", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Generation (kWh)", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Performance (%)", bold: true, size: 26 })] })], shading: { fill: "FFD700" } })
                     ]
                 })
             ];
@@ -2980,9 +2983,9 @@
                 dailyRows.push(
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph(record.date)] }),
-                            new TableCell({ children: [new Paragraph(record.generation_kwh.toFixed(2))] }),
-                            new TableCell({ children: [new Paragraph((record.performance_ratio * 100).toFixed(1) + "%")] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: record.date, size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: record.generation_kwh.toFixed(2), size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (record.performance_ratio * 100).toFixed(1) + "%", size: 24 })] })] })
                         ]
                     })
                 );
@@ -2991,15 +2994,17 @@
             const dailyTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: dailyRows });
             sections.push(dailyTable);
             
-            // Comments
+            // Comments - LARGER FONTS
             sections.push(
                 new Paragraph({
-                    text: "Comment on Daily Performance",
-                    bold: true,
+                    children: [new TextRun({ text: "Comment on Daily Performance", bold: true, size: 26 })],
                     spacing: { before: 240, after: 120 }
                 }),
                 new Paragraph({
-                    text: `The system performed consistently throughout ${monthName} ${year}, with daily yields generally aligning with expectations. The overall performance ratio of ${data.performance.toFixed(1)}% indicates ${data.performance >= 100 ? 'excellent' : 'good'} system operation.`,
+                    children: [new TextRun({
+                        text: `The system performed consistently throughout ${monthName} ${year}, with daily yields generally aligning with expectations. The overall performance ratio of ${data.performance.toFixed(1)}% indicates ${data.performance >= 100 ? 'excellent' : 'good'} system operation.`,
+                        size: 24
+                    })],
                     spacing: { after: 360 }
                 })
             );
@@ -3007,12 +3012,11 @@
             // 4. FINANCIAL SUMMARY
             sections.push(
                 new Paragraph({
-                    text: "FINANCIAL SUMMARY",
-                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "FINANCIAL SUMMARY", size: 32, bold: true })],
                     spacing: { before: 480, after: 240 }
                 }),
                 new Paragraph({
-                    text: `Total electricity cost savings for ${monthName} ${year}:`,
+                    children: [new TextRun({ text: `Total electricity cost savings for ${monthName} ${year}:`, size: 24 })],
                     spacing: { after: 240 }
                 })
             );
@@ -3022,26 +3026,26 @@
                 rows: [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ text: "Category", bold: true })], shading: { fill: "FFD700" } }),
-                            new TableCell({ children: [new Paragraph({ text: "Amount (ZAR)", bold: true })], shading: { fill: "FFD700" } })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Category", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Amount (ZAR)", bold: true, size: 26 })] })], shading: { fill: "FFD700" } })
                         ]
                     }),
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph("Total Monthly Savings")] }),
-                            new TableCell({ children: [new Paragraph(`R ${formatNumber(data.totalSavings, 2)}`)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Total Monthly Savings", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `R ${formatNumber(data.totalSavings, 2)}`, size: 24 })] })] })
                         ]
                     }),
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph("Energy Generated")] }),
-                            new TableCell({ children: [new Paragraph(`${data.totalGeneration.toFixed(2)} kWh`)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Energy Generated", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalGeneration.toFixed(2)} kWh`, size: 24 })] })] })
                         ]
                     }),
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph("Grid Consumption")] }),
-                            new TableCell({ children: [new Paragraph(`${data.totalGrid.toFixed(2)} kWh`)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Grid Consumption", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalGrid.toFixed(2)} kWh`, size: 24 })] })] })
                         ]
                     })
                 ]
@@ -3051,23 +3055,22 @@
             // 5. WARRANTY STATUS
             sections.push(
                 new Paragraph({
-                    text: "MAJOR COMPONENT WARRANTIES",
-                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "MAJOR COMPONENT WARRANTIES", size: 32, bold: true })],
                     spacing: { before: 480, after: 240 }
                 }),
                 new Paragraph({
-                    text: "The remaining warranty periods for the system's major components are given below:",
+                    children: [new TextRun({ text: "The remaining warranty periods for the system's major components are given below:", size: 24 })],
                     spacing: { after: 240 }
                 })
             );
             
-            // Warranty table
+            // Warranty table - LARGER FONTS
             const warrantyRows = [
                 new TableRow({
                     children: [
-                        new TableCell({ children: [new Paragraph({ text: "Component", bold: true })], shading: { fill: "FFD700" } }),
-                        new TableCell({ children: [new Paragraph({ text: "Days Remaining", bold: true })], shading: { fill: "FFD700" } }),
-                        new TableCell({ children: [new Paragraph({ text: "Status", bold: true })], shading: { fill: "FFD700" } })
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Component", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Days Remaining", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Status", bold: true, size: 26 })] })], shading: { fill: "FFD700" } })
                     ]
                 })
             ];
@@ -3078,9 +3081,9 @@
                 warrantyRows.push(
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph(item.item)] }),
-                            new TableCell({ children: [new Paragraph(Math.max(0, diffDays).toString())] }),
-                            new TableCell({ children: [new Paragraph(status)] })
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.item, size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: Math.max(0, diffDays).toString(), size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: status, size: 24 })] })] })
                         ]
                     })
                 );
@@ -3092,20 +3095,28 @@
             // 6. CONCLUSION
             sections.push(
                 new Paragraph({
-                    text: "CONCLUSION",
-                    heading: HeadingLevel.HEADING_1,
+                    children: [new TextRun({ text: "CONCLUSION", size: 32, bold: true })],
                     spacing: { before: 480, after: 240 }
                 }),
                 new Paragraph({
-                    text: `The report indicates that the system is performing ${data.performance >= 100 ? 'excellently' : 'as designed'} and is continuing to operate as expected. The ${monthName} ${year} performance of ${data.performance.toFixed(1)}% demonstrates reliable energy production.`,
+                    children: [new TextRun({
+                        text: `The report indicates that the system is performing ${data.performance >= 100 ? 'excellently' : 'as designed'} and is continuing to operate as expected. The ${monthName} ${year} performance of ${data.performance.toFixed(1)}% demonstrates reliable energy production.`,
+                        size: 24
+                    })],
                     spacing: { after: 240 }
                 }),
                 new Paragraph({
-                    text: "The system is monitored continuously, and all data is logged onto the online portal. Any significant deviations from expected performance are investigated promptly.",
+                    children: [new TextRun({
+                        text: "The system is monitored continuously, and all data is logged onto the online portal. Any significant deviations from expected performance are investigated promptly.",
+                        size: 24
+                    })],
                     spacing: { after: 240 }
                 }),
                 new Paragraph({
-                    text: "Please do not hesitate to contact us if you have any queries related to this report.",
+                    children: [new TextRun({
+                        text: "Please do not hesitate to contact us if you have any queries related to this report.",
+                        size: 24
+                    })],
                     spacing: { after: 240 }
                 })
             );
@@ -6306,6 +6317,12 @@ async function loadPast30Days() {
         }
         
         loadCredentials().then(() => {
+            // Check if docx library is loaded
+            console.log('📄 Checking docx library:', typeof window.docx !== 'undefined' ? '✓ Loaded' : '✗ Not loaded');
+            if (typeof window.docx !== 'undefined') {
+                console.log('📄 docx exports:', Object.keys(window.docx));
+            }
+            
             // Check for persisted authentication
             const wasLoggedIn = checkPersistedAuth();
             
