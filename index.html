@@ -3916,7 +3916,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
     
     // Calculate monthly hourly average for predicted data from predictions file
     // Get the average of each hour across the entire month from predictions_2025_2044.min.json
-    const selectedDate = document.getElementById('datePicker')?.value || new Date().toISOString().split('T')[0];
+    // Use the selectedDate parameter that was passed to this function, don't re-read from date picker
     const [year, month] = selectedDate.split('-');
     const monthKey = `${year}-${month}`;
     
