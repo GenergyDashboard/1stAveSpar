@@ -1908,37 +1908,23 @@
             <div id="warranty-tab" class="tab-content">
                 <h2 style="color: #FFD700; margin-bottom: 30px; font-size: 2.5em;">System Warranty Overview</h2>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px;">
-                    <!-- Active Warranty Donut Chart -->
-                    <div class="card" style="padding: 30px;">
-                        <h3 style="color: #4ade80; margin-bottom: 20px; text-align: center;">Active Warranty</h3>
-                        <div style="height: 350px; display: flex; justify-content: center; align-items: center;">
-                            <canvas id="activeWarrantyChart"></canvas>
-                        </div>
-                    </div>
-                    
-                    <!-- Expired Warranty Donut Chart -->
-                    <div class="card" style="padding: 30px;">
-                        <h3 style="color: #ef4444; margin-bottom: 20px; text-align: center;">Expired Warranty</h3>
-                        <div style="height: 350px; display: flex; justify-content: center; align-items: center;">
-                            <canvas id="expiredWarrantyChart"></canvas>
-                        </div>
-                    </div>
+                <div id="warrantyChartsGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-bottom: 40px;">
+                    <!-- Individual donut charts will be generated here -->
                 </div>
                 
                 <!-- Warranty Data Table -->
                 <div class="card" style="padding: 30px;">
-                    <h3 style="color: #FFD700; margin-bottom: 25px;">Warranty Details</h3>
+                    <h3 style="color: #FFD700; margin-bottom: 25px; font-size: 1.8em;">Warranty Details</h3>
                     <div style="overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr style="background: rgba(255, 215, 0, 0.1); border-bottom: 2px solid #FFD700;">
-                                    <th style="padding: 15px; text-align: left; color: #FFD700; font-weight: 600;">Item</th>
-                                    <th style="padding: 15px; text-align: left; color: #FFD700; font-weight: 600;">Start Date</th>
-                                    <th style="padding: 15px; text-align: center; color: #FFD700; font-weight: 600;">Duration (Months)</th>
-                                    <th style="padding: 15px; text-align: center; color: #FFD700; font-weight: 600;">End Date</th>
-                                    <th style="padding: 15px; text-align: center; color: #FFD700; font-weight: 600;">Days Remaining</th>
-                                    <th style="padding: 15px; text-align: center; color: #FFD700; font-weight: 600;">Status</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">Item</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">Start Date</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">Duration (Months)</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">End Date</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">Days Remaining</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="warranty-table-body">
@@ -3348,8 +3334,7 @@
             }
         ];
         
-        let activeWarrantyChart = null;
-        let expiredWarrantyChart = null;
+        let warrantyCharts = [];
         
         function calculateDaysRemaining(startDate, durationMonths) {
             const start = new Date(startDate);
@@ -3363,106 +3348,151 @@
         
         function loadWarrantyData() {
             console.log('📊 Loading warranty data...');
-            const today = new Date();
             
-            // Separate active and expired warranties
-            const activeWarranties = [];
-            const expiredWarranties = [];
+            // Destroy existing charts
+            warrantyCharts.forEach(chart => chart.destroy());
+            warrantyCharts = [];
             
-            warrantyData.forEach(item => {
+            // Calculate warranty data
+            const warrantyItems = warrantyData.map(item => {
                 const { diffDays, endDate } = calculateDaysRemaining(item.startDate, item.durationMonths);
-                const warrantyItem = {
+                const totalDays = item.durationMonths * 30; // Approximate days
+                const elapsedDays = totalDays - diffDays;
+                const remainingDays = Math.max(0, diffDays);
+                const elapsedPercentage = ((elapsedDays / totalDays) * 100).toFixed(0);
+                const remainingPercentage = ((remainingDays / totalDays) * 100).toFixed(0);
+                
+                return {
                     ...item,
                     endDate: endDate,
                     daysRemaining: diffDays,
-                    isActive: diffDays > 0
+                    isActive: diffDays > 0,
+                    totalDays: totalDays,
+                    elapsedDays: Math.max(0, elapsedDays),
+                    remainingDays: remainingDays,
+                    elapsedPercentage: elapsedPercentage,
+                    remainingPercentage: remainingPercentage
                 };
-                
-                if (diffDays > 0) {
-                    activeWarranties.push(warrantyItem);
-                } else {
-                    expiredWarranties.push(warrantyItem);
-                }
             });
             
-            // Create donut charts
-            createWarrantyDonutChart('activeWarrantyChart', activeWarranties, true);
-            createWarrantyDonutChart('expiredWarrantyChart', expiredWarranties, false);
+            // Create grid of individual donut charts
+            const grid = document.getElementById('warrantyChartsGrid');
+            grid.innerHTML = '';
+            
+            warrantyItems.forEach((item, index) => {
+                const chartId = `warrantyChart${index}`;
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.padding = '25px';
+                card.innerHTML = `
+                    <h3 style="text-align: center; margin-bottom: 15px; font-size: 1.4em; color: #ffffff;">${item.item}</h3>
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 16px; height: 16px; background: #a3e635; border-radius: 3px;"></div>
+                            <span style="color: #ffffff; font-size: 1.1em;">Remaining</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 16px; height: 16px; background: #3b3b4f; border-radius: 3px;"></div>
+                            <span style="color: #ffffff; font-size: 1.1em;">Elapsed</span>
+                        </div>
+                    </div>
+                    <div style="height: 250px; display: flex; justify-content: center; align-items: center;">
+                        <canvas id="${chartId}"></canvas>
+                    </div>
+                `;
+                grid.appendChild(card);
+                
+                // Create the donut chart
+                createIndividualWarrantyDonut(chartId, item);
+            });
             
             // Populate table
-            populateWarrantyTable([...activeWarranties, ...expiredWarranties]);
+            populateWarrantyTable(warrantyItems);
         }
         
-        function createWarrantyDonutChart(canvasId, warranties, isActive) {
+        function createIndividualWarrantyDonut(canvasId, warrantyItem) {
             const ctx = document.getElementById(canvasId);
             if (!ctx) return;
             
-            // Destroy existing chart
-            if (canvasId === 'activeWarrantyChart' && activeWarrantyChart) {
-                activeWarrantyChart.destroy();
-            }
-            if (canvasId === 'expiredWarrantyChart' && expiredWarrantyChart) {
-                expiredWarrantyChart.destroy();
-            }
-            
-            if (warranties.length === 0) {
-                ctx.parentElement.innerHTML = `
-                    <div style="text-align: center; color: #888; padding: 40px;">
-                        <p style="font-size: 1.2em;">No ${isActive ? 'expired' : 'active'} warranties</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            const labels = warranties.map(w => w.item);
-            const data = warranties.map(w => isActive ? w.daysRemaining : Math.abs(w.daysRemaining));
-            const colors = warranties.map(w => w.color);
+            const remaining = warrantyItem.remainingDays;
+            const elapsed = warrantyItem.elapsedDays;
             
             const chart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: labels,
+                    labels: ['Remaining', 'Elapsed'],
                     datasets: [{
-                        data: data,
-                        backgroundColor: colors,
+                        data: [remaining, elapsed],
+                        backgroundColor: ['#a3e635', '#3b3b4f'],
                         borderColor: '#1a1a1a',
-                        borderWidth: 2
+                        borderWidth: 3
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
+                    cutout: '60%',
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: '#ffffff',
-                                padding: 15,
-                                font: {
-                                    size: 12
-                                }
-                            }
+                            display: false
                         },
                         tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            titleFont: { size: 18, weight: 'bold' },
+                            bodyFont: { size: 20 },
+                            padding: 15,
                             callbacks: {
                                 label: function(context) {
                                     const label = context.label || '';
                                     const value = context.parsed;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    const percentage = warrantyItem[label === 'Remaining' ? 'remainingPercentage' : 'elapsedPercentage'];
                                     return `${label}: ${value} days (${percentage}%)`;
                                 }
                             }
                         }
                     }
-                }
+                },
+                plugins: [{
+                    id: 'segmentLabels',
+                    afterDatasetDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        const meta = chart.getDatasetMeta(0);
+                        const dataset = chart.data.datasets[0];
+                        
+                        ctx.save();
+                        ctx.font = 'bold 18px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        meta.data.forEach((element, index) => {
+                            const model = element;
+                            const midAngle = (element.startAngle + element.endAngle) / 2;
+                            const midRadius = (element.innerRadius + element.outerRadius) / 2;
+                            
+                            const x = model.x + Math.cos(midAngle) * midRadius;
+                            const y = model.y + Math.sin(midAngle) * midRadius;
+                            
+                            const value = dataset.data[index];
+                            const percentage = index === 0 ? warrantyItem.remainingPercentage : warrantyItem.elapsedPercentage;
+                            
+                            // Draw value
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillText(`${value};`, x, y - 12);
+                            
+                            // Draw percentage
+                            ctx.font = 'bold 16px sans-serif';
+                            ctx.fillText(`${percentage}%`, x, y + 8);
+                            ctx.font = 'bold 18px sans-serif';
+                        });
+                        
+                        ctx.restore();
+                    }
+                }]
             });
             
-            if (canvasId === 'activeWarrantyChart') {
-                activeWarrantyChart = chart;
-            } else {
-                expiredWarrantyChart = chart;
-            }
+            warrantyCharts.push(chart);
         }
         
         function populateWarrantyTable(warranties) {
@@ -3482,12 +3512,12 @@
                 
                 return `
                     <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                        <td style="padding: 15px; color: ${w.color}; font-weight: 500;">${w.item}</td>
-                        <td style="padding: 15px; color: #cccccc;">${w.startDate}</td>
-                        <td style="padding: 15px; text-align: center; color: #cccccc;">${w.durationMonths}</td>
-                        <td style="padding: 15px; text-align: center; color: #cccccc;">${endDateStr}</td>
-                        <td style="padding: 15px; text-align: center; color: ${statusColor}; font-weight: 600;">${daysText}</td>
-                        <td style="padding: 15px; text-align: center; color: ${statusColor}; font-weight: 600;">${statusText}</td>
+                        <td style="padding: 20px; color: ${w.color}; font-weight: 500; font-size: 1.15em;">${w.item}</td>
+                        <td style="padding: 20px; color: #cccccc; font-size: 1.1em;">${w.startDate}</td>
+                        <td style="padding: 20px; text-align: center; color: #cccccc; font-size: 1.1em;">${w.durationMonths}</td>
+                        <td style="padding: 20px; text-align: center; color: #cccccc; font-size: 1.1em;">${endDateStr}</td>
+                        <td style="padding: 20px; text-align: center; color: ${statusColor}; font-weight: 600; font-size: 1.1em;">${daysText}</td>
+                        <td style="padding: 20px; text-align: center; color: ${statusColor}; font-weight: 600; font-size: 1.1em;">${statusText}</td>
                     </tr>
                 `;
             }).join('');
