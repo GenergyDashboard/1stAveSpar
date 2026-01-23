@@ -6238,11 +6238,33 @@ async function loadPast30Days() {
                 
                 // Get the most recent update time from daily_records
                 let lastUpdate;
-                if (dashboardData.last_updated) {
-                    // Use root-level last_updated field (actual scraper run time)
+                // Use the latest timestamp from today's actual hourly data (what's displayed on Daily tab)
+                const today = new Date().toISOString().split('T')[0];
+                const todayRecord = dashboardData.daily_records?.find(r => r.date === today);
+                
+                if (todayRecord && todayRecord.hourly_data && todayRecord.hourly_data.length > 0) {
+                    // Find the last hour with actual generation data (non-zero)
+                    let latestHour = null;
+                    for (let i = todayRecord.hourly_data.length - 1; i >= 0; i--) {
+                        const hour = todayRecord.hourly_data[i];
+                        if (hour.generation_kw > 0 || hour.load_kw > 0) {
+                            latestHour = hour;
+                            break;
+                        }
+                    }
+                    
+                    if (latestHour && latestHour.time) {
+                        // Construct full timestamp from date + time (e.g., "2026-01-23T08:38:00")
+                        lastUpdate = new Date(`${today}T${latestHour.time}`);
+                    } else {
+                        // No data yet today, use updated_at or date
+                        lastUpdate = new Date(todayRecord.updated_at || todayRecord.date);
+                    }
+                } else if (dashboardData.last_updated) {
+                    // Fallback to root-level last_updated
                     lastUpdate = new Date(dashboardData.last_updated);
                 } else if (dashboardData.daily_records && dashboardData.daily_records.length > 0) {
-                    // Fallback: Find the most recent updated_at timestamp
+                    // Last fallback: most recent record
                     const mostRecentRecord = dashboardData.daily_records.reduce((latest, record) => {
                         const recordTime = new Date(record.updated_at || record.date);
                         const latestTime = new Date(latest.updated_at || latest.date);
