@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- SheetJS for parsing Excel files in browser -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
     <style>
         * {
             margin: 0;
@@ -1896,10 +1897,33 @@
                     <!-- Download Button & Status -->
                     <div class="stat-card" style="padding: 30px; text-align: center;">
                         <button onclick="generateReport()" class="btn" style="padding: 18px 50px; font-size: 1.3em; background: linear-gradient(135deg, #FFD700, #FFA500); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);">
-                            📥 Generate & Download Report
+                            📥 Generate & Download CSV Report
                         </button>
                         <div id="report-status" style="margin-top: 20px; font-size: 1.1em; color: #4ade80;"></div>
                         <div id="report-info" style="margin-top: 15px; color: #aaaaaa; font-size: 1em;"></div>
+                    </div>
+                    
+                    <!-- Monthly Word Document Report -->
+                    <div class="stat-card" style="padding: 30px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 2px solid rgba(255,215,0,0.3);">
+                        <h3 style="color: #FFD700; margin-bottom: 15px; font-size: 1.5em;">📄 Monthly Performance Report (Word Document)</h3>
+                        <p style="color: #aaaaaa; margin-bottom: 25px; font-size: 1.05em;">Generate a comprehensive monthly report with performance data, financial summary, and warranty status</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+                            <div>
+                                <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">Report Month:</label>
+                                <input type="month" id="word-report-month" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                            </div>
+                            <div>
+                                <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">Report Type:</label>
+                                <select id="word-report-type" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                                    <option value="monthly">Monthly Report</option>
+                                    <option value="quarterly">Quarterly Report</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="generateWordReport()" class="btn" style="padding: 18px 50px; font-size: 1.3em; background: linear-gradient(135deg, #4ade80, #22c55e); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4);">
+                            📄 Generate Word Report
+                        </button>
+                        <div id="word-report-status" style="margin-top: 20px; font-size: 1.1em; color: #4ade80;"></div>
                     </div>
                 </div>
             </div>
@@ -2136,6 +2160,16 @@
                 const endInput = document.getElementById('report-end-date');
                 if (!startInput.value || !endInput.value) {
                     setReportDateRange('thisMonth');
+                }
+                
+                // Initialize word report month with last month
+                const wordMonthInput = document.getElementById('word-report-month');
+                if (!wordMonthInput.value) {
+                    const today = new Date();
+                    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1);
+                    const year = lastMonth.getFullYear();
+                    const month = String(lastMonth.getMonth() + 1).padStart(2, '0');
+                    wordMonthInput.value = `${year}-${month}`;
                 }
             } else if (tab === 'warranty') {
                 loadWarrantyData();
@@ -2715,6 +2749,390 @@
                 statusEl.style.color = '#ff4444';
                 infoEl.textContent = error.message;
             }
+        }
+        
+        // Word Document Report Generation
+        async function generateWordReport() {
+            const statusEl = document.getElementById('word-report-status');
+            const monthInput = document.getElementById('word-report-month');
+            const reportType = document.getElementById('word-report-type').value;
+            
+            if (!monthInput.value) {
+                statusEl.textContent = '⚠️ Please select a report month';
+                statusEl.style.color = '#ff9800';
+                return;
+            }
+            
+            try {
+                statusEl.textContent = '⏳ Generating Word document...';
+                statusEl.style.color = '#4ade80';
+                
+                const [year, month] = monthInput.value.split('-');
+                const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+                const reportTitle = `${monthName} ${year} Performance Report`;
+                
+                // Get data for the selected month
+                const monthData = await getMonthData(year, month);
+                
+                // Generate Word document
+                await createWordDocument(monthData, reportTitle, year, month, reportType);
+                
+                statusEl.textContent = '✅ Word document generated successfully!';
+                statusEl.style.color = '#4ade80';
+                
+            } catch (error) {
+                console.error('Word report generation error:', error);
+                statusEl.textContent = '❌ Error generating Word report';
+                statusEl.style.color = '#ff4444';
+            }
+        }
+        
+        async function getMonthData(year, month) {
+            const monthKey = `${year}-${month}`;
+            
+            // Get all records for the selected month
+            const monthRecords = dashboardData.daily_records.filter(r => r.date.startsWith(monthKey));
+            
+            // Calculate totals
+            let totalGeneration = 0;
+            let totalPredicted = 0;
+            let totalLoad = 0;
+            let totalGrid = 0;
+            let totalSavings = 0;
+            
+            monthRecords.forEach(record => {
+                totalGeneration += record.generation_kwh || 0;
+                totalLoad += record.load_kwh || 0;
+                totalGrid += Math.abs(record.grid_kwh || 0);
+                totalSavings += record.savings_zar || 0;
+            });
+            
+            // Get predictions
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            const predResponse = await fetch(predictionsPath);
+            const predictions = await predResponse.json();
+            
+            // Calculate expected for month
+            Object.keys(predictions.daily_predictions)
+                .filter(date => date.startsWith(monthKey))
+                .forEach(date => {
+                    const dayPred = predictions.daily_predictions[date];
+                    if (dayPred.pv_kw) {
+                        totalPredicted += dayPred.pv_kw.reduce((sum, val) => sum + val, 0);
+                    }
+                });
+            
+            const performance = totalPredicted > 0 ? ((totalGeneration / totalPredicted) * 100) : 0;
+            
+            return {
+                monthRecords,
+                totalGeneration,
+                totalPredicted,
+                totalLoad,
+                totalGrid,
+                totalSavings,
+                performance,
+                year,
+                month
+            };
+        }
+        
+        async function createWordDocument(data, title, year, month, reportType) {
+            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
+                    AlignmentType, WidthType, BorderStyle, ShadingType, HeadingLevel } = docx;
+            
+            const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+            
+            // Create document sections
+            const sections = [];
+            
+            // Title page
+            sections.push(
+                new Paragraph({
+                    text: "1st Avenue Spar",
+                    heading: HeadingLevel.TITLE,
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 1440, after: 240 }
+                }),
+                new Paragraph({
+                    text: title,
+                    heading: HeadingLevel.HEADING_1,
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 2880 }
+                })
+            );
+            
+            // 1. INTRODUCTION
+            sections.push(
+                new Paragraph({
+                    text: "INTRODUCTION",
+                    heading: HeadingLevel.HEADING_1,
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    children: [
+                        new TextRun({
+                            text: `The following report contains a summary of the solar plant's performance for ${monthName} ${year}. The plant is monitored through the Genergy online portal, which provides real-time data on generation, load consumption, and grid usage.`
+                        })
+                    ],
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // 2. OVERVIEW
+            sections.push(
+                new Paragraph({
+                    text: "OVERVIEW",
+                    heading: HeadingLevel.HEADING_1,
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    text: `The table below provides a summary of ${monthName} ${year}'s generation values compared to expected performance:`,
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // Overview table
+            const overviewTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ text: "Metric", bold: true })], shading: { fill: "FFD700" } }),
+                            new TableCell({ children: [new Paragraph({ text: "Value", bold: true })], shading: { fill: "FFD700" } })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph("Total Generation")] }),
+                            new TableCell({ children: [new Paragraph(`${data.totalGeneration.toFixed(2)} kWh`)] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph("Expected Generation")] }),
+                            new TableCell({ children: [new Paragraph(`${data.totalPredicted.toFixed(2)} kWh`)] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph("Performance")] }),
+                            new TableCell({ children: [new Paragraph(`${data.performance.toFixed(1)}%`)] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph("Total Load")] }),
+                            new TableCell({ children: [new Paragraph(`${data.totalLoad.toFixed(2)} kWh`)] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph("Grid Usage")] }),
+                            new TableCell({ children: [new Paragraph(`${data.totalGrid.toFixed(2)} kWh`)] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph("Total Savings")] }),
+                            new TableCell({ children: [new Paragraph(`R ${formatNumber(data.totalSavings, 2)}`)] })
+                        ]
+                    })
+                ]
+            });
+            sections.push(overviewTable);
+            
+            // 3. PERFORMANCE FIGURES
+            sections.push(
+                new Paragraph({
+                    text: "PERFORMANCE FIGURES",
+                    heading: HeadingLevel.HEADING_1,
+                    spacing: { before: 480, after: 240 }
+                })
+            );
+            
+            // 3.1 Daily Performance
+            sections.push(
+                new Paragraph({
+                    text: "3.1 Daily Performance",
+                    heading: HeadingLevel.HEADING_2,
+                    spacing: { before: 360, after: 240 }
+                }),
+                new Paragraph({
+                    text: `Daily generation values for ${monthName} ${year}:`,
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // Daily performance table (first 10 days as sample)
+            const dailyRows = [
+                new TableRow({
+                    children: [
+                        new TableCell({ children: [new Paragraph({ text: "Date", bold: true })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ text: "Generation (kWh)", bold: true })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ text: "Performance (%)", bold: true })], shading: { fill: "FFD700" } })
+                    ]
+                })
+            ];
+            
+            data.monthRecords.slice(0, 10).forEach(record => {
+                dailyRows.push(
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph(record.date)] }),
+                            new TableCell({ children: [new Paragraph(record.generation_kwh.toFixed(2))] }),
+                            new TableCell({ children: [new Paragraph((record.performance_ratio * 100).toFixed(1) + "%")] })
+                        ]
+                    })
+                );
+            });
+            
+            const dailyTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: dailyRows });
+            sections.push(dailyTable);
+            
+            // Comments
+            sections.push(
+                new Paragraph({
+                    text: "Comment on Daily Performance",
+                    bold: true,
+                    spacing: { before: 240, after: 120 }
+                }),
+                new Paragraph({
+                    text: `The system performed consistently throughout ${monthName} ${year}, with daily yields generally aligning with expectations. The overall performance ratio of ${data.performance.toFixed(1)}% indicates ${data.performance >= 100 ? 'excellent' : 'good'} system operation.`,
+                    spacing: { after: 360 }
+                })
+            );
+            
+            // 4. FINANCIAL SUMMARY
+            sections.push(
+                new Paragraph({
+                    text: "FINANCIAL SUMMARY",
+                    heading: HeadingLevel.HEADING_1,
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    text: `Total electricity cost savings for ${monthName} ${year}:`,
+                    spacing: { after: 240 }
+                })
+            );
+            
+            const financialTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ text: "Category", bold: true })], shading: { fill: "FFD700" } }),
+                            new TableCell({ children: [new Paragraph({ text: "Amount (ZAR)", bold: true })], shading: { fill: "FFD700" } })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph("Total Monthly Savings")] }),
+                            new TableCell({ children: [new Paragraph(`R ${formatNumber(data.totalSavings, 2)}`)] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph("Energy Generated")] }),
+                            new TableCell({ children: [new Paragraph(`${data.totalGeneration.toFixed(2)} kWh`)] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph("Grid Consumption")] }),
+                            new TableCell({ children: [new Paragraph(`${data.totalGrid.toFixed(2)} kWh`)] })
+                        ]
+                    })
+                ]
+            });
+            sections.push(financialTable);
+            
+            // 5. WARRANTY STATUS
+            sections.push(
+                new Paragraph({
+                    text: "MAJOR COMPONENT WARRANTIES",
+                    heading: HeadingLevel.HEADING_1,
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    text: "The remaining warranty periods for the system's major components are given below:",
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // Warranty table
+            const warrantyRows = [
+                new TableRow({
+                    children: [
+                        new TableCell({ children: [new Paragraph({ text: "Component", bold: true })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ text: "Days Remaining", bold: true })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ text: "Status", bold: true })], shading: { fill: "FFD700" } })
+                    ]
+                })
+            ];
+            
+            warrantyData.forEach(item => {
+                const { diffDays } = calculateDaysRemaining(item.startDate, item.durationMonths);
+                const status = diffDays > 0 ? "Active" : "Expired";
+                warrantyRows.push(
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph(item.item)] }),
+                            new TableCell({ children: [new Paragraph(Math.max(0, diffDays).toString())] }),
+                            new TableCell({ children: [new Paragraph(status)] })
+                        ]
+                    })
+                );
+            });
+            
+            const warrantyTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: warrantyRows });
+            sections.push(warrantyTable);
+            
+            // 6. CONCLUSION
+            sections.push(
+                new Paragraph({
+                    text: "CONCLUSION",
+                    heading: HeadingLevel.HEADING_1,
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    text: `The report indicates that the system is performing ${data.performance >= 100 ? 'excellently' : 'as designed'} and is continuing to operate as expected. The ${monthName} ${year} performance of ${data.performance.toFixed(1)}% demonstrates reliable energy production.`,
+                    spacing: { after: 240 }
+                }),
+                new Paragraph({
+                    text: "The system is monitored continuously, and all data is logged onto the online portal. Any significant deviations from expected performance are investigated promptly.",
+                    spacing: { after: 240 }
+                }),
+                new Paragraph({
+                    text: "Please do not hesitate to contact us if you have any queries related to this report.",
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // Create document
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            size: { width: 12240, height: 15840 },  // US Letter
+                            margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+                        }
+                    },
+                    children: sections
+                }]
+            });
+            
+            // Generate and download
+            const blob = await Packer.toBlob(doc);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `1stAveSpar_${monthName}_${year}_Report.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         }
         
         // Report Generation Helper Functions
