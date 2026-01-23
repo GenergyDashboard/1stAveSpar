@@ -6278,11 +6278,11 @@ async function loadPast30Days() {
                 
                 // Format the last update time in a friendly way
                 const now = new Date();
-                const today = now.toDateString();
+                const todayString = now.toDateString();
                 const updateDate = lastUpdate.toDateString();
                 
                 let displayTime;
-                if (updateDate === today) {
+                if (updateDate === todayString) {
                     // Show "Today at HH:MM AM/PM" using the actual lastUpdate time
                     displayTime = `Today at ${lastUpdate.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
                 } else {
