@@ -3,9 +3,8 @@ name: Update Solar Data
 
 on:
   schedule:
-    - cron: '0 6 * * *'
-    - cron: '0 11 * * *'
-    - cron: '0 18 * * *'
+    # Run every hour from 05:00 to 21:00 (5 AM to 9 PM SAST)
+    - cron: '0 5-21 * * *'
   workflow_dispatch:
     inputs:
       test_mode:
@@ -165,4 +164,4 @@ jobs:
           git add data/
           git add predictions_2025_2044.min.json 2>/dev/null || true
           git add dashboard_data.json 2>/dev/null || git add data/dashboard_data.json 2>/dev/null || true
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update solar data with fresh irradiation - $(date +'%Y-%m-%d %H:%M')" && git pull --rebase origin main && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update solar data - $(date +'%Y-%m-%d %H:%M SAST')" && git pull --rebase origin main && git push)
