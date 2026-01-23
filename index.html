@@ -3353,14 +3353,25 @@
             warrantyCharts.forEach(chart => chart.destroy());
             warrantyCharts = [];
             
+            const today = new Date();
+            
             // Calculate warranty data
             const warrantyItems = warrantyData.map(item => {
                 const { diffDays, endDate } = calculateDaysRemaining(item.startDate, item.durationMonths);
-                const totalDays = item.durationMonths * 30; // Approximate days
-                const elapsedDays = totalDays - diffDays;
-                const remainingDays = Math.max(0, diffDays);
-                const elapsedPercentage = ((elapsedDays / totalDays) * 100).toFixed(0);
-                const remainingPercentage = ((remainingDays / totalDays) * 100).toFixed(0);
+                const totalDays = item.durationMonths * 30; // Approximate days in warranty period
+                
+                // Calculate days from start
+                const start = new Date(item.startDate);
+                const msFromStart = today - start;
+                const daysFromStart = Math.max(0, Math.ceil(msFromStart / (1000 * 60 * 60 * 24)));
+                
+                // Calculate elapsed and remaining, clamped to valid ranges
+                const elapsedDays = Math.min(daysFromStart, totalDays);
+                const remainingDays = Math.max(0, totalDays - elapsedDays);
+                
+                // Calculate percentages that always add to 100%
+                const elapsedPercentage = Math.round((elapsedDays / totalDays) * 100);
+                const remainingPercentage = 100 - elapsedPercentage;
                 
                 return {
                     ...item,
@@ -3368,7 +3379,7 @@
                     daysRemaining: diffDays,
                     isActive: diffDays > 0,
                     totalDays: totalDays,
-                    elapsedDays: Math.max(0, elapsedDays),
+                    elapsedDays: elapsedDays,
                     remainingDays: remainingDays,
                     elapsedPercentage: elapsedPercentage,
                     remainingPercentage: remainingPercentage
