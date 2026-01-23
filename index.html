@@ -2341,6 +2341,12 @@
                             labels: { color: '#ffffff', font: { size: 16 } }
                         },
                         tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            titleFont: { size: 18, weight: 'bold' },
+                            bodyFont: { size: 20 },
+                            padding: 15,
                             callbacks: {
                                 label: function(context) {
                                     return context.dataset.label + ': R ' + formatNumber(context.parsed.y, 2);
@@ -2430,9 +2436,9 @@
                             backgroundColor: 'rgba(0, 0, 0, 0.9)',
                             titleColor: '#ffffff',
                             bodyColor: '#ffffff',
-                            titleFont: { size: 16, weight: 'bold' },
-                            bodyFont: { size: 18 },
-                            padding: 15,
+                            titleFont: { size: 20, weight: 'bold' },
+                            bodyFont: { size: 24 },
+                            padding: 20,
                             displayColors: false,
                             callbacks: {
                                 label: function(context) {
