@@ -6238,8 +6238,11 @@ async function loadPast30Days() {
                 
                 // Get the most recent update time from daily_records
                 let lastUpdate;
-                if (dashboardData.daily_records && dashboardData.daily_records.length > 0) {
-                    // Find the most recent updated_at timestamp
+                if (dashboardData.last_updated) {
+                    // Use root-level last_updated field (actual scraper run time)
+                    lastUpdate = new Date(dashboardData.last_updated);
+                } else if (dashboardData.daily_records && dashboardData.daily_records.length > 0) {
+                    // Fallback: Find the most recent updated_at timestamp
                     const mostRecentRecord = dashboardData.daily_records.reduce((latest, record) => {
                         const recordTime = new Date(record.updated_at || record.date);
                         const latestTime = new Date(latest.updated_at || latest.date);
@@ -6247,8 +6250,8 @@ async function loadPast30Days() {
                     });
                     lastUpdate = new Date(mostRecentRecord.updated_at || mostRecentRecord.date);
                 } else {
-                    // Fallback to old last_updated field
-                    lastUpdate = new Date(dashboardData.last_updated);
+                    // Last resort: use current time
+                    lastUpdate = new Date();
                 }
                 
                 // Format the last update time in a friendly way
