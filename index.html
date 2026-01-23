@@ -3844,7 +3844,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
             pvCoveragePerfEl.className = 'performance ' + (pvCoveragePerf >= 100 ? 'positive' : 'negative');
             
             // Continue with chart rendering
-            renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord);
+            renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord, selectedDate);
         })
         .catch(error => {
             console.warn('Could not load predictions file, using fallback:', error);
@@ -3884,11 +3884,11 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 pvCoveragePerfEl.className = 'performance ' + (pvCoveragePerf >= 100 ? 'positive' : 'negative');
             }
             
-            renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord);
+            renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord, selectedDate);
         });
 }
 
-function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord) {
+function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord, selectedDate) {
     const ctx = document.getElementById('dailyChart').getContext('2d');
     if (dailyChart) dailyChart.destroy();
     
