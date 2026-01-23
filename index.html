@@ -6258,11 +6258,11 @@ async function loadPast30Days() {
                 
                 let displayTime;
                 if (updateDate === today) {
-                    // Show "Today at HH:MM AM/PM"
-                    displayTime = `Today at ${now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+                    // Show "Today at HH:MM AM/PM" using the actual lastUpdate time
+                    displayTime = `Today at ${lastUpdate.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
                 } else {
                     // Show full date and time
-                    displayTime = now.toLocaleString('en-ZA', { 
+                    displayTime = lastUpdate.toLocaleString('en-ZA', { 
                         year: 'numeric', 
                         month: '2-digit', 
                         day: '2-digit',
