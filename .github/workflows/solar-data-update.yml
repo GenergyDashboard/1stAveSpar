@@ -3,8 +3,8 @@ name: Update Solar Data
 
 on:
   schedule:
-    # Run every hour from 05:00 to 21:00 (5 AM to 9 PM SAST)
-    - cron: '0 5-21 * * *'
+    # Run every hour from 03:00 to 19:00 UTC (05:00 to 21:00 SAST/UTC+2)
+    - cron: '0 3-19 * * *'
   workflow_dispatch:
     inputs:
       test_mode:
