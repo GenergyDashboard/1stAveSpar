@@ -15,47 +15,47 @@
   },
   "today": {
     "date": "2026-01-24",
-    "generation_kwh": 412.65,
+    "generation_kwh": 501.4,
     "expected_kwh": 0,
     "performance_percent": 0,
     "avg_power_kw": 0,
     "peak_power_kw": 0,
     "env_impact": {
-      "co2_offset_tons": 0.41,
-      "trees_equivalent": 18.57,
-      "households_offset": 42.09,
-      "km_driven_offset": 1642.35,
-      "km_flown_offset": 33.42,
-      "coal_saved_kg": 226.13,
-      "water_saved_litres": 577.71
+      "co2_offset_tons": 0.5,
+      "trees_equivalent": 22.56,
+      "households_offset": 51.14,
+      "km_driven_offset": 1995.57,
+      "km_flown_offset": 40.61,
+      "coal_saved_kg": 274.77,
+      "water_saved_litres": 701.96
     }
   },
   "month": {
-    "generation_kwh": 10712.939999999999,
+    "generation_kwh": 10801.689999999999,
     "expected_kwh": 0,
     "performance_percent": 0,
     "month_name": "January 2026",
     "env_impact": {
-      "co2_offset_tons": 10.71,
-      "trees_equivalent": 482.08,
-      "households_offset": 1092.72,
-      "km_driven_offset": 42637.5,
-      "km_flown_offset": 867.75,
-      "coal_saved_kg": 5870.69,
-      "water_saved_litres": 14998.12
+      "co2_offset_tons": 10.8,
+      "trees_equivalent": 486.08,
+      "households_offset": 1101.77,
+      "km_driven_offset": 42990.73,
+      "km_flown_offset": 874.94,
+      "coal_saved_kg": 5919.33,
+      "water_saved_litres": 15122.37
     }
   },
   "lifetime": {
-    "total_generation_kwh": 25535.579999999998,
-    "total_generation_mwh": 25.53558,
+    "total_generation_kwh": 25624.329999999998,
+    "total_generation_mwh": 25.624329999999997,
     "env_impact": {
-      "co2_offset_tons": 25.54,
-      "trees_equivalent": 1149.1,
-      "households_offset": 2604.63,
-      "km_driven_offset": 101631.61,
-      "km_flown_offset": 2068.38,
-      "coal_saved_kg": 13993.5,
-      "water_saved_litres": 35749.81
+      "co2_offset_tons": 25.62,
+      "trees_equivalent": 1153.09,
+      "households_offset": 2613.68,
+      "km_driven_offset": 101984.83,
+      "km_flown_offset": 2075.57,
+      "coal_saved_kg": 14042.13,
+      "water_saved_litres": 35874.06
     }
   },
   "system": {
@@ -11801,147 +11801,313 @@
           "generation_kw": 0.0,
           "grid_kw": -36.827,
           "load_kw": 36.827,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": -1.5
         },
         {
           "time": "01:00",
           "generation_kw": 0.0,
           "grid_kw": -35.7,
           "load_kw": 35.7,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": -1.5
         },
         {
           "time": "02:00",
           "generation_kw": 0.0,
           "grid_kw": -36.207,
           "load_kw": 36.207,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": -1.5
         },
         {
           "time": "03:00",
           "generation_kw": 0.0,
           "grid_kw": -36.72,
           "load_kw": 36.72,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": -1.5
         },
         {
           "time": "04:00",
           "generation_kw": 0.0,
           "grid_kw": -38.067,
           "load_kw": 38.067,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": -1.5
         },
         {
           "time": "05:00",
           "generation_kw": 0.278,
           "grid_kw": -49.027,
           "load_kw": 49.305,
-          "intervals": 11
+          "intervals": 11,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": -0.51
         },
         {
           "time": "06:00",
           "generation_kw": 2.738,
           "grid_kw": -68.78,
           "load_kw": 71.518,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": 8.22
         },
         {
           "time": "07:00",
           "generation_kw": 10.81,
           "grid_kw": -71.807,
           "load_kw": 82.617,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 48.98
         },
         {
           "time": "08:00",
           "generation_kw": 27.879,
           "grid_kw": -52.493,
           "load_kw": 80.372,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 128.69
         },
         {
           "time": "09:00",
           "generation_kw": 42.489,
           "grid_kw": -45.653,
           "load_kw": 88.142,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 196.92
         },
         {
           "time": "10:00",
           "generation_kw": 51.977,
           "grid_kw": -41.953,
           "load_kw": 93.93,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 241.23
         },
         {
           "time": "11:00",
           "generation_kw": 59.138,
           "grid_kw": -27.807,
           "load_kw": 86.945,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 274.67
         },
         {
           "time": "12:00",
           "generation_kw": 62.344,
           "grid_kw": -30.387,
           "load_kw": 92.731,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": 219.82
         },
         {
           "time": "13:00",
           "generation_kw": 62.041,
           "grid_kw": -32.107,
           "load_kw": 94.147,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": 218.75
         },
         {
           "time": "14:00",
           "generation_kw": 58.106,
           "grid_kw": -22.46,
           "load_kw": 80.566,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": 204.78
         },
         {
           "time": "15:00",
           "generation_kw": 50.671,
           "grid_kw": -28.5,
           "load_kw": 79.171,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": 178.38
         },
         {
           "time": "16:00",
           "generation_kw": 39.076,
           "grid_kw": -36.34,
           "load_kw": 75.416,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": 137.22
         },
         {
           "time": "17:00",
           "generation_kw": 24.066,
           "grid_kw": -48.173,
           "load_kw": 72.239,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": 83.93
         },
         {
           "time": "18:00",
           "generation_kw": 9.139,
           "grid_kw": -62.12,
           "load_kw": 71.259,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 41.18
         },
         {
           "time": "19:00",
           "generation_kw": 0.64,
           "grid_kw": -68.353,
           "load_kw": 68.993,
-          "intervals": 12
+          "intervals": 12,
+          "tou_period": "standard",
+          "tou_season": "low",
+          "tou_rate": 4.67,
+          "savings_zar": 1.49
         },
         {
           "time": "20:00",
           "generation_kw": 0.003,
           "grid_kw": -26.193,
           "load_kw": 26.197,
-          "intervals": 5
+          "intervals": 5,
+          "tou_period": "off_peak",
+          "tou_season": "low",
+          "tou_rate": 3.55,
+          "savings_zar": -1.49
+        }
+      ],
+      "actual_load_kwh": 1397.07,
+      "actual_grid_kwh": 895.67,
+      "tou_breakdown": {
+        "peak_kwh": 0,
+        "standard_kwh": 202.07,
+        "off_peak_kwh": 299.32
+      },
+      "financial": {
+        "total_savings_zar": 1974.77289,
+        "peak_savings_zar": 0,
+        "standard_savings_zar": 933.1762399999999,
+        "off_peak_savings_zar": 1041.59665
+      }
+    },
+    {
+      "date": "2026-01-25",
+      "generation_kwh": 35.84,
+      "hourly_data": [
+        {
+          "time": "00:00",
+          "generation_kw": 0.0,
+          "grid_kw": -38.467,
+          "load_kw": 38.467,
+          "intervals": 12
+        },
+        {
+          "time": "01:00",
+          "generation_kw": 0.0,
+          "grid_kw": -37.94,
+          "load_kw": 37.94,
+          "intervals": 12
+        },
+        {
+          "time": "02:00",
+          "generation_kw": 0.0,
+          "grid_kw": -38.98,
+          "load_kw": 38.98,
+          "intervals": 12
+        },
+        {
+          "time": "03:00",
+          "generation_kw": 0.0,
+          "grid_kw": -37.08,
+          "load_kw": 37.08,
+          "intervals": 12
+        },
+        {
+          "time": "04:00",
+          "generation_kw": 0.0,
+          "grid_kw": -38.913,
+          "load_kw": 38.913,
+          "intervals": 12
+        },
+        {
+          "time": "05:00",
+          "generation_kw": 0.267,
+          "grid_kw": -52.54,
+          "load_kw": 52.807,
+          "intervals": 11
+        },
+        {
+          "time": "06:00",
+          "generation_kw": 2.781,
+          "grid_kw": -75.407,
+          "load_kw": 78.188,
+          "intervals": 12
+        },
+        {
+          "time": "07:00",
+          "generation_kw": 10.912,
+          "grid_kw": -64.693,
+          "load_kw": 75.605,
+          "intervals": 12
+        },
+        {
+          "time": "08:00",
+          "generation_kw": 21.884,
+          "grid_kw": -51.113,
+          "load_kw": 72.998,
+          "intervals": 10
         }
       ]
     }
@@ -11982,46 +12148,46 @@
       }
     },
     "2026-01": {
-      "total_generation_kwh": 10712.939999999999,
-      "actual_load_kwh": 29212.83,
-      "actual_grid_kwh": 18499.890000000003,
+      "total_generation_kwh": 10801.689999999999,
+      "actual_load_kwh": 29550.31,
+      "actual_grid_kwh": 18748.61,
       "days_with_data": 24,
       "tou_breakdown": {
         "peak_kwh": 747.0200000000001,
-        "standard_kwh": 7467.27,
-        "off_peak_kwh": 2498.65
+        "standard_kwh": 7477.05,
+        "off_peak_kwh": 2577.6200000000003
       },
       "financial": {
-        "total_savings_zar": 48730.22,
+        "total_savings_zar": 49048.73,
         "peak_savings_zar": 5445.3,
-        "standard_savings_zar": 34567.74,
-        "off_peak_savings_zar": 8717.18
+        "standard_savings_zar": 34610.41,
+        "off_peak_savings_zar": 8993.02
       }
     }
   },
   "lifetime_summary": {
-    "total_generation_kwh": 25535.579999999998,
-    "actual_load_kwh": 71625.55,
-    "actual_grid_kwh": 46089.97999999999,
+    "total_generation_kwh": 25624.329999999998,
+    "actual_load_kwh": 71963.03000000001,
+    "actual_grid_kwh": 46338.69999999999,
     "days_active": 59,
     "tou_breakdown": {
       "peak_kwh": 1955.0100000000002,
-      "standard_kwh": 17506.54,
-      "off_peak_kwh": 6073.99
+      "standard_kwh": 17516.32,
+      "off_peak_kwh": 6152.959999999999
     },
     "financial": {
-      "total_savings_zar": 116461.32,
+      "total_savings_zar": 116779.83,
       "peak_savings_zar": 14286.04,
-      "standard_savings_zar": 81008.73,
-      "off_peak_savings_zar": 21166.55,
+      "standard_savings_zar": 81051.4,
+      "off_peak_savings_zar": 21442.39,
       "by_year": {
         "2025": 67731.1,
-        "2026": 48730.22
+        "2026": 49048.73
       },
       "by_month": {
         "2025-11": 5631.25,
         "2025-12": 62099.86,
-        "2026-01": 48730.22
+        "2026-01": 49048.73
       }
     }
   },
