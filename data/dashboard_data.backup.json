@@ -15,47 +15,47 @@
   },
   "today": {
     "date": "2026-01-27",
-    "generation_kwh": 64.03,
+    "generation_kwh": 103.62,
     "expected_kwh": 0,
     "performance_percent": 0,
     "avg_power_kw": 0,
     "peak_power_kw": 0,
     "env_impact": {
-      "co2_offset_tons": 0.06,
-      "trees_equivalent": 2.88,
-      "households_offset": 6.53,
-      "km_driven_offset": 254.84,
-      "km_flown_offset": 5.19,
-      "coal_saved_kg": 35.09,
-      "water_saved_litres": 89.64
+      "co2_offset_tons": 0.1,
+      "trees_equivalent": 4.66,
+      "households_offset": 10.57,
+      "km_driven_offset": 412.41,
+      "km_flown_offset": 8.39,
+      "coal_saved_kg": 56.78,
+      "water_saved_litres": 145.07
     }
   },
   "month": {
-    "generation_kwh": 11556.22,
+    "generation_kwh": 11595.81,
     "expected_kwh": 0,
     "performance_percent": 0,
     "month_name": "January 2026",
     "env_impact": {
-      "co2_offset_tons": 11.56,
-      "trees_equivalent": 520.03,
-      "households_offset": 1178.73,
-      "km_driven_offset": 45993.76,
-      "km_flown_offset": 936.05,
-      "coal_saved_kg": 6332.81,
-      "water_saved_litres": 16178.71
+      "co2_offset_tons": 11.6,
+      "trees_equivalent": 521.81,
+      "households_offset": 1182.77,
+      "km_driven_offset": 46151.32,
+      "km_flown_offset": 939.26,
+      "coal_saved_kg": 6354.5,
+      "water_saved_litres": 16234.13
     }
   },
   "lifetime": {
-    "total_generation_kwh": 26378.859999999997,
-    "total_generation_mwh": 26.378859999999996,
+    "total_generation_kwh": 26418.449999999997,
+    "total_generation_mwh": 26.418449999999996,
     "env_impact": {
-      "co2_offset_tons": 26.38,
-      "trees_equivalent": 1187.05,
-      "households_offset": 2690.64,
-      "km_driven_offset": 104987.86,
-      "km_flown_offset": 2136.69,
-      "coal_saved_kg": 14455.62,
-      "water_saved_litres": 36930.4
+      "co2_offset_tons": 26.42,
+      "trees_equivalent": 1188.83,
+      "households_offset": 2694.68,
+      "km_driven_offset": 105145.43,
+      "km_flown_offset": 2139.89,
+      "coal_saved_kg": 14477.31,
+      "water_saved_litres": 36985.83
     }
   },
   "system": {
@@ -12555,7 +12555,7 @@
     },
     {
       "date": "2026-01-27",
-      "generation_kwh": 103.62,
+      "generation_kwh": 128.39,
       "hourly_data": [
         {
           "time": "00:00",
@@ -12636,9 +12636,16 @@
         },
         {
           "time": "11:00",
-          "generation_kw": 30.493,
-          "grid_kw": -31.607,
-          "load_kw": 62.1,
+          "generation_kw": 34.354,
+          "grid_kw": -47.28,
+          "load_kw": 81.634,
+          "intervals": 12
+        },
+        {
+          "time": "12:00",
+          "generation_kw": 20.901,
+          "grid_kw": -46.413,
+          "load_kw": 67.314,
           "intervals": 9
         }
       ]
@@ -12680,46 +12687,46 @@
       }
     },
     "2026-01": {
-      "total_generation_kwh": 11556.22,
-      "actual_load_kwh": 33273.38,
-      "actual_grid_kwh": 21717.15,
+      "total_generation_kwh": 11595.81,
+      "actual_load_kwh": 33350.44,
+      "actual_grid_kwh": 21754.620000000003,
       "days_with_data": 27,
       "tou_breakdown": {
         "peak_kwh": 791.2400000000001,
-        "standard_kwh": 7770.69,
+        "standard_kwh": 7810.29,
         "off_peak_kwh": 2994.2900000000004
       },
       "financial": {
-        "total_savings_zar": 52148.1,
+        "total_savings_zar": 52331.52,
         "peak_savings_zar": 5764.69,
-        "standard_savings_zar": 35957.72,
+        "standard_savings_zar": 36141.14,
         "off_peak_savings_zar": 10425.69
       }
     }
   },
   "lifetime_summary": {
-    "total_generation_kwh": 26378.859999999997,
-    "actual_load_kwh": 75686.10000000002,
-    "actual_grid_kwh": 49307.23999999999,
+    "total_generation_kwh": 26418.449999999997,
+    "actual_load_kwh": 75763.16000000002,
+    "actual_grid_kwh": 49344.709999999985,
     "days_active": 62,
     "tou_breakdown": {
       "peak_kwh": 1999.2300000000002,
-      "standard_kwh": 17809.96,
+      "standard_kwh": 17849.559999999998,
       "off_peak_kwh": 6569.629999999999
     },
     "financial": {
-      "total_savings_zar": 119879.2,
+      "total_savings_zar": 120062.63,
       "peak_savings_zar": 14605.43,
-      "standard_savings_zar": 82398.7,
+      "standard_savings_zar": 82582.13,
       "off_peak_savings_zar": 22875.07,
       "by_year": {
         "2025": 67731.1,
-        "2026": 52148.1
+        "2026": 52331.52
       },
       "by_month": {
         "2025-11": 5631.25,
         "2025-12": 62099.86,
-        "2026-01": 52148.1
+        "2026-01": 52331.52
       }
     }
   },
