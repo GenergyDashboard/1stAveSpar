@@ -1469,82 +1469,92 @@
                     </div>
                 </div>
                 
-                <!-- TOU Breakdown & Savings Card - 3 Sections -->
+                <!-- TOU Breakdown & Savings Card - Table Format -->
                 <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
                         <div class="label">Time of Use Financial Breakdown</div>
                         
-                        <!-- Section 1: Utility Cost (Eskom Rates) -->
-                        <div style="margin-bottom: 20px;">
-                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">Utility Cost (Eskom Rates)</div>
-                            <div class="tou-breakdown">
-                                <div class="tou-item">
-                                    <span class="tou-label peak">Peak</span>
-                                    <span class="tou-value" id="daily-tou-peak">--</span>
-                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-utility-peak">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label standard">Standard</span>
-                                    <span class="tou-value" id="daily-tou-standard">--</span>
-                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-utility-standard">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label off-peak">Off-Peak</span>
-                                    <span class="tou-value" id="daily-tou-off-peak">--</span>
-                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-utility-off-peak">--</span></span>
-                                </div>
-                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
-                                    <span class="tou-label">Total Utility</span>
-                                    <span class="savings-amount" style="margin-left: auto; font-weight: bold;">R<span id="daily-utility-total">--</span></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Section 2: PPA Cost (Solar Generation Cost) -->
-                        <div style="margin-bottom: 20px;">
-                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">PPA Cost (Solar @ R1.50/kWh)</div>
-                            <div class="tou-breakdown">
-                                <div class="tou-item">
-                                    <span class="tou-label peak">Peak</span>
-                                    <span style="margin-left: auto;">R<span id="daily-ppa-peak">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label standard">Standard</span>
-                                    <span style="margin-left: auto;">R<span id="daily-ppa-standard">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label off-peak">Off-Peak</span>
-                                    <span style="margin-left: auto;">R<span id="daily-ppa-off-peak">--</span></span>
-                                </div>
-                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
-                                    <span class="tou-label">Total PPA</span>
-                                    <span style="margin-left: auto; font-weight: bold;">R<span id="daily-ppa-total">--</span></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Section 3: Actual Savings (Utility - PPA) -->
-                        <div>
-                            <div style="font-size: 0.9em; color: #4ade80; margin-bottom: 8px; font-weight: bold;">Actual Savings</div>
-                            <div class="tou-breakdown">
-                                <div class="tou-item">
-                                    <span class="tou-label peak">Peak</span>
-                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="daily-savings-peak">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label standard">Standard</span>
-                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="daily-savings-standard">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label off-peak">Off-Peak</span>
-                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="daily-savings-off-peak">--</span></span>
-                                </div>
-                                <div class="tou-item" style="border-top: 2px solid rgba(74,222,128,0.3); margin-top: 10px; padding-top: 10px; font-weight: bold;">
-                                    <span class="tou-label">Total Savings</span>
-                                    <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="daily-total-savings">--</span></span>
-                                </div>
-                            </div>
-                        </div>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: 0.9em;">Period</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Generation</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Utility Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">PPA Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: 0.9em;">Savings</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label peak">Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="daily-tou-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-utility-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-ppa-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="daily-savings-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label standard">Standard</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="daily-tou-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-utility-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-ppa-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="daily-savings-standard">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label off-peak">Off-Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="daily-tou-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-utility-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-ppa-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="daily-savings-off-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-top: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05);">
+                                    <td style="padding: 15px; font-weight: bold; color: #FFD700;">
+                                        TOTAL
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        <span id="daily-tou-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="daily-utility-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="daily-ppa-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: 1.1em;">
+                                        R<span id="daily-total-savings">--</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 
@@ -1613,82 +1623,92 @@
                     </div>
                 </div>
                 
-                <!-- TOU Breakdown & Savings Card - 3 Sections -->
+                <!-- TOU Breakdown & Savings Card - Table Format -->
                 <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
                         <div class="label">Time of Use Financial Breakdown</div>
                         
-                        <!-- Section 1: Utility Cost (Eskom Rates) -->
-                        <div style="margin-bottom: 20px;">
-                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">Utility Cost (Eskom Rates)</div>
-                            <div class="tou-breakdown">
-                                <div class="tou-item">
-                                    <span class="tou-label peak">Peak</span>
-                                    <span class="tou-value" id="monthly-tou-peak">--</span>
-                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-utility-peak">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label standard">Standard</span>
-                                    <span class="tou-value" id="monthly-tou-standard">--</span>
-                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-utility-standard">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label off-peak">Off-Peak</span>
-                                    <span class="tou-value" id="monthly-tou-off-peak">--</span>
-                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-utility-off-peak">--</span></span>
-                                </div>
-                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
-                                    <span class="tou-label">Total Utility</span>
-                                    <span class="savings-amount" style="margin-left: auto; font-weight: bold;">R<span id="monthly-utility-total">--</span></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Section 2: PPA Cost (Solar Generation Cost) -->
-                        <div style="margin-bottom: 20px;">
-                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">PPA Cost (Solar @ R1.50/kWh)</div>
-                            <div class="tou-breakdown">
-                                <div class="tou-item">
-                                    <span class="tou-label peak">Peak</span>
-                                    <span style="margin-left: auto;">R<span id="monthly-ppa-peak">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label standard">Standard</span>
-                                    <span style="margin-left: auto;">R<span id="monthly-ppa-standard">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label off-peak">Off-Peak</span>
-                                    <span style="margin-left: auto;">R<span id="monthly-ppa-off-peak">--</span></span>
-                                </div>
-                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
-                                    <span class="tou-label">Total PPA</span>
-                                    <span style="margin-left: auto; font-weight: bold;">R<span id="monthly-ppa-total">--</span></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Section 3: Actual Savings (Utility - PPA) -->
-                        <div>
-                            <div style="font-size: 0.9em; color: #4ade80; margin-bottom: 8px; font-weight: bold;">Actual Savings</div>
-                            <div class="tou-breakdown">
-                                <div class="tou-item">
-                                    <span class="tou-label peak">Peak</span>
-                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="monthly-savings-peak">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label standard">Standard</span>
-                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="monthly-savings-standard">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label off-peak">Off-Peak</span>
-                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="monthly-savings-off-peak">--</span></span>
-                                </div>
-                                <div class="tou-item" style="border-top: 2px solid rgba(74,222,128,0.3); margin-top: 10px; padding-top: 10px; font-weight: bold;">
-                                    <span class="tou-label">Total Savings</span>
-                                    <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="monthly-total-savings">--</span></span>
-                                </div>
-                            </div>
-                        </div>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: 0.9em;">Period</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Generation</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Utility Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">PPA Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: 0.9em;">Savings</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label peak">Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="monthly-tou-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-utility-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-ppa-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="monthly-savings-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label standard">Standard</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="monthly-tou-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-utility-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-ppa-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="monthly-savings-standard">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label off-peak">Off-Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="monthly-tou-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-utility-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-ppa-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="monthly-savings-off-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-top: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05);">
+                                    <td style="padding: 15px; font-weight: bold; color: #FFD700;">
+                                        TOTAL
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        <span id="monthly-tou-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="monthly-utility-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="monthly-ppa-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: 1.1em;">
+                                        R<span id="monthly-total-savings">--</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 
@@ -1739,82 +1759,92 @@
                     </div>
                 </div>
                 
-                <!-- TOU Breakdown & Savings Card - 3 Sections -->
+                <!-- TOU Breakdown & Savings Card - Table Format -->
                 <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
                         <div class="label">Lifetime Time of Use Financial Breakdown</div>
                         
-                        <!-- Section 1: Utility Cost (Eskom Rates) -->
-                        <div style="margin-bottom: 20px;">
-                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">Utility Cost (Eskom Rates)</div>
-                            <div class="tou-breakdown">
-                                <div class="tou-item">
-                                    <span class="tou-label peak">Peak</span>
-                                    <span class="tou-value" id="lifetime-tou-peak">--</span>
-                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-utility-peak">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label standard">Standard</span>
-                                    <span class="tou-value" id="lifetime-tou-standard">--</span>
-                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-utility-standard">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label off-peak">Off-Peak</span>
-                                    <span class="tou-value" id="lifetime-tou-off-peak">--</span>
-                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-utility-off-peak">--</span></span>
-                                </div>
-                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
-                                    <span class="tou-label">Total Utility</span>
-                                    <span class="savings-amount" style="margin-left: auto; font-weight: bold;">R<span id="lifetime-utility-total">--</span></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Section 2: PPA Cost (Solar Generation Cost) -->
-                        <div style="margin-bottom: 20px;">
-                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">PPA Cost (Solar @ R1.50/kWh)</div>
-                            <div class="tou-breakdown">
-                                <div class="tou-item">
-                                    <span class="tou-label peak">Peak</span>
-                                    <span style="margin-left: auto;">R<span id="lifetime-ppa-peak">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label standard">Standard</span>
-                                    <span style="margin-left: auto;">R<span id="lifetime-ppa-standard">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label off-peak">Off-Peak</span>
-                                    <span style="margin-left: auto;">R<span id="lifetime-ppa-off-peak">--</span></span>
-                                </div>
-                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
-                                    <span class="tou-label">Total PPA</span>
-                                    <span style="margin-left: auto; font-weight: bold;">R<span id="lifetime-ppa-total">--</span></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Section 3: Actual Savings (Utility - PPA) -->
-                        <div>
-                            <div style="font-size: 0.9em; color: #4ade80; margin-bottom: 8px; font-weight: bold;">Actual Savings</div>
-                            <div class="tou-breakdown">
-                                <div class="tou-item">
-                                    <span class="tou-label peak">Peak</span>
-                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="lifetime-savings-peak">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label standard">Standard</span>
-                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="lifetime-savings-standard">--</span></span>
-                                </div>
-                                <div class="tou-item">
-                                    <span class="tou-label off-peak">Off-Peak</span>
-                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="lifetime-savings-off-peak">--</span></span>
-                                </div>
-                                <div class="tou-item" style="border-top: 2px solid rgba(74,222,128,0.3); margin-top: 10px; padding-top: 10px; font-weight: bold;">
-                                    <span class="tou-label">Total Savings</span>
-                                    <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="lifetime-total-savings">--</span></span>
-                                </div>
-                            </div>
-                        </div>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: 0.9em;">Period</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Generation</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Utility Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">PPA Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: 0.9em;">Savings</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label peak">Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="lifetime-tou-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-utility-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-ppa-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="lifetime-savings-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label standard">Standard</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="lifetime-tou-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-utility-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-ppa-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="lifetime-savings-standard">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label off-peak">Off-Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="lifetime-tou-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-utility-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-ppa-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="lifetime-savings-off-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-top: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05);">
+                                    <td style="padding: 15px; font-weight: bold; color: #FFD700;">
+                                        TOTAL
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        <span id="lifetime-tou-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="lifetime-utility-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="lifetime-ppa-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: 1.1em;">
+                                        R<span id="lifetime-total-savings">--</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 
@@ -2499,6 +2529,10 @@
                 document.getElementById(`${prefix}-tou-standard`).textContent = '-- kWh';
                 document.getElementById(`${prefix}-tou-off-peak`).textContent = '-- kWh';
                 
+                // Clear total generation
+                const totalGenEl = document.getElementById(`${prefix}-tou-total`);
+                if (totalGenEl) totalGenEl.textContent = '-- kWh';
+                
                 // Clear all financial values
                 ['utility', 'ppa', 'savings'].forEach(type => {
                     ['peak', 'standard', 'off-peak', 'total'].forEach(period => {
@@ -2516,6 +2550,13 @@
             document.getElementById(`${prefix}-tou-peak`).textContent = formatNumber(tou.peak_kwh, 1) + ' kWh';
             document.getElementById(`${prefix}-tou-standard`).textContent = formatNumber(tou.standard_kwh, 1) + ' kWh';
             document.getElementById(`${prefix}-tou-off-peak`).textContent = formatNumber(tou.off_peak_kwh, 1) + ' kWh';
+            
+            // Calculate and display total generation
+            const totalGen = tou.peak_kwh + tou.standard_kwh + tou.off_peak_kwh;
+            const totalGenEl = document.getElementById(`${prefix}-tou-total`);
+            if (totalGenEl) {
+                totalGenEl.textContent = formatNumber(totalGen, 1) + ' kWh';
+            }
             
             // Calculate 3-part financial breakdown
             const financials = calculateTOUFinancials(tou);
