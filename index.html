@@ -214,6 +214,7 @@
 #system-cap::after,
 #downtime-events-count::after,
 #downtime-total-duration::after,
+#downtime-lost-generation::after,
 #downtime-financial-loss::after {
     content: '';
 }
@@ -2762,7 +2763,7 @@
             for (const record of records) {
                 if (!record.hourly_data || record.hourly_data.length === 0) continue;
                 
-                const dayDowntime = analyzeDayDowntime(record);
+                const dayDowntime = analyzeDayDowntime(record, records);  // Pass all records
                 downtimeEvents.push(...dayDowntime);
                 
                 dayDowntime.forEach(event => {
@@ -2788,7 +2789,7 @@
             return endTotalMinutes - startTotalMinutes;
         }
         
-        function analyzeDayDowntime(record) {
+        function analyzeDayDowntime(record, allRecords) {
             const downtimeEvents = [];
             const hourlyData = record.hourly_data;
             
@@ -2807,8 +2808,8 @@
                 
                 const generation = hour.generation_kw || 0;
                 
-                // Calculate expected generation from surrounding actual data
-                const expectedGen = getExpectedFromSurroundingIntervals(hourlyData, i);
+                // Calculate expected generation from same-time averages across the month
+                const expectedGen = getExpectedFromMonthAverage(allRecords, record.date, hourNum, minuteNum);
                 
                 // Consider it downtime if generation is 0 or <5% of expected during daylight
                 const isDowntime = generation < (expectedGen * 0.05) && expectedGen > 1;
@@ -2883,64 +2884,75 @@
             return downtimeEvents;
         }
         
-        function getExpectedFromSurroundingIntervals(hourlyData, currentIndex) {
-            // Get average generation from surrounding 5-minute intervals (actual data)
-            // Look at ±30 minutes (6 intervals before and after)
-            const lookback = 6;
-            const lookahead = 6;
+        function getExpectedFromMonthAverage(allRecords, currentDate, hourNum, minuteNum) {
+            // Calculate expected generation by averaging same-time-of-day from other days
+            // This is much more accurate than using surrounding intervals
             
-            const startIdx = Math.max(0, currentIndex - lookback);
-            const endIdx = Math.min(hourlyData.length - 1, currentIndex + lookahead);
+            const targetTime = `${String(hourNum).padStart(2, '0')}:${String(minuteNum).padStart(2, '0')}:00`;
             
             let sum = 0;
             let count = 0;
             
-            // Collect non-zero generation values from surrounding intervals
-            for (let i = startIdx; i <= endIdx; i++) {
-                // Skip the current interval itself
-                if (i === currentIndex) continue;
+            // Get all records from the same month
+            const currentMonth = currentDate.substring(0, 7); // "2026-01"
+            
+            for (const record of allRecords) {
+                // Skip the current day (to avoid using its downtime in the average)
+                if (record.date === currentDate) continue;
                 
-                const gen = hourlyData[i].generation_kw || 0;
+                // Only use records from the same month
+                if (!record.date.startsWith(currentMonth)) continue;
                 
-                // Only include positive generation values
-                if (gen > 0.5) {  // Filter out very small noise values
-                    sum += gen;
-                    count++;
+                // Find the same time interval in this record
+                if (!record.hourly_data) continue;
+                
+                for (const interval of record.hourly_data) {
+                    if (interval.time === targetTime) {
+                        const gen = interval.generation_kw || 0;
+                        if (gen > 0.5) {  // Filter out noise
+                            sum += gen;
+                            count++;
+                        }
+                        break;  // Found the matching time, move to next record
+                    }
                 }
             }
             
+            // If we have at least 3 data points from other days, use the average
             if (count >= 3) {
-                // Return average of surrounding actual data (need at least 3 points)
                 return sum / count;
             }
             
-            // Fallback: expand to ±60 minutes if insufficient nearby data
-            const widerLookback = 12;
-            const widerLookahead = 12;
-            
+            // Fallback 1: Use same hour (not just same 5-min) from other days
             sum = 0;
             count = 0;
             
-            for (let i = Math.max(0, currentIndex - widerLookback); i <= Math.min(hourlyData.length - 1, currentIndex + widerLookahead); i++) {
-                if (i === currentIndex) continue;
+            for (const record of allRecords) {
+                if (record.date === currentDate) continue;
+                if (!record.date.startsWith(currentMonth)) continue;
+                if (!record.hourly_data) continue;
                 
-                const gen = hourlyData[i].generation_kw || 0;
-                if (gen > 0.5) {
-                    sum += gen;
-                    count++;
+                for (const interval of record.hourly_data) {
+                    const intervalHour = parseInt(interval.time.split(':')[0]);
+                    if (intervalHour === hourNum) {
+                        const gen = interval.generation_kw || 0;
+                        if (gen > 0.5) {
+                            sum += gen;
+                            count++;
+                        }
+                    }
                 }
             }
             
-            if (count > 0) {
+            if (count >= 5) {  // Need more points when using hourly averages
                 return sum / count;
             }
             
-            // Last resort: use typical pattern
-            const currentTime = hourlyData[currentIndex].time;
-            const hourNum = parseInt(currentTime.split(':')[0]);
+            // Fallback 2: Use typical pattern based on system size
+            // For a 71.59 kWp system
             const typicalPattern = {
-                6: 5, 7: 15, 8: 25, 9: 35, 10: 40, 11: 45, 12: 45,
-                13: 40, 14: 35, 15: 28, 16: 20, 17: 12, 18: 5
+                6: 8, 7: 18, 8: 30, 9: 40, 10: 50, 11: 58, 12: 60,
+                13: 58, 14: 50, 15: 40, 16: 28, 17: 18, 18: 8
             };
             
             return typicalPattern[hourNum] || 0;
