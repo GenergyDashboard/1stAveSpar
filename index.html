@@ -2496,17 +2496,22 @@
          */
         function getTOURates(dateStr) {
             const season = getSeason(dateStr);
+            console.log(`[getTOURates] dateStr=${dateStr}, season=${season}`);
             
             if (season === 'weighted') {
                 // For lifetime stats: weighted average (9 months low-demand, 3 months high-demand)
-                return {
+                const rates = {
                     peak: (TOU_RATES_2026.low_season.peak * 9 + TOU_RATES_2026.high_season.peak * 3) / 12,
                     standard: (TOU_RATES_2026.low_season.standard * 9 + TOU_RATES_2026.high_season.standard * 3) / 12,
                     off_peak: (TOU_RATES_2026.low_season.off_peak * 9 + TOU_RATES_2026.high_season.off_peak * 3) / 12
                 };
+                console.log(`[getTOURates] weighted average rates:`, rates);
+                return rates;
             }
             
-            return TOU_RATES_2026[season];
+            const rates = TOU_RATES_2026[season];
+            console.log(`[getTOURates] ${season} rates:`, rates);
+            return rates;
         }
         
         /**
@@ -2516,6 +2521,8 @@
          * @returns {Object} - {utility, ppa, savings} each with {peak, standard, off_peak, total}
          */
         function calculateTOUFinancials(touKwh, dateStr = null) {
+            console.log(`[calculateTOUFinancials] touKwh=`, touKwh, `dateStr=${dateStr}`);
+            
             const peakKwh = touKwh.peak_kwh || 0;
             const standardKwh = touKwh.standard_kwh || 0;
             const offPeakKwh = touKwh.off_peak_kwh || 0;
@@ -2547,6 +2554,7 @@
             };
             savings.total = savings.peak + savings.standard + savings.off_peak;
             
+            console.log(`[calculateTOUFinancials] result:`, { utility, ppa, savings });
             return { utility, ppa, savings };
         }
         
@@ -2579,7 +2587,10 @@
         }
         
         function updateTouBreakdown(prefix, data) {
+            console.log(`[updateTouBreakdown] prefix=${prefix}, data=`, data);
+            
             if (!data || !data.tou_breakdown) {
+                console.log(`[updateTouBreakdown] No TOU data for ${prefix}`);
                 document.getElementById(`${prefix}-tou-peak`).textContent = '-- kWh';
                 document.getElementById(`${prefix}-tou-standard`).textContent = '-- kWh';
                 document.getElementById(`${prefix}-tou-off-peak`).textContent = '-- kWh';
@@ -2600,6 +2611,7 @@
             }
             
             const tou = data.tou_breakdown;
+            console.log(`[updateTouBreakdown] TOU breakdown:`, tou);
             
             // Display kWh values
             document.getElementById(`${prefix}-tou-peak`).textContent = formatNumber(tou.peak_kwh, 1) + ' kWh';
@@ -2622,13 +2634,21 @@
                 dateStr = data.date; // Daily data
             } else if (data.month) {
                 dateStr = data.month + '-01'; // Monthly data
-            } else if (prefix === 'monthly' && currentSelectedMonth) {
-                dateStr = currentSelectedMonth + '-01';
+            } else if (prefix === 'monthly') {
+                // Try to get from selectors
+                const selectedYear = document.getElementById('yearSelector')?.value;
+                const selectedMonth = document.getElementById('monthSelector')?.value;
+                if (selectedYear && selectedMonth) {
+                    dateStr = `${selectedYear}-${selectedMonth}-01`;
+                }
             }
             // For lifetime, dateStr remains null, triggering weighted average
             
+            console.log(`[updateTouBreakdown] dateStr for ${prefix}:`, dateStr);
+            
             // Calculate 3-part financial breakdown with seasonal rates
             const financials = calculateTOUFinancials(tou, dateStr);
+            console.log(`[updateTouBreakdown] financials:`, financials);
             
             // Update Utility Cost section
             document.getElementById(`${prefix}-utility-peak`).textContent = formatNumber(financials.utility.peak, 2);
@@ -6060,6 +6080,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
         const monthKey = `${selectedYear}-${selectedMonth}`;
         const monthlyData = dashboardData.monthly_summaries[monthKey];
         if (monthlyData) {
+            // Add month field for seasonal rate calculation
+            monthlyData.month = monthKey;
             updateTouBreakdown('monthly', monthlyData);
         }
     }
