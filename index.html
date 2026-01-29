@@ -2885,51 +2885,45 @@
         }
         
         function getExpectedFromMonthAverage(allRecords, currentDate, hourNum, minuteNum) {
-            // Calculate expected generation by averaging same-time-of-day from other days
-            // This is much more accurate than using surrounding intervals
-            
-            const targetTime = `${String(hourNum).padStart(2, '0')}:${String(minuteNum).padStart(2, '0')}:00`;
+            // Calculate expected generation by averaging same-time-of-day from ALL available days
             
             let sum = 0;
             let count = 0;
             
-            // Get all records from the same month
-            const currentMonth = currentDate.substring(0, 7); // "2026-01"
-            
+            // Strategy 1: Look for same time across ALL days
             for (const record of allRecords) {
-                // Skip the current day (to avoid using its downtime in the average)
                 if (record.date === currentDate) continue;
-                
-                // Only use records from the same month
-                if (!record.date.startsWith(currentMonth)) continue;
-                
-                // Find the same time interval in this record
                 if (!record.hourly_data) continue;
                 
                 for (const interval of record.hourly_data) {
-                    if (interval.time === targetTime) {
+                    // More lenient time matching - just check hour and minute
+                    const intervalHour = parseInt(interval.time.split(':')[0]);
+                    const intervalMinute = parseInt(interval.time.split(':')[1]);
+                    
+                    if (intervalHour === hourNum && intervalMinute === minuteNum) {
                         const gen = interval.generation_kw || 0;
-                        if (gen > 0.5) {  // Filter out noise
+                        if (gen > 0.5) {
                             sum += gen;
                             count++;
                         }
-                        break;  // Found the matching time, move to next record
+                        break;
                     }
                 }
             }
             
-            // If we have at least 3 data points from other days, use the average
-            if (count >= 3) {
-                return sum / count;
+            // Accept ANY positive data points
+            if (count > 0) {
+                const avg = sum / count;
+                console.log(`✓ ${hourNum}:${String(minuteNum).padStart(2,'0')} - Found ${count} points, avg: ${avg.toFixed(1)} kW`);
+                return avg;
             }
             
-            // Fallback 1: Use same hour (not just same 5-min) from other days
+            // Strategy 2: Use same hour from ALL days
             sum = 0;
             count = 0;
             
             for (const record of allRecords) {
                 if (record.date === currentDate) continue;
-                if (!record.date.startsWith(currentMonth)) continue;
                 if (!record.hourly_data) continue;
                 
                 for (const interval of record.hourly_data) {
@@ -2944,18 +2938,21 @@
                 }
             }
             
-            if (count >= 5) {  // Need more points when using hourly averages
-                return sum / count;
+            if (count > 0) {
+                const avg = sum / count;
+                console.log(`✓ Hour ${hourNum} - Found ${count} hourly points, avg: ${avg.toFixed(1)} kW`);
+                return avg;
             }
             
-            // Fallback 2: Use typical pattern based on system size
-            // For a 71.59 kWp system
+            // Strategy 3: Use REALISTIC pattern for 71.59 kWp system
+            console.log(`⚠ Using fallback pattern for hour ${hourNum}`);
             const typicalPattern = {
-                6: 8, 7: 18, 8: 30, 9: 40, 10: 50, 11: 58, 12: 60,
-                13: 58, 14: 50, 15: 40, 16: 28, 17: 18, 18: 8
+                6: 10,   7: 22,   8: 35,   9: 48,
+                10: 58,  11: 65,  12: 68,  13: 65,
+                14: 58,  15: 48,  16: 35,  17: 22,  18: 10
             };
             
-            return typicalPattern[hourNum] || 0;
+            return typicalPattern[hourNum] || 5;
         }
         
         function getTOUPeriod(date, hour, minute) {
