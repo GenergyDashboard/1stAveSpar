@@ -211,7 +211,10 @@
 #pv-coverage::after,
 #monthly-coverage::after,
 #lifetime-coverage::after,
-#system-cap::after {
+#system-cap::after,
+#downtime-events-count::after,
+#downtime-total-duration::after,
+#downtime-financial-loss::after {
     content: '';
 }
 /* Remove kWh from all financial/currency values */
@@ -1923,8 +1926,6 @@
             <!-- Downtime Tab -->
             <div id="downtime-tab" class="tab-content">
                 <h2 style="color: #FFD700; margin-bottom: 30px; font-size: 2.5em;">System Downtime Analysis</h2>
-                <p style="color: #aaaaaa; margin-bottom: 10px; font-size: 1.1em;">Track periods when the system had zero generation during expected production hours</p>
-                <p style="color: #4ade80; margin-bottom: 30px; font-size: 0.95em;">💡 Lost generation calculated from actual 5-minute interval averages. Financial loss uses Eskom TOU rates: Peak R4.68/kWh, Standard R3.38/kWh, Off-Peak R2.07/kWh</p>
                 
                 <!-- Date Range Selection -->
                 <div class="card" style="padding: 30px; margin-bottom: 30px;">
@@ -1976,8 +1977,7 @@
                 
                 <!-- Downtime Events Table -->
                 <div class="card" style="padding: 30px;">
-                    <h3 style="color: #FFD700; margin-bottom: 15px; font-size: 1.8em;">Downtime Events</h3>
-                    <p style="color: #aaaaaa; margin-bottom: 20px; font-size: 0.9em;">💡 Hover over Lost Gen and Financial Loss values to see TOU breakdown</p>
+                    <h3 style="color: #FFD700; margin-bottom: 25px; font-size: 1.8em;">Downtime Events</h3>
                     <div id="downtime-table-container" style="overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
@@ -2781,6 +2781,14 @@
             updateDowntimeUI(downtimeEvents, totalDowntimeMinutes, totalLostGeneration, totalFinancialLoss);
         }
         
+        
+        function calculateActualDuration(startHour, startMinute, endHour, endMinute) {
+            // Calculate duration in minutes from start to end time
+            const startTotalMinutes = (startHour * 60) + startMinute;
+            const endTotalMinutes = (endHour * 60) + endMinute;
+            return endTotalMinutes - startTotalMinutes;
+        }
+        
         function analyzeDayDowntime(record) {
             const downtimeEvents = [];
             const hourlyData = record.hourly_data;
@@ -2837,6 +2845,12 @@
                     currentDowntime.endHour = hourNum;
                     currentDowntime.endMinute = minuteNum;
                     
+                    // Calculate actual duration from start and end times
+                    currentDowntime.durationMinutes = calculateActualDuration(
+                        currentDowntime.startHour, currentDowntime.startMinute,
+                        currentDowntime.endHour, currentDowntime.endMinute
+                    );
+                    
                     // Calculate financial loss using TOU rates
                     currentDowntime.financialLoss = calculateTOUFinancialLoss(currentDowntime.lostGenerationByTOU);
                     
@@ -2854,6 +2868,13 @@
                 currentDowntime.endTime = hourlyData[hourlyData.length - 1].time;
                 currentDowntime.endHour = parseInt(currentDowntime.endTime.split(':')[0]);
                 currentDowntime.endMinute = parseInt(currentDowntime.endTime.split(':')[1]);
+                
+                // Calculate actual duration from start and end times
+                currentDowntime.durationMinutes = calculateActualDuration(
+                    currentDowntime.startHour, currentDowntime.startMinute,
+                    currentDowntime.endHour, currentDowntime.endMinute
+                );
+                
                 currentDowntime.financialLoss = calculateTOUFinancialLoss(currentDowntime.lostGenerationByTOU);
                 
                 if (currentDowntime.durationMinutes >= 10) {
