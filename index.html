@@ -1986,14 +1986,13 @@
                                     <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">Start Time</th>
                                     <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">End Time</th>
                                     <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">Duration</th>
-                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: 1.2em;">Expected Gen (kWh)</th>
                                     <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: 1.2em;">Lost Gen (kWh)</th>
                                     <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: 1.2em;">Financial Loss (ZAR)</th>
                                 </tr>
                             </thead>
                             <tbody id="downtime-table-body">
                                 <tr>
-                                    <td colspan="7" style="padding: 40px; text-align: center; color: #aaaaaa; font-size: 1.1em;">
+                                    <td colspan="6" style="padding: 40px; text-align: center; color: #aaaaaa; font-size: 1.1em;">
                                         Select a date range and click "Analyze Downtime" to view results
                                     </td>
                                 </tr>
@@ -2822,7 +2821,6 @@
                             startTime: hour.time,
                             startHour: hourNum,
                             startMinute: minuteNum,
-                            expectedGen: expectedGen,
                             lostGeneration: 0,
                             lostGenerationByTOU: { peak: 0, standard: 0, off_peak: 0 },
                             durationMinutes: 0
@@ -3022,7 +3020,7 @@
             if (events.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="padding: 40px; text-align: center; color: #4ade80; font-size: 1.1em;">
+                        <td colspan="6" style="padding: 40px; text-align: center; color: #4ade80; font-size: 1.1em;">
                             ✅ No significant downtime detected in selected period
                         </td>
                     </tr>
@@ -3058,7 +3056,6 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                         <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.startTime}</td>
                         <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.endTime}</td>
                         <td style="padding: 20px; text-align: center; color: ${severityColor}; font-weight: 600; font-size: 1.1em;">${duration}</td>
-                        <td style="padding: 20px; text-align: right; color: #cccccc; font-size: 1.1em;">${event.expectedGen.toFixed(1)}</td>
                         <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: 1.1em;" title="${touBreakdown}">${event.lostGeneration.toFixed(1)}</td>
                         <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: 1.1em;" title="${touBreakdown}">R ${event.financialLoss.toFixed(2)}</td>
                     </tr>
