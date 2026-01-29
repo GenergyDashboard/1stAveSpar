@@ -157,6 +157,18 @@ jobs:
           mkdir -p data
           echo '{"username":"${{ secrets.CLIENT_USERNAME }}","password":"${{ secrets.CLIENT_PASSWORD }}"}' > data/client_auth.json
       
+      - name: Check for downtime and notify
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -f "check_downtime_notify.py" ]; then
+            echo "📡 Checking for downtime..."
+            python3 check_downtime_notify.py || echo "⚠️ Notification check failed, continuing..."
+          else
+            echo "⚠️ check_downtime_notify.py not found - skipping notification check"
+          fi
+      
       - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
