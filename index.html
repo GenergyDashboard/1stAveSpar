@@ -1469,29 +1469,80 @@
                     </div>
                 </div>
                 
-                <!-- Combined TOU Breakdown & Savings Card -->
+                <!-- TOU Breakdown & Savings Card - 3 Sections -->
                 <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
-                        <div class="label">Time of Use Breakdown & Savings</div>
-                        <div class="tou-breakdown">
-                            <div class="tou-item">
-                                <span class="tou-label peak">Peak</span>
-                                <span class="tou-value" id="daily-tou-peak">--</span>
-                                <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-savings-peak">--</span></span>
+                        <div class="label">Time of Use Financial Breakdown</div>
+                        
+                        <!-- Section 1: Utility Cost (Eskom Rates) -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">Utility Cost (Eskom Rates)</div>
+                            <div class="tou-breakdown">
+                                <div class="tou-item">
+                                    <span class="tou-label peak">Peak</span>
+                                    <span class="tou-value" id="daily-tou-peak">--</span>
+                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-utility-peak">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label standard">Standard</span>
+                                    <span class="tou-value" id="daily-tou-standard">--</span>
+                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-utility-standard">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label off-peak">Off-Peak</span>
+                                    <span class="tou-value" id="daily-tou-off-peak">--</span>
+                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-utility-off-peak">--</span></span>
+                                </div>
+                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
+                                    <span class="tou-label">Total Utility</span>
+                                    <span class="savings-amount" style="margin-left: auto; font-weight: bold;">R<span id="daily-utility-total">--</span></span>
+                                </div>
                             </div>
-                            <div class="tou-item">
-                                <span class="tou-label standard">Standard</span>
-                                <span class="tou-value" id="daily-tou-standard">--</span>
-                                <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-savings-standard">--</span></span>
+                        </div>
+                        
+                        <!-- Section 2: PPA Cost (Solar Generation Cost) -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">PPA Cost (Solar @ R1.50/kWh)</div>
+                            <div class="tou-breakdown">
+                                <div class="tou-item">
+                                    <span class="tou-label peak">Peak</span>
+                                    <span style="margin-left: auto;">R<span id="daily-ppa-peak">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label standard">Standard</span>
+                                    <span style="margin-left: auto;">R<span id="daily-ppa-standard">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label off-peak">Off-Peak</span>
+                                    <span style="margin-left: auto;">R<span id="daily-ppa-off-peak">--</span></span>
+                                </div>
+                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
+                                    <span class="tou-label">Total PPA</span>
+                                    <span style="margin-left: auto; font-weight: bold;">R<span id="daily-ppa-total">--</span></span>
+                                </div>
                             </div>
-                            <div class="tou-item">
-                                <span class="tou-label off-peak">Off-Peak</span>
-                                <span class="tou-value" id="daily-tou-off-peak">--</span>
-                                <span class="savings-amount" style="margin-left: 20px;">R<span id="daily-savings-off-peak">--</span></span>
-                            </div>
-                            <div class="tou-item" style="border-top: 2px solid rgba(255,255,255,0.2); margin-top: 10px; padding-top: 10px; font-weight: bold;">
-                                <span class="tou-label">Total Savings</span>
-                                <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="daily-total-savings">--</span></span>
+                        </div>
+                        
+                        <!-- Section 3: Actual Savings (Utility - PPA) -->
+                        <div>
+                            <div style="font-size: 0.9em; color: #4ade80; margin-bottom: 8px; font-weight: bold;">Actual Savings</div>
+                            <div class="tou-breakdown">
+                                <div class="tou-item">
+                                    <span class="tou-label peak">Peak</span>
+                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="daily-savings-peak">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label standard">Standard</span>
+                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="daily-savings-standard">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label off-peak">Off-Peak</span>
+                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="daily-savings-off-peak">--</span></span>
+                                </div>
+                                <div class="tou-item" style="border-top: 2px solid rgba(74,222,128,0.3); margin-top: 10px; padding-top: 10px; font-weight: bold;">
+                                    <span class="tou-label">Total Savings</span>
+                                    <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="daily-total-savings">--</span></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1562,29 +1613,80 @@
                     </div>
                 </div>
                 
-                <!-- Combined TOU Breakdown & Savings Card -->
+                <!-- TOU Breakdown & Savings Card - 3 Sections -->
                 <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
-                        <div class="label">Time of Use Breakdown & Savings</div>
-                        <div class="tou-breakdown">
-                            <div class="tou-item">
-                                <span class="tou-label peak">Peak</span>
-                                <span class="tou-value" id="monthly-tou-peak">--</span>
-                                <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-savings-peak">--</span></span>
+                        <div class="label">Time of Use Financial Breakdown</div>
+                        
+                        <!-- Section 1: Utility Cost (Eskom Rates) -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">Utility Cost (Eskom Rates)</div>
+                            <div class="tou-breakdown">
+                                <div class="tou-item">
+                                    <span class="tou-label peak">Peak</span>
+                                    <span class="tou-value" id="monthly-tou-peak">--</span>
+                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-utility-peak">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label standard">Standard</span>
+                                    <span class="tou-value" id="monthly-tou-standard">--</span>
+                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-utility-standard">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label off-peak">Off-Peak</span>
+                                    <span class="tou-value" id="monthly-tou-off-peak">--</span>
+                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-utility-off-peak">--</span></span>
+                                </div>
+                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
+                                    <span class="tou-label">Total Utility</span>
+                                    <span class="savings-amount" style="margin-left: auto; font-weight: bold;">R<span id="monthly-utility-total">--</span></span>
+                                </div>
                             </div>
-                            <div class="tou-item">
-                                <span class="tou-label standard">Standard</span>
-                                <span class="tou-value" id="monthly-tou-standard">--</span>
-                                <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-savings-standard">--</span></span>
+                        </div>
+                        
+                        <!-- Section 2: PPA Cost (Solar Generation Cost) -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">PPA Cost (Solar @ R1.50/kWh)</div>
+                            <div class="tou-breakdown">
+                                <div class="tou-item">
+                                    <span class="tou-label peak">Peak</span>
+                                    <span style="margin-left: auto;">R<span id="monthly-ppa-peak">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label standard">Standard</span>
+                                    <span style="margin-left: auto;">R<span id="monthly-ppa-standard">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label off-peak">Off-Peak</span>
+                                    <span style="margin-left: auto;">R<span id="monthly-ppa-off-peak">--</span></span>
+                                </div>
+                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
+                                    <span class="tou-label">Total PPA</span>
+                                    <span style="margin-left: auto; font-weight: bold;">R<span id="monthly-ppa-total">--</span></span>
+                                </div>
                             </div>
-                            <div class="tou-item">
-                                <span class="tou-label off-peak">Off-Peak</span>
-                                <span class="tou-value" id="monthly-tou-off-peak">--</span>
-                                <span class="savings-amount" style="margin-left: 20px;">R<span id="monthly-savings-off-peak">--</span></span>
-                            </div>
-                            <div class="tou-item" style="border-top: 2px solid rgba(255,255,255,0.2); margin-top: 10px; padding-top: 10px; font-weight: bold;">
-                                <span class="tou-label">Total Savings</span>
-                                <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="monthly-total-savings">--</span></span>
+                        </div>
+                        
+                        <!-- Section 3: Actual Savings (Utility - PPA) -->
+                        <div>
+                            <div style="font-size: 0.9em; color: #4ade80; margin-bottom: 8px; font-weight: bold;">Actual Savings</div>
+                            <div class="tou-breakdown">
+                                <div class="tou-item">
+                                    <span class="tou-label peak">Peak</span>
+                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="monthly-savings-peak">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label standard">Standard</span>
+                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="monthly-savings-standard">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label off-peak">Off-Peak</span>
+                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="monthly-savings-off-peak">--</span></span>
+                                </div>
+                                <div class="tou-item" style="border-top: 2px solid rgba(74,222,128,0.3); margin-top: 10px; padding-top: 10px; font-weight: bold;">
+                                    <span class="tou-label">Total Savings</span>
+                                    <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="monthly-total-savings">--</span></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1637,29 +1739,80 @@
                     </div>
                 </div>
                 
-                <!-- Combined TOU Breakdown & Savings Card -->
+                <!-- TOU Breakdown & Savings Card - 3 Sections -->
                 <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <div class="tou-breakdown-card">
-                        <div class="label">Lifetime TOU Breakdown & Savings</div>
-                        <div class="tou-breakdown">
-                            <div class="tou-item">
-                                <span class="tou-label peak">Peak</span>
-                                <span class="tou-value" id="lifetime-tou-peak">--</span>
-                                <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-savings-peak">--</span></span>
+                        <div class="label">Lifetime Time of Use Financial Breakdown</div>
+                        
+                        <!-- Section 1: Utility Cost (Eskom Rates) -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">Utility Cost (Eskom Rates)</div>
+                            <div class="tou-breakdown">
+                                <div class="tou-item">
+                                    <span class="tou-label peak">Peak</span>
+                                    <span class="tou-value" id="lifetime-tou-peak">--</span>
+                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-utility-peak">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label standard">Standard</span>
+                                    <span class="tou-value" id="lifetime-tou-standard">--</span>
+                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-utility-standard">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label off-peak">Off-Peak</span>
+                                    <span class="tou-value" id="lifetime-tou-off-peak">--</span>
+                                    <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-utility-off-peak">--</span></span>
+                                </div>
+                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
+                                    <span class="tou-label">Total Utility</span>
+                                    <span class="savings-amount" style="margin-left: auto; font-weight: bold;">R<span id="lifetime-utility-total">--</span></span>
+                                </div>
                             </div>
-                            <div class="tou-item">
-                                <span class="tou-label standard">Standard</span>
-                                <span class="tou-value" id="lifetime-tou-standard">--</span>
-                                <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-savings-standard">--</span></span>
+                        </div>
+                        
+                        <!-- Section 2: PPA Cost (Solar Generation Cost) -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 0.9em; color: #888; margin-bottom: 8px; font-weight: bold;">PPA Cost (Solar @ R1.50/kWh)</div>
+                            <div class="tou-breakdown">
+                                <div class="tou-item">
+                                    <span class="tou-label peak">Peak</span>
+                                    <span style="margin-left: auto;">R<span id="lifetime-ppa-peak">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label standard">Standard</span>
+                                    <span style="margin-left: auto;">R<span id="lifetime-ppa-standard">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label off-peak">Off-Peak</span>
+                                    <span style="margin-left: auto;">R<span id="lifetime-ppa-off-peak">--</span></span>
+                                </div>
+                                <div class="tou-item" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px;">
+                                    <span class="tou-label">Total PPA</span>
+                                    <span style="margin-left: auto; font-weight: bold;">R<span id="lifetime-ppa-total">--</span></span>
+                                </div>
                             </div>
-                            <div class="tou-item">
-                                <span class="tou-label off-peak">Off-Peak</span>
-                                <span class="tou-value" id="lifetime-tou-off-peak">--</span>
-                                <span class="savings-amount" style="margin-left: 20px;">R<span id="lifetime-savings-off-peak">--</span></span>
-                            </div>
-                            <div class="tou-item" style="border-top: 2px solid rgba(255,255,255,0.2); margin-top: 10px; padding-top: 10px; font-weight: bold;">
-                                <span class="tou-label">Total Savings</span>
-                                <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="lifetime-total-savings">--</span></span>
+                        </div>
+                        
+                        <!-- Section 3: Actual Savings (Utility - PPA) -->
+                        <div>
+                            <div style="font-size: 0.9em; color: #4ade80; margin-bottom: 8px; font-weight: bold;">Actual Savings</div>
+                            <div class="tou-breakdown">
+                                <div class="tou-item">
+                                    <span class="tou-label peak">Peak</span>
+                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="lifetime-savings-peak">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label standard">Standard</span>
+                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="lifetime-savings-standard">--</span></span>
+                                </div>
+                                <div class="tou-item">
+                                    <span class="tou-label off-peak">Off-Peak</span>
+                                    <span class="savings-amount" style="margin-left: auto; color: #4ade80;">R<span id="lifetime-savings-off-peak">--</span></span>
+                                </div>
+                                <div class="tou-item" style="border-top: 2px solid rgba(74,222,128,0.3); margin-top: 10px; padding-top: 10px; font-weight: bold;">
+                                    <span class="tou-label">Total Savings</span>
+                                    <span class="savings-amount" style="margin-left: auto; font-size: 1.3em; color: #4ade80;">R<span id="lifetime-total-savings">--</span></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2266,6 +2419,52 @@
         // PHASE 2: DATA MODE TOGGLE & TOU/FINANCIAL
         // ============================================
         
+        // TOU Rate Constants
+        const TOU_RATES = {
+            peak: 4.68,        // Eskom peak rate (ZAR/kWh)
+            standard: 3.38,    // Eskom standard rate
+            off_peak: 2.07     // Eskom off-peak rate
+        };
+        
+        const PPA_RATE = 1.50;  // Solar PPA rate (ZAR/kWh)
+        
+        /**
+         * Calculate 3-part TOU breakdown: Utility Cost, PPA Cost, Savings
+         * @param {Object} touKwh - {peak_kwh, standard_kwh, off_peak_kwh} in kWh
+         * @returns {Object} - {utility, ppa, savings} each with {peak, standard, off_peak, total}
+         */
+        function calculateTOUFinancials(touKwh) {
+            const peakKwh = touKwh.peak_kwh || 0;
+            const standardKwh = touKwh.standard_kwh || 0;
+            const offPeakKwh = touKwh.off_peak_kwh || 0;
+            
+            // Utility cost (what you would pay Eskom)
+            const utility = {
+                peak: peakKwh * TOU_RATES.peak,
+                standard: standardKwh * TOU_RATES.standard,
+                off_peak: offPeakKwh * TOU_RATES.off_peak
+            };
+            utility.total = utility.peak + utility.standard + utility.off_peak;
+            
+            // PPA cost (what you pay for solar generation)
+            const ppa = {
+                peak: peakKwh * PPA_RATE,
+                standard: standardKwh * PPA_RATE,
+                off_peak: offPeakKwh * PPA_RATE
+            };
+            ppa.total = ppa.peak + ppa.standard + ppa.off_peak;
+            
+            // Savings (utility - ppa)
+            const savings = {
+                peak: utility.peak - ppa.peak,
+                standard: utility.standard - ppa.standard,
+                off_peak: utility.off_peak - ppa.off_peak
+            };
+            savings.total = savings.peak + savings.standard + savings.off_peak;
+            
+            return { utility, ppa, savings };
+        }
+        
         function toggleDataMode(mode) {
             currentDataMode = mode;
             
@@ -2299,30 +2498,48 @@
                 document.getElementById(`${prefix}-tou-peak`).textContent = '-- kWh';
                 document.getElementById(`${prefix}-tou-standard`).textContent = '-- kWh';
                 document.getElementById(`${prefix}-tou-off-peak`).textContent = '-- kWh';
+                
+                // Clear all financial values
+                ['utility', 'ppa', 'savings'].forEach(type => {
+                    ['peak', 'standard', 'off-peak', 'total'].forEach(period => {
+                        const id = `${prefix}-${type}-${period.replace('_', '-')}`;
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = '--';
+                    });
+                });
                 return;
             }
             
             const tou = data.tou_breakdown;
+            
+            // Display kWh values
             document.getElementById(`${prefix}-tou-peak`).textContent = formatNumber(tou.peak_kwh, 1) + ' kWh';
             document.getElementById(`${prefix}-tou-standard`).textContent = formatNumber(tou.standard_kwh, 1) + ' kWh';
             document.getElementById(`${prefix}-tou-off-peak`).textContent = formatNumber(tou.off_peak_kwh, 1) + ' kWh';
+            
+            // Calculate 3-part financial breakdown
+            const financials = calculateTOUFinancials(tou);
+            
+            // Update Utility Cost section
+            document.getElementById(`${prefix}-utility-peak`).textContent = formatNumber(financials.utility.peak, 2);
+            document.getElementById(`${prefix}-utility-standard`).textContent = formatNumber(financials.utility.standard, 2);
+            document.getElementById(`${prefix}-utility-off-peak`).textContent = formatNumber(financials.utility.off_peak, 2);
+            document.getElementById(`${prefix}-utility-total`).textContent = formatNumber(financials.utility.total, 2);
+            
+            // Update PPA Cost section
+            document.getElementById(`${prefix}-ppa-peak`).textContent = formatNumber(financials.ppa.peak, 2);
+            document.getElementById(`${prefix}-ppa-standard`).textContent = formatNumber(financials.ppa.standard, 2);
+            document.getElementById(`${prefix}-ppa-off-peak`).textContent = formatNumber(financials.ppa.off_peak, 2);
+            document.getElementById(`${prefix}-ppa-total`).textContent = formatNumber(financials.ppa.total, 2);
+            
+            // Update Savings section
+            document.getElementById(`${prefix}-savings-peak`).textContent = formatNumber(financials.savings.peak, 2);
+            document.getElementById(`${prefix}-savings-standard`).textContent = formatNumber(financials.savings.standard, 2);
+            document.getElementById(`${prefix}-savings-off-peak`).textContent = formatNumber(financials.savings.off_peak, 2);
+            document.getElementById(`${prefix}-total-savings`).textContent = formatNumber(financials.savings.total, 2);
         }
         
-        function updateFinancialSavings(prefix, data) {
-            if (!data || !data.financial) {
-                document.getElementById(`${prefix}-total-savings`).textContent = '--';
-                document.getElementById(`${prefix}-savings-peak`).textContent = '--';
-                document.getElementById(`${prefix}-savings-standard`).textContent = '--';
-                document.getElementById(`${prefix}-savings-off-peak`).textContent = '--';
-                return;
-            }
-            
-            const financial = data.financial;
-            document.getElementById(`${prefix}-total-savings`).textContent = formatNumber(financial.total_savings_zar, 2);
-            document.getElementById(`${prefix}-savings-peak`).textContent = formatNumber(financial.peak_savings_zar, 2);
-            document.getElementById(`${prefix}-savings-standard`).textContent = formatNumber(financial.standard_savings_zar, 2);
-            document.getElementById(`${prefix}-savings-off-peak`).textContent = formatNumber(financial.off_peak_savings_zar, 2);
-        }
+        // Financial savings now calculated in updateTouBreakdown
         
         function loadFinancialOverview() {
             if (!dashboardData || !dashboardData.lifetime_summary) {
@@ -2999,17 +3216,16 @@
         }
         
         function calculateTOUFinancialLoss(lostGenerationByTOU) {
-            // Eskom TOU Rates (ZAR/kWh)
-            const TOU_RATES = {
-                peak: 4.68,        // Peak hours - highest rate
-                standard: 3.38,    // Standard hours
-                off_peak: 2.07     // Off-peak hours - lowest rate
-            };
+            // Downtime loss calculation
+            // When solar is down, you lose the PPA generation cost (R1.50/kWh)
+            const PPA_RATE = 1.50;  // Cost of solar generation
             
-            const loss = 
-                (lostGenerationByTOU.peak * TOU_RATES.peak) +
-                (lostGenerationByTOU.standard * TOU_RATES.standard) +
-                (lostGenerationByTOU.off_peak * TOU_RATES.off_peak);
+            const totalLostGeneration = 
+                lostGenerationByTOU.peak + 
+                lostGenerationByTOU.standard + 
+                lostGenerationByTOU.off_peak;
+            
+            const loss = totalLostGeneration * PPA_RATE;
             
             return loss;
         }
@@ -5265,7 +5481,6 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
     // Phase 2: Update TOU and Financial data
     if (dailyRecord) {
         updateTouBreakdown('daily', dailyRecord);
-        updateFinancialSavings('daily', dailyRecord);
     }
 }
 
@@ -5736,7 +5951,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
         const monthlyData = dashboardData.monthly_summaries[monthKey];
         if (monthlyData) {
             updateTouBreakdown('monthly', monthlyData);
-            updateFinancialSavings('monthly', monthlyData);
         }
     }
 }
@@ -6818,7 +7032,6 @@ async function loadPast30Days() {
                 // Phase 2: Update TOU and Financial data for Lifetime tab
                 if (dashboardData.lifetime_summary) {
                     updateTouBreakdown('lifetime', dashboardData.lifetime_summary);
-                    updateFinancialSavings('lifetime', dashboardData.lifetime_summary);
                 }
                 
                 document.getElementById('loading').style.display = 'none';
