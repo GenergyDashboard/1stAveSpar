@@ -6,6 +6,10 @@ Updates dashboard_data.json with Time-of-Use breakdown and correct financial sav
 CRITICAL: Uses correct savings formula:
 - Savings = (Generation × TOU_rate) - (Generation × PPA_rate)
 - NOT just Generation × TOU_rate
+
+2026 TOU Rates (Season-Dependent):
+- High Season (Sept-April): Peak R8.21, Standard R2.36, Off-Peak R1.71
+- Low Season (May-Aug): Peak R3.57, Standard R2.23, Off-Peak R1.70
 """
 
 import json
@@ -13,14 +17,73 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Constants
-TOU_RATES = {
-    'peak': 4.68,       # Eskom peak rate (ZAR/kWh)
-    'standard': 3.38,   # Eskom standard rate
-    'off_peak': 2.07    # Eskom off-peak rate
+# Constants - 2026 TOU Rates
+TOU_RATES_2026 = {
+    'high_season': {  # Summer: September - April
+        'peak': 8.21,
+        'standard': 2.36,
+        'off_peak': 1.71
+    },
+    'low_season': {   # Winter: May - August
+        'peak': 3.57,
+        'standard': 2.23,
+        'off_peak': 1.70
+    }
 }
 
 PPA_RATE = 1.50  # Solar PPA rate (ZAR/kWh)
+
+
+def get_season(date_str):
+    """
+    Determine if a date is in high-demand or low-demand season
+    High-demand = Winter (June-Aug) when heating demand is high
+    Low-demand = Rest of year (Jan-May, Sep-Dec)
+    
+    Args:
+        date_str: Date in format "YYYY-MM-DD"
+    
+    Returns:
+        str: 'high_season' or 'low_season'
+    """
+    date = datetime.strptime(date_str, '%Y-%m-%d')
+    month = date.month
+    
+    # High-demand Season (Winter): June (6), July (7), August (8)
+    # Low-demand Season (Rest): Jan-May (1-5), Sep-Dec (9-12)
+    if 6 <= month <= 8:
+        return 'high_season'  # High-demand (winter)
+    else:
+        return 'low_season'   # Low-demand (rest of year)
+
+
+def get_tou_rates(date_str):
+    """
+    Get TOU rates for a specific date
+    
+    Args:
+        date_str: Date in format "YYYY-MM-DD"
+    
+    Returns:
+        dict: {peak, standard, off_peak} rates
+    """
+    season = get_season(date_str)
+    return TOU_RATES_2026[season]
+
+
+def get_weighted_average_rates():
+    """
+    Calculate weighted average rates for lifetime calculations
+    9 months low-demand, 3 months high-demand
+    
+    Returns:
+        dict: {peak, standard, off_peak} weighted average rates
+    """
+    return {
+        'peak': (TOU_RATES_2026['low_season']['peak'] * 9 + TOU_RATES_2026['high_season']['peak'] * 3) / 12,
+        'standard': (TOU_RATES_2026['low_season']['standard'] * 9 + TOU_RATES_2026['high_season']['standard'] * 3) / 12,
+        'off_peak': (TOU_RATES_2026['low_season']['off_peak'] * 9 + TOU_RATES_2026['high_season']['off_peak'] * 3) / 12
+    }
 
 
 def get_tou_period(date_str, hour, minute=0):
@@ -116,13 +179,14 @@ def calculate_tou_breakdown(hourly_data, date_str):
     return tou_breakdown
 
 
-def calculate_financial_savings(tou_breakdown):
+def calculate_financial_savings(tou_breakdown, date_str=None):
     """
     Calculate financial savings using correct formula:
     Savings = (Utility Cost - PPA Cost)
     
     Args:
         tou_breakdown: Dict with peak_kwh, standard_kwh, off_peak_kwh
+        date_str: Date string for seasonal rate determination (optional)
     
     Returns:
         dict: Financial breakdown with utility, PPA, and savings for each period
@@ -131,10 +195,16 @@ def calculate_financial_savings(tou_breakdown):
     standard_kwh = tou_breakdown.get('standard_kwh', 0)
     off_peak_kwh = tou_breakdown.get('off_peak_kwh', 0)
     
+    # Get appropriate rates (seasonal or weighted average)
+    if date_str:
+        rates = get_tou_rates(date_str)
+    else:
+        rates = get_weighted_average_rates()
+    
     # Utility cost (what you would pay Eskom)
-    utility_peak = peak_kwh * TOU_RATES['peak']
-    utility_standard = standard_kwh * TOU_RATES['standard']
-    utility_off_peak = off_peak_kwh * TOU_RATES['off_peak']
+    utility_peak = peak_kwh * rates['peak']
+    utility_standard = standard_kwh * rates['standard']
+    utility_off_peak = off_peak_kwh * rates['off_peak']
     utility_total = utility_peak + utility_standard + utility_off_peak
     
     # PPA cost (what you pay for solar)
@@ -195,8 +265,8 @@ def process_daily_record(record):
     # Calculate TOU breakdown
     tou_breakdown = calculate_tou_breakdown(hourly_data, date_str)
     
-    # Calculate financial savings
-    financial = calculate_financial_savings(tou_breakdown)
+    # Calculate financial savings with seasonal rates
+    financial = calculate_financial_savings(tou_breakdown, date_str)
     
     # Update record
     record['tou_breakdown'] = tou_breakdown
@@ -236,8 +306,9 @@ def aggregate_monthly_data(daily_records, year_month):
             total_tou['standard_kwh'] += tou.get('standard_kwh', 0)
             total_tou['off_peak_kwh'] += tou.get('off_peak_kwh', 0)
     
-    # Calculate financial for month
-    financial = calculate_financial_savings(total_tou)
+    # Calculate financial for month using first day of month for seasonal rate
+    month_date = year_month + '-01'
+    financial = calculate_financial_savings(total_tou, month_date)
     
     return {
         'tou_breakdown': total_tou,
@@ -269,8 +340,8 @@ def aggregate_lifetime_data(daily_records):
             total_tou['standard_kwh'] += tou.get('standard_kwh', 0)
             total_tou['off_peak_kwh'] += tou.get('off_peak_kwh', 0)
     
-    # Calculate financial for lifetime
-    financial = calculate_financial_savings(total_tou)
+    # Calculate financial for lifetime using weighted average rates
+    financial = calculate_financial_savings(total_tou, None)
     
     return {
         'tou_breakdown': total_tou,
