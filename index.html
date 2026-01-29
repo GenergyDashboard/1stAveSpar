@@ -2828,8 +2828,9 @@
                         };
                     }
                     
-                    // Calculate lost generation for this 5-minute interval (kW to kWh)
-                    const lostKWh = expectedGen / 12; // 5 min = 1/12 hour
+                    // Calculate lost generation for this interval
+                    // Data is HOURLY (not 5-minute), so kW × 1 hour = kWh
+                    const lostKWh = expectedGen * 1; // 1 hour interval
                     currentDowntime.lostGeneration += lostKWh;
                     
                     // Determine TOU period for this time
