@@ -218,6 +218,16 @@
 #downtime-financial-loss::after {
     content: '';
 }
+/* Remove kWh from generation/load/grid to prevent duplication issues */
+#monthly-gen::after,
+#monthly-load::after,
+#monthly-grid::after,
+#daily-gen::after,
+#daily-load::after,
+#daily-grid::after,
+#lifetime-gen::after {
+    content: '';
+}
 /* Remove kWh from all financial/currency values */
 .financial-value::after,
 .financial-hero::after,
@@ -2443,6 +2453,10 @@
         
         function formatNumber(num, decimals = 0) {
             return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
+        
+        function formatKwh(num, decimals = 0) {
+            return formatNumber(num, decimals) + ' kWh';
         }
         
         // ============================================
@@ -5056,7 +5070,7 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
     
     const performance = totalPredicted > 0 ? (totalGeneration / totalPredicted * 100) : 0;
     
-    document.getElementById('daily-gen').textContent = formatNumber(totalGeneration);
+    document.getElementById('daily-gen').textContent = formatKwh(totalGeneration);
     document.getElementById('daily-gen-expected').textContent = formatNumber(totalPredicted);
     
     const genPerf = document.getElementById('daily-gen-perf');
@@ -5124,14 +5138,14 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
             const pvCoveragePerf = expectedPVCoverage > 0 ? ((pvCoverage / expectedPVCoverage) * 100) : 0;
             
             // Update Load display
-            document.getElementById('daily-load').textContent = formatNumber(totalLoad);
+            document.getElementById('daily-load').textContent = formatKwh(totalLoad);
             document.getElementById('daily-load-expected').textContent = formatNumber(expectedLoad);
             const loadPerfEl = document.getElementById('daily-load-perf');
             loadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
             loadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
             
             // Update Grid display
-            document.getElementById('daily-grid').textContent = formatNumber(totalGrid);
+            document.getElementById('daily-grid').textContent = formatKwh(totalGrid);
             document.getElementById('daily-grid-expected').textContent = formatNumber(expectedGrid);
             const gridPerfEl = document.getElementById('daily-grid-perf');
             gridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
@@ -5161,7 +5175,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
             const pvCoveragePerf = expectedPVCoverage > 0 ? ((pvCoverage / expectedPVCoverage) * 100) : 0;
             
             // Update displays with fallback values
-            document.getElementById('daily-load').textContent = formatNumber(totalLoad);
+            document.getElementById('daily-load').textContent = formatKwh(totalLoad);
             document.getElementById('daily-load-expected').textContent = formatNumber(expectedLoad);
             const loadPerfEl = document.getElementById('daily-load-perf');
             if (loadPerfEl) {
@@ -5169,7 +5183,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 loadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
             }
             
-            document.getElementById('daily-grid').textContent = formatNumber(totalGrid);
+            document.getElementById('daily-grid').textContent = formatKwh(totalGrid);
             document.getElementById('daily-grid-expected').textContent = formatNumber(expectedGrid);
             const gridPerfEl = document.getElementById('daily-grid-perf');
             if (gridPerfEl) {
@@ -5730,7 +5744,7 @@ async function loadMonthlyData() {
         // Target progress: performance for days with data
         const targetProgress = expectedForDaysWithData > 0 ? ((monthlyGen / expectedForDaysWithData) * 100).toFixed(1) : 0;
         
-        document.getElementById('monthly-gen').textContent = formatNumber(monthlyGen);
+        document.getElementById('monthly-gen').textContent = formatKwh(monthlyGen);
         document.getElementById('monthly-expected').textContent = formatNumber(expectedMonthly);
         document.getElementById('monthly-days-count').textContent = daysWithData;
         document.getElementById('monthly-target-perf').textContent = formatNumber(targetProgress);
@@ -5805,7 +5819,7 @@ async function loadMonthlyData() {
         const pvCoveragePerf = expectedPVCoverage > 0 ? ((actualPVCoverage / expectedPVCoverage) * 100) : 0;
         
         // Update Load display
-        document.getElementById('monthly-load').textContent = formatNumber(actualLoad);
+        document.getElementById('monthly-load').textContent = formatKwh(actualLoad);
         document.getElementById('monthly-load-expected').textContent = formatNumber(expectedLoad);
         const monthlyLoadPerfEl = document.getElementById('monthly-load-perf');
         if (monthlyLoadPerfEl) {
@@ -5814,7 +5828,7 @@ async function loadMonthlyData() {
         }
         
         // Update Grid display
-        document.getElementById('monthly-grid').textContent = formatNumber(actualGrid);
+        document.getElementById('monthly-grid').textContent = formatKwh(actualGrid);
         document.getElementById('monthly-grid-expected').textContent = formatNumber(expectedGrid);
         const monthlyGridPerfEl = document.getElementById('monthly-grid-perf');
         if (monthlyGridPerfEl) {
@@ -6332,7 +6346,7 @@ async function loadLifetimeMonthlyBreakdown() {
         }
         
         // Update Generation display
-        document.getElementById('lifetime-gen').textContent = formatNumber(totalGeneration);
+        document.getElementById('lifetime-gen').textContent = formatKwh(totalGeneration);
         document.getElementById('lifetime-gen-expected').textContent = formatNumber(totalExpected);
         const lifetimeGenPerfEl = document.getElementById('lifetime-gen-perf');
         if (lifetimeGenPerfEl) {
@@ -6949,7 +6963,7 @@ async function loadPast30Days() {
         const totalGen = recentRecords.reduce((sum, day) => sum + day.generation_kwh, 0);
         
         // Clear the monthly stats cards
-        document.getElementById('monthly-gen').textContent = formatNumber(totalGen);
+        document.getElementById('monthly-gen').textContent = formatKwh(totalGen);
         document.getElementById('monthly-expected').textContent = '--';
         document.getElementById('monthly-days-count').textContent = recentRecords.length;
         document.getElementById('monthly-target-perf').textContent = '--';
