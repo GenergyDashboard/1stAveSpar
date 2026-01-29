@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>1st Avenue Spar: Solar Generation</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- SheetJS for parsing Excel files in browser -->
@@ -493,6 +495,11 @@
             margin-bottom: 30px;
             position: relative;
             z-index: 10;
+            height: 500px;
+        }
+        
+        .chart-container canvas {
+            max-height: 440px !important;
         }
         
         .chart-title {
@@ -1307,6 +1314,282 @@
             color: #ffffff;
             font-weight: 500;
         }
+        
+        /* ============================================
+           MOBILE RESPONSIVE STYLES
+           ============================================ */
+        
+        @media (max-width: 768px) {
+            /* Container adjustments */
+            .container {
+                padding: 10px;
+            }
+            
+            /* Header adjustments */
+            .header {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em !important;
+            }
+            
+            .header p {
+                font-size: 0.9em !important;
+            }
+            
+            /* Tab navigation - make scrollable */
+            .tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 5px;
+                padding-bottom: 10px;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .tab {
+                padding: 10px 15px !important;
+                font-size: 0.9em !important;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            
+            /* Stats grid - single column on mobile */
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+                gap: 15px !important;
+            }
+            
+            /* Stat cards */
+            .stat-card {
+                padding: 15px !important;
+            }
+            
+            .stat-card h3 {
+                font-size: 1em !important;
+            }
+            
+            .stat-value {
+                font-size: 1.8em !important;
+            }
+            
+            .stat-label {
+                font-size: 0.85em !important;
+            }
+            
+            /* Card adjustments */
+            .card {
+                padding: 15px !important;
+            }
+            
+            /* Chart containers */
+            .chart-container {
+                height: 300px !important;
+                margin: 10px 0 !important;
+            }
+            
+            /* Section headers */
+            .section-header h2 {
+                font-size: 1.5em !important;
+            }
+            
+            .section-header p {
+                font-size: 0.9em !important;
+            }
+            
+            /* Date picker controls */
+            .date-controls {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            
+            .date-controls input,
+            .date-controls button {
+                width: 100% !important;
+                font-size: 0.9em !important;
+            }
+            
+            /* Buttons */
+            .btn {
+                padding: 12px 20px !important;
+                font-size: 1em !important;
+            }
+            
+            .btn-secondary {
+                padding: 8px 12px !important;
+                font-size: 0.85em !important;
+            }
+            
+            /* Info button */
+            .info-button {
+                top: 15px !important;
+                right: 15px !important;
+                width: 35px !important;
+                height: 35px !important;
+                font-size: 1.2em !important;
+            }
+            
+            /* Refresh button */
+            .refresh-button {
+                padding: 8px !important;
+                font-size: 0.9em !important;
+            }
+            
+            /* Tables - make scrollable */
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            table th,
+            table td {
+                padding: 10px 8px !important;
+                font-size: 0.85em !important;
+            }
+            
+            /* Environmental cards - single column */
+            .env-card {
+                min-width: 100% !important;
+                margin-bottom: 15px;
+            }
+            
+            /* Summary box */
+            .summary-box {
+                padding: 15px !important;
+            }
+            
+            .summary-item {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 5px !important;
+            }
+            
+            /* Toggle switch */
+            .toggle-container {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            
+            /* Login modal */
+            .modal-content {
+                width: 90% !important;
+                padding: 20px !important;
+            }
+            
+            /* Report tab - stack inputs */
+            #report-tab input[type="date"],
+            #report-tab input[type="month"] {
+                font-size: 1em !important;
+            }
+            
+            /* Warranty grid - single column */
+            #warrantyChartsGrid {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* Financial charts */
+            #financial-monthly-tou-chart,
+            #financial-cumulative-chart,
+            #financial-tou-pie-chart {
+                height: 300px !important;
+            }
+            
+            /* Interval and field options - stack vertically */
+            .interval-option,
+            .field-option {
+                padding: 12px !important;
+            }
+            
+            .interval-label strong {
+                font-size: 1em !important;
+            }
+            
+            .interval-label small {
+                font-size: 0.8em !important;
+            }
+            
+            .field-option span {
+                font-size: 0.95em !important;
+            }
+            
+            /* Client login buttons */
+            .client-login-section {
+                flex-direction: column !important;
+            }
+            
+            /* Update time footer */
+            .update-time {
+                font-size: 0.85em !important;
+                padding: 10px !important;
+            }
+            
+            /* Hide decorative elements on mobile */
+            .decorative-tree,
+            .decorative-grass {
+                display: none !important;
+            }
+            
+            /* Make charts responsive */
+            canvas {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+            
+            /* Adjust grid gaps */
+            [style*="display: grid"] {
+                gap: 10px !important;
+            }
+            
+            /* Stack two-column layouts */
+            [style*="grid-template-columns: 1fr 1fr"],
+            [style*="grid-template-columns: repeat(2"] {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* Stack three-column layouts */
+            [style*="grid-template-columns: repeat(3"],
+            [style*="grid-template-columns: 1fr 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        
+        /* Extra small devices (phones in portrait, less than 576px) */
+        @media (max-width: 576px) {
+            .header h1 {
+                font-size: 1.5em !important;
+            }
+            
+            .stat-value {
+                font-size: 1.5em !important;
+            }
+            
+            .chart-container {
+                height: 250px !important;
+            }
+            
+            .tab {
+                padding: 8px 12px !important;
+                font-size: 0.8em !important;
+            }
+            
+            .btn {
+                padding: 10px 15px !important;
+                font-size: 0.9em !important;
+            }
+        }
+        
+        /* Landscape phone orientation */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .chart-container {
+                height: 250px !important;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1427,6 +1710,7 @@
                 <button class="tab" onclick="switchClientTab('lifetime')">Lifetime Stats</button>
                 <button class="tab" onclick="switchClientTab('financial')">Financial Overview</button>
                 <button class="tab" onclick="switchClientTab('report')">Report</button>
+                <button class="tab" onclick="switchClientTab('downtime')">Downtime</button>
                 <button class="tab" onclick="switchClientTab('warranty')">Warranty</button>
             </div>
             
@@ -1919,6 +2203,89 @@
                 </div>
             </div>
             
+            <!-- Downtime Tab -->
+            <div id="downtime-tab" class="tab-content">
+                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: 2.5em;">System Downtime Analysis</h2>
+                <p style="color: #aaaaaa; margin-bottom: 10px; font-size: 1.1em;">Track periods when the system had zero generation during expected production hours</p>
+                <p style="color: #4ade80; margin-bottom: 30px; font-size: 0.95em;">💡 Lost generation calculated from actual 5-minute interval averages. Financial loss uses Eskom TOU rates: Peak R4.68/kWh, Standard R3.38/kWh, Off-Peak R2.07/kWh</p>
+                
+                <!-- Date Range Selection -->
+                <div class="card" style="padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #FFD700; margin-bottom: 20px; font-size: 1.4em;">Select Analysis Period</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div>
+                            <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">Start Date:</label>
+                            <input type="date" id="downtime-start-date" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                        </div>
+                        <div>
+                            <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">End Date:</label>
+                            <input type="date" id="downtime-end-date" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                        </div>
+                        <div style="display: flex; align-items: flex-end;">
+                            <button onclick="loadDowntimeAnalysis()" class="btn" style="width: 100%; padding: 12px; font-size: 1.1em; background: linear-gradient(135deg, #FFD700, #FFA500); color: #000000; font-weight: 700;">
+                                Analyze Downtime
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('today')" style="padding: 10px 20px;">Today</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('yesterday')" style="padding: 10px 20px;">Yesterday</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('thisWeek')" style="padding: 10px 20px;">This Week</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('lastWeek')" style="padding: 10px 20px;">Last Week</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('thisMonth')" style="padding: 10px 20px;">This Month</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('lastMonth')" style="padding: 10px 20px;">Last Month</button>
+                    </div>
+                </div>
+                
+                <!-- Summary Statistics -->
+                <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <div class="label">Total Downtime Events</div>
+                        <div class="value" id="downtime-events-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Total Downtime Duration</div>
+                        <div class="value" id="downtime-total-duration">0 hrs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Generation Lost</div>
+                        <div class="value" id="downtime-lost-generation">0 kWh</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Financial Loss</div>
+                        <div class="value" id="downtime-financial-loss">R 0</div>
+                    </div>
+                </div>
+                
+                <!-- Downtime Events Table -->
+                <div class="card" style="padding: 30px;">
+                    <h3 style="color: #FFD700; margin-bottom: 15px; font-size: 1.8em;">Downtime Events</h3>
+                    <p style="color: #aaaaaa; margin-bottom: 20px; font-size: 0.9em;">💡 Hover over Lost Gen and Financial Loss values to see TOU breakdown</p>
+                    <div id="downtime-table-container" style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: rgba(255, 215, 0, 0.1); border-bottom: 2px solid #FFD700;">
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">Date</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">Start Time</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">End Time</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">Duration</th>
+                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: 1.2em;">Expected Gen (kWh)</th>
+                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: 1.2em;">Lost Gen (kWh)</th>
+                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: 1.2em;">Financial Loss (ZAR)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="downtime-table-body">
+                                <tr>
+                                    <td colspan="7" style="padding: 40px; text-align: center; color: #aaaaaa; font-size: 1.1em;">
+                                        Select a date range and click "Analyze Downtime" to view results
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Warranty Tab -->
             <div id="warranty-tab" class="tab-content">
                 <h2 style="color: #FFD700; margin-bottom: 30px; font-size: 2.5em;">System Warranty Overview</h2>
@@ -1984,6 +2351,24 @@
         let isLoggedIn = false;
         let clientCredentials = null;
         let currentDataMode = 'expected'; // 'expected' or 'actual'
+        
+        // Configure Chart.js for mobile responsiveness
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.responsive = true;
+            // Note: maintainAspectRatio is set per-chart to avoid conflicts
+            
+            // Detect if on mobile device
+            const isMobile = window.innerWidth <= 768;
+            
+            if (isMobile) {
+                // Adjust default font sizes for mobile
+                Chart.defaults.font.size = 10;
+                Chart.defaults.plugins.legend.labels.font.size = 10;
+                Chart.defaults.plugins.legend.labels.padding = 8;
+                Chart.defaults.plugins.tooltip.titleFont.size = 12;
+                Chart.defaults.plugins.tooltip.bodyFont.size = 11;
+            }
+        }
         
         // Check for persisted login state on page load
         function checkPersistedAuth() {
@@ -2164,6 +2549,13 @@
                 }
             } else if (tab === 'warranty') {
                 loadWarrantyData();
+            } else if (tab === 'downtime') {
+                // Initialize downtime date range to this month
+                const downtimeStart = document.getElementById('downtime-start-date');
+                const downtimeEnd = document.getElementById('downtime-end-date');
+                if (!downtimeStart.value || !downtimeEnd.value) {
+                    setDowntimeRange('thisMonth');
+                }
             }
         }
         
@@ -2591,6 +2983,423 @@
         }
         
         // End Phase 2 Functions
+        
+        
+        // ============================================
+        // DOWNTIME ANALYSIS FUNCTIONS
+        // ============================================
+        
+        function setDowntimeRange(range) {
+            const startInput = document.getElementById('downtime-start-date');
+            const endInput = document.getElementById('downtime-end-date');
+            const today = new Date();
+            
+            let startDate, endDate;
+            
+            switch(range) {
+                case 'today':
+                    startDate = endDate = new Date(today);
+                    break;
+                case 'yesterday':
+                    startDate = endDate = new Date(today.setDate(today.getDate() - 1));
+                    break;
+                case 'thisWeek':
+                    startDate = new Date(today.setDate(today.getDate() - today.getDay()));
+                    endDate = new Date();
+                    break;
+                case 'lastWeek':
+                    endDate = new Date(today.setDate(today.getDate() - today.getDay() - 1));
+                    startDate = new Date(endDate);
+                    startDate.setDate(endDate.getDate() - 6);
+                    break;
+                case 'thisMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = new Date();
+                    break;
+                case 'lastMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                    break;
+            }
+            
+            startInput.value = startDate.toISOString().split('T')[0];
+            endInput.value = endDate.toISOString().split('T')[0];
+            
+            // Auto-trigger analysis
+            loadDowntimeAnalysis();
+        }
+        
+        async function loadDowntimeAnalysis() {
+            const startDate = document.getElementById('downtime-start-date').value;
+            const endDate = document.getElementById('downtime-end-date').value;
+            
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            if (!dashboardData || !dashboardData.daily_records) {
+                console.error('Dashboard data not loaded');
+                return;
+            }
+            
+            console.log(`📊 Analyzing downtime from ${startDate} to ${endDate}`);
+            
+            // Filter records within date range
+            const records = dashboardData.daily_records.filter(r => 
+                r.date >= startDate && r.date <= endDate
+            );
+            
+            if (records.length === 0) {
+                updateDowntimeUI([], 0, 0, 0);
+                return;
+            }
+            
+            // Analyze each day for downtime events
+            const downtimeEvents = [];
+            let totalDowntimeMinutes = 0;
+            let totalLostGeneration = 0;
+            let totalFinancialLoss = 0;
+            
+            for (const record of records) {
+                if (!record.hourly_data || record.hourly_data.length === 0) continue;
+                
+                const dayDowntime = analyzeDayDowntime(record);
+                downtimeEvents.push(...dayDowntime);
+                
+                dayDowntime.forEach(event => {
+                    totalDowntimeMinutes += event.durationMinutes;
+                    totalLostGeneration += event.lostGeneration;
+                    totalFinancialLoss += event.financialLoss;
+                });
+            }
+            
+            console.log(`Found ${downtimeEvents.length} downtime events`);
+            console.log(`Total downtime: ${(totalDowntimeMinutes / 60).toFixed(2)} hours`);
+            console.log(`Lost generation: ${totalLostGeneration.toFixed(2)} kWh`);
+            console.log(`Financial loss: R ${totalFinancialLoss.toFixed(2)}`);
+            
+            updateDowntimeUI(downtimeEvents, totalDowntimeMinutes, totalLostGeneration, totalFinancialLoss);
+        }
+        
+        function analyzeDayDowntime(record) {
+            const downtimeEvents = [];
+            const hourlyData = record.hourly_data;
+            
+            if (!hourlyData || hourlyData.length === 0) return downtimeEvents;
+            
+            // Build array of actual generation values for reference
+            const generationValues = hourlyData.map(h => ({
+                time: h.time,
+                hour: parseInt(h.time.split(':')[0]),
+                minute: parseInt(h.time.split(':')[1]),
+                generation: h.generation_kw || 0
+            }));
+            
+            // Analyze 5-minute intervals
+            let currentDowntime = null;
+            
+            for (let i = 0; i < generationValues.length; i++) {
+                const interval = generationValues[i];
+                const hourNum = interval.hour;
+                const minuteNum = interval.minute;
+                
+                // Only check daylight hours (6 AM to 7 PM)
+                if (hourNum < 6 || hourNum >= 19) continue;
+                
+                const generation = interval.generation;
+                
+                // Get expected generation from surrounding actual data
+                const expectedGen = getExpectedFromActualData(generationValues, i, hourNum);
+                
+                // Consider it downtime if generation is 0 or <5% of expected during daylight
+                const isDowntime = generation < (expectedGen * 0.05) && expectedGen > 1;
+                
+                if (isDowntime) {
+                    if (!currentDowntime) {
+                        // Start new downtime event
+                        currentDowntime = {
+                            date: record.date,
+                            startTime: interval.time,
+                            startHour: hourNum,
+                            startMinute: minuteNum,
+                            startIndex: i,
+                            lostGeneration: 0,
+                            lostGenerationByTOU: { peak: 0, standard: 0, off_peak: 0 },
+                            durationMinutes: 0,
+                            intervals: []
+                        };
+                    }
+                    
+                    // Store interval info for later calculation
+                    currentDowntime.intervals.push({
+                        index: i,
+                        hour: hourNum,
+                        minute: minuteNum,
+                        expectedGen: expectedGen
+                    });
+                    
+                    currentDowntime.durationMinutes += 5;
+                    
+                } else if (currentDowntime) {
+                    // End current downtime event
+                    currentDowntime.endTime = interval.time;
+                    currentDowntime.endHour = hourNum;
+                    currentDowntime.endMinute = minuteNum;
+                    currentDowntime.endIndex = i;
+                    
+                    // Calculate lost generation using average of surrounding actual data
+                    calculateDowntimeLoss(currentDowntime, generationValues);
+                    
+                    // Only record downtime events >= 10 minutes
+                    if (currentDowntime.durationMinutes >= 10) {
+                        downtimeEvents.push(currentDowntime);
+                    }
+                    
+                    currentDowntime = null;
+                }
+            }
+            
+            // Close any ongoing downtime at end of day
+            if (currentDowntime) {
+                currentDowntime.endTime = generationValues[generationValues.length - 1].time;
+                currentDowntime.endHour = parseInt(currentDowntime.endTime.split(':')[0]);
+                currentDowntime.endMinute = parseInt(currentDowntime.endTime.split(':')[1]);
+                currentDowntime.endIndex = generationValues.length - 1;
+                
+                calculateDowntimeLoss(currentDowntime, generationValues);
+                
+                if (currentDowntime.durationMinutes >= 10) {
+                    downtimeEvents.push(currentDowntime);
+                }
+            }
+            
+            return downtimeEvents;
+        }
+        
+        function getExpectedFromActualData(generationValues, currentIndex, currentHour) {
+            // Get average generation from surrounding 5-minute intervals
+            // Look at ±30 minutes (6 intervals before and after)
+            
+            const lookbackRange = 6;  // 6 x 5 min = 30 minutes
+            const lookforwardRange = 6;
+            let validValues = [];
+            
+            // Collect values from before downtime
+            for (let i = Math.max(0, currentIndex - lookbackRange); i < currentIndex; i++) {
+                const gen = generationValues[i].generation;
+                if (gen > 0.5) {  // Filter out noise, include any positive generation
+                    validValues.push(gen);
+                }
+            }
+            
+            // Collect values from after downtime
+            for (let i = currentIndex + 1; i < Math.min(generationValues.length, currentIndex + lookforwardRange + 1); i++) {
+                const gen = generationValues[i].generation;
+                if (gen > 0.5) {  // Filter out noise
+                    validValues.push(gen);
+                }
+            }
+            
+            // If we have actual data from ±30 minutes, use it
+            if (validValues.length >= 3) {  // Need at least 3 valid points
+                const avg = validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
+                return avg;
+            }
+            
+            // Fallback: look wider (±60 minutes / 12 intervals)
+            validValues = [];
+            const widerRange = 12;
+            
+            for (let i = Math.max(0, currentIndex - widerRange); i <= Math.min(generationValues.length - 1, currentIndex + widerRange); i++) {
+                if (i === currentIndex) continue;  // Skip current index
+                const gen = generationValues[i].generation;
+                if (gen > 0.5) {
+                    validValues.push(gen);
+                }
+            }
+            
+            if (validValues.length > 0) {
+                const avg = validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
+                return avg;
+            }
+            
+            // Last resort: use typical generation pattern
+            const typicalPattern = {
+                6: 5, 7: 15, 8: 25, 9: 35, 10: 40, 11: 45, 12: 45,
+                13: 40, 14: 35, 15: 28, 16: 20, 17: 12, 18: 5
+            };
+            
+            return typicalPattern[currentHour] || 0;
+        }
+        
+        function calculateDowntimeLoss(downtime, generationValues) {
+            // For each interval during downtime, calculate what should have been generated
+            // using average of surrounding actual data
+            
+            let totalExpectedGen = 0;
+            
+            for (const interval of downtime.intervals) {
+                // Get expected generation for this specific 5-minute interval
+                const expectedKW = getExpectedFromActualData(generationValues, interval.index, interval.hour);
+                
+                // Convert kW to kWh for 5-minute interval
+                const expectedKWh = expectedKW / 12; // 5 min = 1/12 hour
+                
+                totalExpectedGen += expectedKWh;
+                downtime.lostGeneration += expectedKWh;
+                
+                // Determine TOU period for this interval
+                const touPeriod = getTOUPeriod(downtime.date, interval.hour, interval.minute);
+                downtime.lostGenerationByTOU[touPeriod] += expectedKWh;
+            }
+            
+            // Store average expected generation for display
+            downtime.expectedGen = totalExpectedGen;
+            
+            // Calculate financial loss using TOU rates
+            downtime.financialLoss = calculateTOUFinancialLoss(downtime.lostGenerationByTOU);
+        }
+        
+        function getTOUPeriod(date, hour, minute) {
+            // Eskom TOU Schedule for Cape Town (adjust if different region)
+            // Note: This is a simplified version - actual TOU has seasonal variations
+            
+            const dayOfWeek = new Date(date).getDay(); // 0 = Sunday, 6 = Saturday
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            
+            // Parse date to get month
+            const month = parseInt(date.split('-')[1]);
+            const isSummer = month >= 9 || month <= 4; // Sept-April
+            
+            // Convert to decimal hours for easier comparison
+            const decimalHour = hour + (minute / 60);
+            
+            if (isWeekend) {
+                // Weekends: Only Off-Peak
+                return 'off_peak';
+            }
+            
+            // Weekdays
+            if (isSummer) {
+                // Summer (Sept - April) - Weekdays
+                if ((decimalHour >= 7 && decimalHour < 10) || (decimalHour >= 18 && decimalHour < 20)) {
+                    return 'peak';
+                } else if ((decimalHour >= 6 && decimalHour < 7) || 
+                          (decimalHour >= 10 && decimalHour < 18) || 
+                          (decimalHour >= 20 && decimalHour < 22)) {
+                    return 'standard';
+                } else {
+                    return 'off_peak';
+                }
+            } else {
+                // Winter (May - Aug) - Weekdays
+                if ((decimalHour >= 6 && decimalHour < 9) || (decimalHour >= 17 && decimalHour < 19)) {
+                    return 'peak';
+                } else if ((decimalHour >= 9 && decimalHour < 17) || 
+                          (decimalHour >= 19 && decimalHour < 22)) {
+                    return 'standard';
+                } else {
+                    return 'off_peak';
+                }
+            }
+        }
+        
+        function calculateTOUFinancialLoss(lostGenerationByTOU) {
+            // Eskom TOU Rates (ZAR/kWh) - Update these with current rates
+            const TOU_RATES = {
+                peak: 4.68,        // Peak hours - highest rate
+                standard: 3.38,    // Standard hours
+                off_peak: 2.07     // Off-peak hours - lowest rate
+            };
+            
+            const loss = 
+                (lostGenerationByTOU.peak * TOU_RATES.peak) +
+                (lostGenerationByTOU.standard * TOU_RATES.standard) +
+                (lostGenerationByTOU.off_peak * TOU_RATES.off_peak);
+            
+            return loss;
+        }
+        
+        function getExpectedGenerationPattern(date) {
+            // Get expected hourly generation from predictions
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            
+            // Use cached predictions if available
+            if (window.cachedPredictions && window.cachedPredictions[date]) {
+                return window.cachedPredictions[date];
+            }
+            
+            // Fallback: typical generation pattern (kW by hour)
+            const typicalPattern = {
+                6: 5, 7: 15, 8: 25, 9: 35, 10: 40, 11: 45, 12: 45,
+                13: 40, 14: 35, 15: 28, 16: 20, 17: 12, 18: 5
+            };
+            
+            return typicalPattern;
+        }
+        
+        function updateDowntimeUI(events, totalMinutes, lostGen, financialLoss) {
+            // Update summary stats
+            document.getElementById('downtime-events-count').textContent = events.length;
+            document.getElementById('downtime-total-duration').textContent = 
+                `${(totalMinutes / 60).toFixed(1)} hrs`;
+            document.getElementById('downtime-lost-generation').textContent = 
+                `${lostGen.toFixed(1)} kWh`;
+            document.getElementById('downtime-financial-loss').textContent = 
+                `R ${formatNumber(financialLoss, 2)}`;
+            
+            // Update table
+            const tbody = document.getElementById('downtime-table-body');
+            
+            if (events.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="padding: 40px; text-align: center; color: #4ade80; font-size: 1.1em;">
+                            ✅ No significant downtime detected in selected period
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Sort events by date and time (newest first)
+            events.sort((a, b) => {
+                const dateCompare = b.date.localeCompare(a.date);
+                if (dateCompare !== 0) return dateCompare;
+                return b.startTime.localeCompare(a.startTime);
+            });
+            
+            tbody.innerHTML = events.map(event => {
+                const duration = event.durationMinutes >= 60 ? 
+                    `${Math.floor(event.durationMinutes / 60)}h ${event.durationMinutes % 60}m` :
+                    `${event.durationMinutes}m`;
+                
+                // Color code by severity
+                let severityColor = '#4ade80'; // green for minor
+                if (event.durationMinutes >= 60) severityColor = '#ef4444'; // red for >1hr
+                else if (event.durationMinutes >= 30) severityColor = '#ff9800'; // orange for 30-60min
+                
+                // Create TOU breakdown tooltip
+                const touBreakdown = `
+Peak: ${event.lostGenerationByTOU.peak.toFixed(1)} kWh @ R4.68
+Standard: ${event.lostGenerationByTOU.standard.toFixed(1)} kWh @ R3.38
+Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07
+                `.trim();
+                
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                        <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.date}</td>
+                        <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.startTime}</td>
+                        <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.endTime}</td>
+                        <td style="padding: 20px; text-align: center; color: ${severityColor}; font-weight: 600; font-size: 1.1em;">${duration}</td>
+                        <td style="padding: 20px; text-align: right; color: #cccccc; font-size: 1.1em;">${event.expectedGen.toFixed(1)}</td>
+                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: 1.1em;" title="${touBreakdown}">${event.lostGeneration.toFixed(1)}</td>
+                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: 1.1em;" title="${touBreakdown}">R ${event.financialLoss.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
         
         // Report Tab Functions
         function setReportDateRange(range) {
@@ -3961,6 +4770,245 @@
             }).join('');
         }
         
+        // ============================================
+        // DOWNTIME ANALYSIS FUNCTIONS
+        // ============================================
+        
+        function setDowntimeRange(range) {
+            const startInput = document.getElementById('downtime-start-date');
+            const endInput = document.getElementById('downtime-end-date');
+            const today = new Date();
+            let startDate, endDate;
+            
+            switch(range) {
+                case 'today':
+                    startDate = endDate = new Date(today);
+                    break;
+                case 'yesterday':
+                    startDate = endDate = new Date(today);
+                    startDate.setDate(today.getDate() - 1);
+                    endDate.setDate(today.getDate() - 1);
+                    break;
+                case 'thisWeek':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - today.getDay());
+                    endDate = new Date(today);
+                    break;
+                case 'lastWeek':
+                    endDate = new Date(today);
+                    endDate.setDate(today.getDate() - today.getDay() - 1);
+                    startDate = new Date(endDate);
+                    startDate.setDate(endDate.getDate() - 6);
+                    break;
+                case 'thisMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = new Date(today);
+                    break;
+                case 'lastMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                    break;
+            }
+            
+            startInput.value = startDate.toISOString().split('T')[0];
+            endInput.value = endDate.toISOString().split('T')[0];
+        }
+        
+        async function loadDowntimeAnalysis() {
+            const startInput = document.getElementById('downtime-start-date');
+            const endInput = document.getElementById('downtime-end-date');
+            
+            if (!startInput.value || !endInput.value) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            const startDate = startInput.value;
+            const endDate = endInput.value;
+            
+            console.log('🔍 Analyzing downtime from', startDate, 'to', endDate);
+            
+            try {
+                // Get data from dashboard
+                if (!dashboardData || !dashboardData.daily_records) {
+                    console.error('No dashboard data available');
+                    return;
+                }
+                
+                // Load predictions for expected generation
+                const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+                const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+                const predResponse = await fetch(predictionsPath);
+                const predictions = await predResponse.json();
+                
+                // Filter records in date range
+                const recordsInRange = dashboardData.daily_records.filter(r => 
+                    r.date >= startDate && r.date <= endDate
+                );
+                
+                console.log('📊 Found', recordsInRange.length, 'days in range');
+                
+                // Analyze each day for downtime
+                const downtimeEvents = [];
+                let totalLostGeneration = 0;
+                let totalDowntimeMinutes = 0;
+                
+                recordsInRange.forEach(record => {
+                    if (!record.hourly_data || !Array.isArray(record.hourly_data)) {
+                        return;
+                    }
+                    
+                    const date = record.date;
+                    const dailyPredictions = predictions.daily_predictions[date];
+                    
+                    if (!dailyPredictions || !dailyPredictions.pv_kw) {
+                        return;
+                    }
+                    
+                    // Track consecutive zero periods
+                    let downtimeStart = null;
+                    let downtimeEnd = null;
+                    let expectedGenDuringDowntime = 0;
+                    
+                    record.hourly_data.forEach((hourData, index) => {
+                        const hourStr = hourData.time.split(':')[0];
+                        const hour = parseInt(hourStr);
+                        const generationKw = hourData.generation_kw || 0;
+                        const expectedKw = dailyPredictions.pv_kw[hour] || 0;
+                        
+                        // Only consider downtime if we expected generation (> 0.1 kW)
+                        if (expectedKw > 0.1) {
+                            if (generationKw === 0) {
+                                // Start or continue downtime
+                                if (downtimeStart === null) {
+                                    downtimeStart = hourData.time;
+                                    expectedGenDuringDowntime = 0;
+                                }
+                                downtimeEnd = hourData.time;
+                                expectedGenDuringDowntime += expectedKw;
+                            } else {
+                                // End downtime if exists
+                                if (downtimeStart !== null) {
+                                    // Record downtime event
+                                    const durationMinutes = calculateDuration(downtimeStart, downtimeEnd);
+                                    const lostKwh = expectedGenDuringDowntime;
+                                    
+                                    downtimeEvents.push({
+                                        date: date,
+                                        startTime: downtimeStart,
+                                        endTime: downtimeEnd,
+                                        durationMinutes: durationMinutes,
+                                        expectedGen: expectedGenDuringDowntime,
+                                        lostGen: lostKwh
+                                    });
+                                    
+                                    totalLostGeneration += lostKwh;
+                                    totalDowntimeMinutes += durationMinutes;
+                                    
+                                    // Reset for next potential downtime
+                                    downtimeStart = null;
+                                    downtimeEnd = null;
+                                    expectedGenDuringDowntime = 0;
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Handle downtime that extends to end of day
+                    if (downtimeStart !== null) {
+                        const durationMinutes = calculateDuration(downtimeStart, downtimeEnd);
+                        const lostKwh = expectedGenDuringDowntime;
+                        
+                        downtimeEvents.push({
+                            date: date,
+                            startTime: downtimeStart,
+                            endTime: downtimeEnd,
+                            durationMinutes: durationMinutes,
+                            expectedGen: expectedGenDuringDowntime,
+                            lostGen: lostKwh
+                        });
+                        
+                        totalLostGeneration += lostKwh;
+                        totalDowntimeMinutes += durationMinutes;
+                    }
+                });
+                
+                console.log('⚠️ Found', downtimeEvents.length, 'downtime events');
+                console.log('📉 Total lost generation:', totalLostGeneration.toFixed(2), 'kWh');
+                
+                // Calculate financial loss (using average ZAR rate)
+                const avgRate = 2.50; // R2.50/kWh average
+                const financialLoss = totalLostGeneration * avgRate;
+                
+                // Update summary stats
+                document.getElementById('downtime-events-count').textContent = downtimeEvents.length;
+                document.getElementById('downtime-total-duration').textContent = formatDuration(totalDowntimeMinutes);
+                document.getElementById('downtime-lost-generation').textContent = totalLostGeneration.toFixed(2) + ' kWh';
+                document.getElementById('downtime-financial-loss').textContent = 'R ' + financialLoss.toFixed(2);
+                
+                // Populate table
+                populateDowntimeTable(downtimeEvents, avgRate);
+                
+            } catch (error) {
+                console.error('Error analyzing downtime:', error);
+                alert('Error analyzing downtime. Please try again.');
+            }
+        }
+        
+        function calculateDuration(startTime, endTime) {
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            const [endHour, endMin] = endTime.split(':').map(Number);
+            return (endHour * 60 + endMin) - (startHour * 60 + startMin) + 5; // +5 for the 5-min interval
+        }
+        
+        function formatDuration(minutes) {
+            if (minutes < 60) {
+                return minutes + ' min';
+            }
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+        }
+        
+        function populateDowntimeTable(events, avgRate) {
+            const tbody = document.getElementById('downtime-table-body');
+            if (!tbody) return;
+            
+            if (events.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="padding: 40px; text-align: center; color: #4ade80; font-size: 1.2em;">
+                            ✅ No downtime detected during this period!
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Sort by date and time (most recent first)
+            events.sort((a, b) => {
+                if (a.date !== b.date) return b.date.localeCompare(a.date);
+                return b.startTime.localeCompare(a.startTime);
+            });
+            
+            tbody.innerHTML = events.map(event => {
+                const financialLoss = event.lostGen * avgRate;
+                const duration = formatDuration(event.durationMinutes);
+                
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                        <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.date}</td>
+                        <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.startTime}</td>
+                        <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.endTime}</td>
+                        <td style="padding: 20px; text-align: center; color: #fbbf24; font-weight: 600; font-size: 1.1em;">${duration}</td>
+                        <td style="padding: 20px; text-align: right; color: #94a3b8; font-size: 1.1em;">${event.expectedGen.toFixed(2)}</td>
+                        <td style="padding: 20px; text-align: right; color: #ef4444; font-weight: 600; font-size: 1.1em;">${event.lostGen.toFixed(2)}</td>
+                        <td style="padding: 20px; text-align: right; color: #ef4444; font-weight: 600; font-size: 1.1em;">R ${financialLoss.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
         function createEnvCards(data, containerId) {
             const container = document.getElementById(containerId);
             container.innerHTML = `
@@ -5190,6 +6238,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: {
                 mode: 'index',
                 intersect: false,
@@ -6395,6 +7444,24 @@ async function loadPast30Days() {
             window.addEventListener('focus', () => {
                 console.log('Window focused - refreshing data');
                 loadData();
+            });
+            
+            // Handle window resize for mobile orientation changes
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    console.log('Window resized - updating charts');
+                    // Resize all active charts
+                    if (dailyChart) dailyChart.resize();
+                    if (monthlyChart) monthlyChart.resize();
+                    if (lifetimeMonthlyChart) lifetimeMonthlyChart.resize();
+                    if (lifetimeActualVsExpectedChart) lifetimeActualVsExpectedChart.resize();
+                    if (lifetimePerformanceLineChart) lifetimePerformanceLineChart.resize();
+                    if (financialMonthlyTouChart) financialMonthlyTouChart.resize();
+                    if (financialCumulativeChart) financialCumulativeChart.resize();
+                    if (financialTouPieChart) financialTouPieChart.resize();
+                }, 250);
             });
             
             console.log('✓ Auto-refresh enabled: Every 2 minutes + on visibility change');
