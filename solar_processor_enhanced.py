@@ -317,6 +317,93 @@ def aggregate_monthly_data(daily_records, year_month):
     }
 
 
+def calculate_expected_tou_for_month(year_month, monthly_predictions_base, system_data):
+    """
+    Calculate expected TOU breakdown for a month based on PVSyst predictions
+    
+    Args:
+        year_month: String like "2026-01"
+        monthly_predictions_base: PVSyst monthly averages
+        system_data: System configuration including commissioning date and degradation
+    
+    Returns:
+        dict: Expected TOU breakdown and financial savings
+    """
+    if not monthly_predictions_base:
+        return None
+    
+    year, month_num = year_month.split('-')
+    month_key = month_num  # "01", "02", etc.
+    
+    if month_key not in monthly_predictions_base:
+        return None
+    
+    # Get monthly average daily generation
+    avg_daily_kwh = monthly_predictions_base[month_key].get('avg_daily_kwh', 0)
+    
+    # Apply degradation if system data available
+    if system_data and 'commissioning_date' in system_data:
+        commissioning_date = datetime.fromisoformat(system_data['commissioning_date'].split('T')[0])
+        target_date = datetime(int(year), int(month_num), 15)  # Mid-month
+        days_active = (target_date - commissioning_date).days
+        years_active = days_active / 365.25
+        
+        degradation_year_1 = system_data.get('degradation_year_1', 0.02)
+        degradation_subsequent = system_data.get('degradation_subsequent_years', 0.005)
+        
+        if years_active < 1:
+            degradation_percent = degradation_year_1 * years_active
+        else:
+            degradation_percent = degradation_year_1 + (degradation_subsequent * (years_active - 1))
+        
+        degradation_factor = 1 - degradation_percent
+        avg_daily_kwh *= degradation_factor
+    
+    # Get hourly pattern (normalized)
+    hourly_pattern = monthly_predictions_base[month_key].get('hourly_avg_kw', [0] * 24)
+    total_daily = sum(hourly_pattern)
+    
+    if total_daily > 0:
+        # Normalize to sum to 1.0
+        hourly_pattern = [h / total_daily for h in hourly_pattern]
+    else:
+        # Fallback to uniform distribution
+        hourly_pattern = [1/24] * 24
+    
+    # Scale to actual daily generation
+    hourly_kwh = [h * avg_daily_kwh for h in hourly_pattern]
+    
+    # Classify each hour by TOU period (using mid-month date)
+    mid_month_date = f"{year}-{month_num}-15"
+    
+    expected_tou = {
+        'peak_kwh': 0.0,
+        'standard_kwh': 0.0,
+        'off_peak_kwh': 0.0
+    }
+    
+    for hour in range(24):
+        kwh = hourly_kwh[hour]
+        period = get_tou_period(mid_month_date, hour)
+        expected_tou[f'{period}_kwh'] += kwh
+    
+    # Multiply by days in month
+    days_in_month = (datetime(int(year), int(month_num) + 1 if int(month_num) < 12 else int(year) + 1, 1 if int(month_num) < 12 else 1, 1) - 
+                     datetime(int(year), int(month_num), 1)).days
+    
+    for key in expected_tou:
+        expected_tou[key] = round(expected_tou[key] * days_in_month, 2)
+    
+    # Calculate expected financial savings
+    month_date = year_month + '-01'
+    financial_expected = calculate_financial_savings(expected_tou, month_date)
+    
+    return {
+        'tou_breakdown_expected': expected_tou,
+        'financial_expected': financial_expected
+    }
+
+
 def aggregate_lifetime_data(daily_records):
     """
     Aggregate all daily records into lifetime summary
@@ -392,8 +479,18 @@ def process_dashboard_data(input_file):
             if year_month not in data['monthly_summaries']:
                 data['monthly_summaries'][year_month] = {}
             data['monthly_summaries'][year_month].update(monthly_data)
+            
+            # Add expected TOU breakdown if predictions available
+            if 'monthly_predictions_base' in data:
+                expected_data = calculate_expected_tou_for_month(
+                    year_month, 
+                    data['monthly_predictions_base'],
+                    data.get('system', {})
+                )
+                if expected_data:
+                    data['monthly_summaries'][year_month].update(expected_data)
     
-    print(f"✓ Updated {len(year_months)} monthly summaries")
+    print(f"✓ Updated {len(year_months)} monthly summaries (with expected TOU)")
     
     # Update lifetime summary
     if 'lifetime_summary' not in data:
@@ -413,7 +510,28 @@ def process_dashboard_data(input_file):
     # Print summary
     if 'lifetime_summary' in data and 'financial' in data['lifetime_summary']:
         fin = data['lifetime_summary']['financial']
-        print("\n📊 Lifetime Financial Summary:")
+        tou = data['lifetime_summary'].get('tou_breakdown', {})
+        
+        # Calculate TOU total
+        tou_total = tou.get('peak_kwh', 0) + tou.get('standard_kwh', 0) + tou.get('off_peak_kwh', 0)
+        lifetime_gen = data['lifetime_summary'].get('total_generation_kwh', 0)
+        
+        print("\n📊 Lifetime Summary:")
+        print(f"   Total Generation: {lifetime_gen:,.1f} kWh")
+        print(f"   TOU Breakdown Total: {tou_total:,.1f} kWh")
+        print(f"     - Peak: {tou.get('peak_kwh', 0):,.1f} kWh")
+        print(f"     - Standard: {tou.get('standard_kwh', 0):,.1f} kWh")
+        print(f"     - Off-Peak: {tou.get('off_peak_kwh', 0):,.1f} kWh")
+        
+        # Validate totals match
+        diff = abs(lifetime_gen - tou_total)
+        if diff > 1:
+            print(f"\n   ⚠️  WARNING: TOU total doesn't match lifetime generation!")
+            print(f"   Difference: {diff:,.1f} kWh")
+        else:
+            print(f"\n   ✅ TOU total matches lifetime generation")
+        
+        print("\n📊 Financial Summary:")
         print(f"   Utility Cost: R {fin['utility']['total_zar']:,.2f}")
         print(f"   PPA Cost: R {fin['ppa']['total_zar']:,.2f}")
         print(f"   Total Savings: R {fin['savings']['total_savings_zar']:,.2f}")
