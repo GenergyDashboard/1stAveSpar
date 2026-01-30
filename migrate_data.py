@@ -88,6 +88,10 @@ def parse_xls_file(filepath):
                 grid_w = float(row[4]) if len(row) > 4 and row[4] != '' else 0
                 load_w = float(row[5]) if len(row) > 5 and row[5] != '' else 0
                 
+                # Grid: negative = importing FROM grid (what we want to track)
+                # Convert to positive for display purposes
+                grid_w = abs(grid_w)
+                
                 # Extract hour from time (HH:MM:SS)
                 try:
                     hour = int(time_str.split(':')[0])
