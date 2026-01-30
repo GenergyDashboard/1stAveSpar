@@ -240,9 +240,9 @@
 .financial-value::after,
 .financial-hero::after,
 .financial-card .value::after,
-#financial-peak-savings::after,
-#financial-standard-savings::after,
-#financial-off-peak-savings::after {
+.stat-card .value:has(#financial-peak-savings)::after,
+.stat-card .value:has(#financial-standard-savings)::after,
+.stat-card .value:has(#financial-off-peak-savings)::after {
     content: '';
 }
 
@@ -5819,6 +5819,12 @@ async function loadMonthlyData() {
             const firstDate = monthRecords[0].date;
             const lastDate = monthRecords[monthRecords.length - 1].date;
             console.log(`   Date range: ${firstDate} to ${lastDate}`);
+            
+            // Check last 3 records for Load/Grid data
+            console.log(`   Last 3 records Load/Grid data:`);
+            monthRecords.slice(-3).forEach(r => {
+                console.log(`     ${r.date}: Load=${r.actual_load_kwh?.toFixed(1) || 'missing'}, Grid=${r.actual_grid_kwh?.toFixed(1) || 'missing'}`);
+            });
         }
         
         if (monthRecords.length === 0) {
@@ -6265,6 +6271,13 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
     // PHASE 3: Create Load & Grid comparison chart
     const loadGridCtx = document.getElementById('monthlyLoadGridChart').getContext('2d');
     if (monthlyLoadGridChart) monthlyLoadGridChart.destroy();
+    
+    console.log(`📊 Load & Grid Chart Creation:`);
+    console.log(`   Records count: ${records.length}`);
+    console.log(`   First 3 dates: ${records.slice(0, 3).map(r => r.date).join(', ')}`);
+    console.log(`   Last 3 dates: ${records.slice(-3).map(r => r.date).join(', ')}`);
+    console.log(`   Actual Load values (last 5): ${records.slice(-5).map(r => (r.actual_load_kwh || 0).toFixed(1)).join(', ')}`);
+    console.log(`   Actual Grid values (last 5): ${records.slice(-5).map(r => (r.actual_grid_kwh || 0).toFixed(1)).join(', ')}`);
     
     monthlyLoadGridChart = new Chart(loadGridCtx, {
         type: 'bar',
