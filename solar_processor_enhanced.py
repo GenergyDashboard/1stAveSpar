@@ -388,8 +388,13 @@ def calculate_expected_tou_for_month(year_month, monthly_predictions_base, syste
         expected_tou[f'{period}_kwh'] += kwh
     
     # Multiply by days in month
-    days_in_month = (datetime(int(year), int(month_num) + 1 if int(month_num) < 12 else int(year) + 1, 1 if int(month_num) < 12 else 1, 1) - 
-                     datetime(int(year), int(month_num), 1)).days
+    if int(month_num) == 12:
+        next_month_date = datetime(int(year) + 1, 1, 1)
+    else:
+        next_month_date = datetime(int(year), int(month_num) + 1, 1)
+    
+    this_month_date = datetime(int(year), int(month_num), 1)
+    days_in_month = (next_month_date - this_month_date).days
     
     for key in expected_tou:
         expected_tou[key] = round(expected_tou[key] * days_in_month, 2)
