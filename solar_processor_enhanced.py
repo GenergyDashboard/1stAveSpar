@@ -263,20 +263,6 @@ def process_daily_record(record):
     date_str = record.get('date', '')
     hourly_data = record['hourly_data']
     
-    # Calculate daily Load and Grid sums from hourly data
-    actual_load_kwh = 0.0
-    actual_grid_kwh = 0.0
-    
-    for entry in hourly_data:
-        # Each entry has load_kw and grid_kw
-        # These are already in kWh (summed across intervals within the hour)
-        actual_load_kwh += entry.get('load_kw', 0)
-        actual_grid_kwh += entry.get('grid_kw', 0)
-    
-    # Update record with calculated sums
-    record['actual_load_kwh'] = round(actual_load_kwh, 2)
-    record['actual_grid_kwh'] = round(actual_grid_kwh, 2)
-    
     # Calculate TOU breakdown
     tou_breakdown = calculate_tou_breakdown(hourly_data, date_str)
     
@@ -476,14 +462,10 @@ def process_dashboard_data(input_file):
     print(f"✓ Found {len(data['daily_records'])} daily records")
     
     # Process each daily record
-    records_with_load_grid = 0
     for i, record in enumerate(data['daily_records']):
         data['daily_records'][i] = process_daily_record(record)
-        if data['daily_records'][i].get('actual_load_kwh') is not None:
-            records_with_load_grid += 1
     
     print("✓ Processed all daily records")
-    print(f"  └─ {records_with_load_grid} records have Load/Grid data")
     
     # Update monthly summaries
     if 'monthly_summaries' not in data:
