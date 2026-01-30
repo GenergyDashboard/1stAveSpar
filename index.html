@@ -679,6 +679,50 @@
             font-size: 1.2em;
         }
         
+        /* PHASE 3: Info Header */
+        .info-header {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-radius: 15px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .info-label {
+            color: #9ca3af;
+            font-size: 1.4em;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #FFD700;
+            font-size: 1.6em;
+            font-weight: 700;
+        }
+        
+        @media (max-width: 768px) {
+            .info-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .info-item {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+        
         .update-time {
             text-align: center;
             color: #ffffff;
@@ -1435,6 +1479,22 @@
         </div>
         
         <div id="clientView" class="client-view">
+            <!-- PHASE 3: Info Header -->
+            <div class="info-header">
+                <div class="info-item">
+                    <span class="info-label">Last Updated:</span>
+                    <span class="info-value" id="header-last-update">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Days Active:</span>
+                    <span class="info-value" id="header-days-active">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">System Capacity:</span>
+                    <span class="info-value">71.59 kWp</span>
+                </div>
+            </div>
+            
             <div class="tabs">
                 <button class="tab active" onclick="switchClientTab('daily')">Daily Generation</button>
                 <button class="tab" onclick="switchClientTab('monthly')">Monthly Overview</button>
@@ -1726,6 +1786,12 @@
                     <h3 class="chart-title">Daily Generation for Selected Month</h3>
                     <canvas id="monthlyChart"></canvas>
                 </div>
+                
+                <!-- PHASE 3: New Actual vs Expected Load & Grid Graph -->
+                <div class="chart-container" style="margin-top: 30px;">
+                    <h3 class="chart-title">Actual vs Expected Load & Grid</h3>
+                    <canvas id="monthlyLoadGridChart"></canvas>
+                </div>
             </div>
             
             <div id="lifetime-tab" class="tab-content">
@@ -1883,6 +1949,16 @@
                     <div class="scrollable-chart">
                         <div style="min-width: 1200px;">
                             <canvas id="lifetimePerformanceLineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PHASE 3: New TOU Savings Graph -->
+                <div class="chart-container" style="margin-top: 30px;">
+                    <h3 class="chart-title">Monthly TOU Savings Breakdown</h3>
+                    <div class="scrollable-chart">
+                        <div style="min-width: 1200px;">
+                            <canvas id="lifetimeTouSavingsChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -2255,7 +2331,7 @@
     </div>
 
     <script>
-        let dailyChart, monthlyChart, lifetimeMonthlyChart, lifetimeActualVsExpectedChart, lifetimePerformanceLineChart;
+        let dailyChart, monthlyChart, monthlyLoadGridChart, lifetimeMonthlyChart, lifetimeActualVsExpectedChart, lifetimePerformanceLineChart, lifetimeTouSavingsChart;
         let financialMonthlyTouChart, financialCumulativeChart, financialTouPieChart;
         let dashboardData = null;
         let isLoggedIn = false;
@@ -2413,6 +2489,7 @@
                 loadLifetimeMonthlyBreakdown();
                 loadLifetimeActualVsExpectedChart();
                 loadLifetimePerformanceLineChart();
+                loadLifetimeTouSavingsChart();  // PHASE 3
             } else if (tab === 'monthly') {
                 // Restore saved selection or default to current month
                 if (restoreMonthSelection()) {
@@ -5886,6 +5963,10 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
     // Create array of avg prediction for line
     const avgPredictionLine = new Array(records.length).fill(avgDailyPrediction);
     
+    // PHASE 3: Calculate actual PV average
+    const actualAverage = records.reduce((sum, d) => sum + d.generation_kwh, 0) / records.length;
+    const actualAverageLine = new Array(records.length).fill(actualAverage);
+    
     // Get irradiation data from predictions file for each day
     const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
     fetch(`${basePath}predictions_2025_2044.min.json`.replace('//', '/'))
@@ -5975,6 +6056,18 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 3
+                },
+                {
+                    label: 'Actual PV Average (kWh)',
+                    data: actualAverageLine,
+                    type: 'line',
+                    borderColor: '#22c55e',
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
@@ -6107,6 +6200,118 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
             updateTouBreakdown('monthly', monthlyData);
         }
     }
+    
+    // PHASE 3: Create Load & Grid comparison chart
+    const loadGridCtx = document.getElementById('monthlyLoadGridChart').getContext('2d');
+    if (monthlyLoadGridChart) monthlyLoadGridChart.destroy();
+    
+    monthlyLoadGridChart = new Chart(loadGridCtx, {
+        type: 'bar',
+        data: {
+            labels: records.map(d => {
+                const date = new Date(d.date);
+                return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+            }),
+            datasets: [
+                {
+                    label: 'Actual Load (kWh)',
+                    data: records.map(d => d.load_kwh || 0),
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                    borderColor: '#ef4444',
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    label: 'Expected Load (kWh)',
+                    data: actualLoadLine,
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 1
+                },
+                {
+                    label: 'Actual Grid (kWh)',
+                    data: records.map(d => d.grid_kwh || 0),
+                    backgroundColor: 'rgba(249, 115, 22, 0.7)',
+                    borderColor: '#f97316',
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    label: 'Expected Grid (kWh)',
+                    data: expectedGridLine,
+                    type: 'line',
+                    borderColor: '#f97316',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: { 
+                    labels: { 
+                        color: '#ffffff',
+                        font: { size: 16, weight: 'bold' }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                    titleFont: { size: 18, weight: 'bold' },
+                    bodyFont: { size: 16 },
+                    padding: 20,
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + ' kWh';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: { 
+                        display: true, 
+                        text: 'Energy (kWh)',
+                        color: '#ffffff',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                }
+            }
+        }
+    });
 }
 
 async function loadLifetimeMonthlyBreakdown() {
@@ -6947,6 +7152,144 @@ async function loadLifetimePerformanceLineChart() {
     }
 }
 
+// PHASE 3: Load Lifetime TOU Savings Chart
+async function loadLifetimeTouSavingsChart() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const response = await fetch(`${basePath}data/dashboard_data.json`.replace('//', '/'));
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Extract monthly summaries and sort by date
+        const monthKeys = Object.keys(data.monthly_summaries || {}).sort();
+        
+        if (monthKeys.length === 0) {
+            console.warn('No monthly data for TOU savings chart');
+            return;
+        }
+        
+        const monthLabels = [];
+        const peakSavings = [];
+        const standardSavings = [];
+        const offPeakSavings = [];
+        
+        monthKeys.forEach(monthKey => {
+            const monthData = data.monthly_summaries[monthKey];
+            if (monthData && monthData.financial && monthData.financial.savings) {
+                // Format label as "Jan 2025"
+                const [year, month] = monthKey.split('-');
+                const date = new Date(year, parseInt(month) - 1);
+                monthLabels.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+                
+                // Extract savings by TOU period
+                peakSavings.push(monthData.financial.savings.peak_savings_zar || 0);
+                standardSavings.push(monthData.financial.savings.standard_savings_zar || 0);
+                offPeakSavings.push(monthData.financial.savings.off_peak_savings_zar || 0);
+            }
+        });
+        
+        console.log('📊 TOU Savings Chart - Months:', monthLabels.length);
+        
+        // Create chart
+        const ctx = document.getElementById('lifetimeTouSavingsChart').getContext('2d');
+        if (lifetimeTouSavingsChart) lifetimeTouSavingsChart.destroy();
+        
+        lifetimeTouSavingsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        label: 'Peak Savings (R)',
+                        data: peakSavings,
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        borderColor: '#ef4444',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Standard Savings (R)',
+                        data: standardSavings,
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Off-Peak Savings (R)',
+                        data: offPeakSavings,
+                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                        borderColor: '#22c55e',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { 
+                        labels: { 
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleFont: { size: 18, weight: 'bold' },
+                        bodyFont: { size: 16 },
+                        padding: 20,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': R ' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y: {
+                        stacked: true,
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Savings (R)',
+                            color: '#4ade80',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' },
+                            callback: function(value) {
+                                return 'R ' + value.toFixed(0);
+                            }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading TOU savings chart:', error);
+    }
+}
+
 async function loadPast30Days() {
     try {
         const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
@@ -7147,6 +7490,17 @@ async function loadPast30Days() {
                 }
                 
                 document.getElementById('last-update').textContent = displayTime;
+                
+                // PHASE 3: Update header info
+                const headerLastUpdate = document.getElementById('header-last-update');
+                if (headerLastUpdate) {
+                    headerLastUpdate.textContent = displayTime;
+                }
+                
+                const headerDaysActive = document.getElementById('header-days-active');
+                if (headerDaysActive && dashboardData.lifetime && dashboardData.lifetime.days_active) {
+                    headerDaysActive.textContent = dashboardData.lifetime.days_active;
+                }
                 
                 // Handle yesterday's data - either from dashboard_data.json or calculate from today
                 const yesterdayGen = dashboardData.yesterday ? dashboardData.yesterday.generation_kwh : (dashboardData.today.generation_kwh * 0.95);
