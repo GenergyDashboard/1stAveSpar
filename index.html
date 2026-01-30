@@ -2700,6 +2700,14 @@
                 totalGenEl.textContent = formatNumber(totalGen, 1) + ' kWh';
             }
             
+            // Validation: Check if TOU total matches lifetime generation for lifetime prefix
+            if (prefix === 'lifetime' && data.total_generation_kwh) {
+                const diff = Math.abs(totalGen - data.total_generation_kwh);
+                if (diff > 1) {  // Allow 1 kWh tolerance for rounding
+                    console.warn(`⚠️ TOU total (${totalGen.toFixed(1)} kWh) doesn't match lifetime generation (${data.total_generation_kwh.toFixed(1)} kWh). Difference: ${diff.toFixed(1)} kWh`);
+                }
+            }
+            
             // Get date for seasonal rate determination
             // For daily: use data.date
             // For monthly: use first day of month (YYYY-MM-01)
@@ -2763,16 +2771,25 @@
             // Update hero card
             document.getElementById('financial-lifetime-savings').textContent = formatNumber(financial.total_savings_zar, 2);
             
-            // Update TOU breakdown stats
+            // Update TOU breakdown stats (SAVINGS in ZAR only, strip any kWh text)
             const total = financial.total_savings_zar;
-            document.getElementById('financial-peak-savings').textContent = formatNumber(financial.peak_savings_zar, 2);
-            document.getElementById('financial-peak-pct').textContent = formatNumber((financial.peak_savings_zar / total) * 100, 1);
             
-            document.getElementById('financial-standard-savings').textContent = formatNumber(financial.standard_savings_zar, 2);
-            document.getElementById('financial-standard-pct').textContent = formatNumber((financial.standard_savings_zar / total) * 100, 1);
+            // Helper to parse numeric value and strip units
+            const parseValue = (val) => {
+                if (typeof val === 'string') {
+                    return parseFloat(val.replace(/[^0-9.-]/g, '')) || 0;
+                }
+                return val || 0;
+            };
             
-            document.getElementById('financial-off-peak-savings').textContent = formatNumber(financial.off_peak_savings_zar, 2);
-            document.getElementById('financial-off-peak-pct').textContent = formatNumber((financial.off_peak_savings_zar / total) * 100, 1);
+            document.getElementById('financial-peak-savings').textContent = formatNumber(parseValue(financial.peak_savings_zar), 2);
+            document.getElementById('financial-peak-pct').textContent = formatNumber((parseValue(financial.peak_savings_zar) / total) * 100, 1);
+            
+            document.getElementById('financial-standard-savings').textContent = formatNumber(parseValue(financial.standard_savings_zar), 2);
+            document.getElementById('financial-standard-pct').textContent = formatNumber((parseValue(financial.standard_savings_zar) / total) * 100, 1);
+            
+            document.getElementById('financial-off-peak-savings').textContent = formatNumber(parseValue(financial.off_peak_savings_zar), 2);
+            document.getElementById('financial-off-peak-pct').textContent = formatNumber((parseValue(financial.off_peak_savings_zar) / total) * 100, 1);
             
             // Load charts
             loadFinancialMonthlyTouChart();
@@ -7222,17 +7239,36 @@ async function loadLifetimeTouSavingsChart() {
                 standardSavingsActual.push(monthData.financial.savings.standard_savings_zar || 0);
                 offPeakSavingsActual.push(monthData.financial.savings.off_peak_savings_zar || 0);
                 
-                // Calculate PREDICTED savings (use expected generation * rates)
-                // For now, use actual as fallback - would need predicted TOU breakdown from backend
+                // Calculate PREDICTED savings from expected generation if financial_expected not available
                 if (monthData.financial_expected && monthData.financial_expected.savings) {
                     peakSavingsPredicted.push(monthData.financial_expected.savings.peak_savings_zar || 0);
                     standardSavingsPredicted.push(monthData.financial_expected.savings.standard_savings_zar || 0);
                     offPeakSavingsPredicted.push(monthData.financial_expected.savings.off_peak_savings_zar || 0);
+                } else if (monthData.tou_breakdown_expected) {
+                    // Calculate predicted savings from expected TOU breakdown
+                    const expectedTOU = monthData.tou_breakdown_expected;
+                    const monthDate = monthKey + '-15'; // Use mid-month for rate determination
+                    const rates = getTOURates(monthDate);
+                    
+                    const utilityExpected = {
+                        peak: expectedTOU.peak_kwh * rates.peak,
+                        standard: expectedTOU.standard_kwh * rates.standard,
+                        off_peak: expectedTOU.off_peak_kwh * rates.off_peak
+                    };
+                    const ppaExpected = {
+                        peak: expectedTOU.peak_kwh * 1.50,
+                        standard: expectedTOU.standard_kwh * 1.50,
+                        off_peak: expectedTOU.off_peak_kwh * 1.50
+                    };
+                    
+                    peakSavingsPredicted.push(utilityExpected.peak - ppaExpected.peak);
+                    standardSavingsPredicted.push(utilityExpected.standard - ppaExpected.standard);
+                    offPeakSavingsPredicted.push(utilityExpected.off_peak - ppaExpected.off_peak);
                 } else {
-                    // Use actual values as fallback until backend provides predicted
-                    peakSavingsPredicted.push(monthData.financial.savings.peak_savings_zar || 0);
-                    standardSavingsPredicted.push(monthData.financial.savings.standard_savings_zar || 0);
-                    offPeakSavingsPredicted.push(monthData.financial.savings.off_peak_savings_zar || 0);
+                    // Last resort: Don't show predicted bars if no data available
+                    peakSavingsPredicted.push(0);
+                    standardSavingsPredicted.push(0);
+                    offPeakSavingsPredicted.push(0);
                 }
             }
         });
