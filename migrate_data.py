@@ -137,18 +137,22 @@ def parse_xls_file(filepath):
             grid_kwh = bucket['grid_sum'] / 1000
             load_kwh = bucket['load_sum'] / 1000
             
+            # Apply abs() to Grid for both hourly and daily totals
+            # Grid is negative when importing, we want positive values for display
+            grid_kwh = abs(grid_kwh)
+            
             hour_record = {
                 'time': f"{hour:02d}:00",
                 'generation_kw': round(pv_kwh, 3),  # Total energy in this hour
-                'grid_kw': round(grid_kwh, 3),
+                'grid_kw': round(grid_kwh, 3),      # Now always positive
                 'load_kw': round(load_kwh, 3),
                 'intervals': bucket['count']  # For debugging
             }
             
             hourly_data.append(hour_record)
             total_generation += pv_kwh
-            total_load += load_kwh      # FIX: Added
-            total_grid += grid_kwh      # FIX: Added
+            total_load += load_kwh
+            total_grid += grid_kwh  # Adding absolute values
         
         return {
             'date': date_str,
