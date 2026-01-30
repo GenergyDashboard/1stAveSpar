@@ -2,6 +2,8 @@
 """
 Migration script to populate daily_records in dashboard_data.json
 Reads raw XLS files from data/daily/ directory and extracts Load/Grid/PV data
+
+FIX: Now calculates actual_load_kwh and actual_grid_kwh daily totals
 """
 
 import json
@@ -16,7 +18,7 @@ def parse_xls_file(filepath):
     Aggregates 5-minute interval data into hourly buckets
     
     Returns:
-        dict with date, generation_kwh, and hourly_data
+        dict with date, generation_kwh, actual_load_kwh, actual_grid_kwh, and hourly_data
     """
     try:
         wb = xlrd.open_workbook(filepath)
@@ -117,9 +119,11 @@ def parse_xls_file(filepath):
             print(f"  ⚠️  No data extracted from {filepath}")
             return None
         
-        # Create hourly records
+        # Create hourly records and calculate daily totals
         hourly_data = []
         total_generation = 0
+        total_load = 0  # FIX: Added
+        total_grid = 0  # FIX: Added
         
         for hour in sorted(hourly_buckets.keys()):
             bucket = hourly_buckets[hour]
@@ -139,10 +143,14 @@ def parse_xls_file(filepath):
             
             hourly_data.append(hour_record)
             total_generation += pv_kwh
+            total_load += load_kwh      # FIX: Added
+            total_grid += grid_kwh      # FIX: Added
         
         return {
             'date': date_str,
             'generation_kwh': round(total_generation, 2),
+            'actual_load_kwh': round(total_load, 2),    # FIX: Added
+            'actual_grid_kwh': round(total_grid, 2),    # FIX: Added
             'hourly_data': hourly_data
         }
         
@@ -207,7 +215,7 @@ def migrate_data(dashboard_json_path, xls_directory='data/daily'):
                     daily_records_map[record_date] = record
                     updated_count += 1
                     if record_date == today:
-                        print(f"  🔄 UPDATED (today): {record_date}: {new_gen} kWh, {len(record['hourly_data'])} hours")
+                        print(f"  🔄 UPDATED (today): {record_date}: Gen={new_gen:.1f} kWh, Load={record['actual_load_kwh']:.1f} kWh, Grid={record['actual_grid_kwh']:.1f} kWh")
                     else:
                         print(f"  🔄 Updated: {record_date}: {old_gen:.1f} → {new_gen} kWh")
                 else:
@@ -215,7 +223,7 @@ def migrate_data(dashboard_json_path, xls_directory='data/daily'):
             else:
                 # New record
                 daily_records_map[record_date] = record
-                print(f"  ✓ NEW: {record_date}: {record['generation_kwh']} kWh, {len(record['hourly_data'])} hours")
+                print(f"  ✓ NEW: {record_date}: Gen={record['generation_kwh']:.1f} kWh, Load={record['actual_load_kwh']:.1f} kWh, Grid={record['actual_grid_kwh']:.1f} kWh")
             
             success_count += 1
         else:
@@ -260,12 +268,12 @@ def migrate_data(dashboard_json_path, xls_directory='data/daily'):
     
     # Show sample
     if daily_records:
-        sample = daily_records[0]
-        print(f"\nSample record ({sample['date']}):")
+        sample = daily_records[-1]  # Show latest record
+        print(f"\nLatest record ({sample['date']}):")
         print(f"  Generation: {sample['generation_kwh']} kWh")
+        print(f"  Load: {sample.get('actual_load_kwh', 'N/A')} kWh")
+        print(f"  Grid: {sample.get('actual_grid_kwh', 'N/A')} kWh")
         print(f"  Hourly data points: {len(sample['hourly_data'])}")
-        if sample['hourly_data']:
-            print(f"  Sample hour: {sample['hourly_data'][0]}")
     
     print("\n" + "=" * 80)
     print("NEXT STEP: Run the enhanced processor")
