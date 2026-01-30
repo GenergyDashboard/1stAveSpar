@@ -6032,7 +6032,7 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
             
             // Recreate chart with Load and Grid straight lines
             if (monthlyChart) monthlyChart.destroy();
-            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, 
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, irradiationData, 
                 actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine);
         })
         .catch(error => {
@@ -6042,12 +6042,12 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
             // Create chart without Load/Grid data
             const emptyIrradiation = new Array(records.length).fill(0);
             const emptyLine = new Array(records.length).fill(0);
-            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, emptyIrradiation, 
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, emptyIrradiation, 
                 emptyLine, emptyLine, emptyLine, emptyLine);
         });
 }
 
-function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradiationData, 
+function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, irradiationData, 
     actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine) {
     // Scale irradiation to match PV generation scale for visual comparison
     const maxGen = Math.max(...records.map(d => d.generation_kwh));
