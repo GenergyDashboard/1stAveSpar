@@ -9,6 +9,14 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
     <style>
+        :root {
+            /* Standardized Font Sizes - Only 4 sizes used throughout */
+            --font-xs: 0.85em;    /* Small text: captions, helper text, percentages */
+            --font-base: 1.1em;   /* Default: labels, descriptions, body text */
+            --font-lg: 1.5em;     /* Headers: card titles, section headers */
+            --font-xl: 2.5em;     /* Hero: main values, large stats */
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -64,14 +72,14 @@
         
         .header-content h1 {
             color: #ffffff;
-            font-size: 4em;
+            font-size: var(--font-xl);
             margin-bottom: 5px;
             font-weight: 700;
             letter-spacing: 2px;
         }
         
         .powered-by {
-            font-size: 1.8em;
+            font-size: var(--font-lg);
             color: #888888;
             margin-top: 5px;
             font-weight: 300;
@@ -84,7 +92,7 @@
             background-clip: text;
             font-weight: 500;
             animation: glow 2s ease-in-out infinite;
-            font-size: 1.2em;
+            font-size: var(--font-base);
         }
         
         .powered-by .spar {
@@ -109,7 +117,7 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 8px;
             cursor: pointer;
-            font-size: 1em;
+            font-size: var(--font-base);
             transition: all 0.3s;
             font-weight: 400;
             background: transparent;
@@ -185,14 +193,14 @@
         
         .stat-card .label {
             color: #aaaaaa;
-            font-size: 1.3em;
+            font-size: var(--font-base);
             margin-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         
         .stat-card .value {
-    font-size: 4.5em;
+    font-size: var(--font-xl);
     font-weight: 300;
     color: #FFD700;
     margin-bottom: 5px;
@@ -203,7 +211,7 @@
         
         .stat-card .value::after {
             content: ' kWh';
-            font-size: 0.4em;
+            font-size: var(--font-xs);
             color: #FFD700;
             font-weight: 400;
         }
@@ -245,20 +253,17 @@
 }
         .stat-card .subvalue {
             color: #888888;
-            font-size: 1.4em;
-            display: block;
-        }
-        
-        /* PHASE 4: Align Expected text across all stat cards */
-        .stat-card .subvalue {
+            font-size: var(--font-xs);
             display: flex;
             align-items: center;
             gap: 8px;
+            margin-top: 8px;
+            min-height: 24px;  /* Ensures consistent spacing even if empty */
         }
         
         .performance {
             margin-top: 8px;
-            font-size: 0.95em;
+            font-size: var(--font-xs);
         }
         
         .performance.positive {
@@ -279,7 +284,7 @@
         
         .section-header h2 {
             color: #ffffff;
-            font-size: 2.6em;
+            font-size: var(--font-xl);
             font-weight: 300;
             margin-bottom: 10px;
             letter-spacing: 1px;
@@ -297,7 +302,7 @@
         }
         
         .env-impact-title {
-            font-size: 3.5em;
+            font-size: var(--font-xl);
             color: #ffffff;
             font-weight: 300;
             letter-spacing: 2px;
@@ -308,7 +313,7 @@
         
         .tree-decoration {
             display: inline-block;
-            font-size: 1.2em;
+            font-size: var(--font-base);
             margin: 0 15px;
             animation: sway 3s ease-in-out infinite;
             transform-origin: bottom center;
@@ -316,7 +321,7 @@
         
         .grass-decoration {
             display: inline-block;
-            font-size: 0.8em;
+            font-size: var(--font-xs);
             margin: 0 8px;
             animation: grass-sway 2s ease-in-out infinite;
             transform-origin: bottom center;
@@ -343,7 +348,7 @@
             transition: all 0.3s;
             opacity: 0.3;
             color: #888;
-            font-size: 1.2em;
+            font-size: var(--font-base);
         }
         
         .info-button:hover {
@@ -366,7 +371,7 @@
             transition: all 0.3s;
             opacity: 0.5;
             color: #888;
-            font-size: 1.3em;
+            font-size: var(--font-base);
             margin-right: 10px;
         }
         
@@ -409,7 +414,7 @@
             color: #FFD700;
             margin-bottom: 20px;
             margin-top: 25px;
-            font-size: 1.8em;
+            font-size: var(--font-lg);
             border-bottom: 1px solid rgba(255, 215, 0, 0.3);
             padding-bottom: 10px;
         }
@@ -422,14 +427,14 @@
             color: #4ade80;
             margin-top: 20px;
             margin-bottom: 12px;
-            font-size: 1.4em;
+            font-size: var(--font-lg);
         }
         
         .info-content p {
             color: #ccc;
             line-height: 1.8;
             margin-bottom: 15px;
-            font-size: 1.15em;
+            font-size: var(--font-base);
         }
         
         .info-content code {
@@ -438,7 +443,7 @@
             padding: 4px 8px;
             border-radius: 4px;
             font-family: 'Courier New', monospace;
-            font-size: 1.05em;
+            font-size: var(--font-base);
             display: block;
             margin-top: 8px;
         }
@@ -446,7 +451,7 @@
         .info-content ul {
             color: #aaa;
             margin-left: 20px;
-            font-size: 0.95em;
+            font-size: var(--font-xs);
         }
         
         .info-content li {
@@ -479,20 +484,20 @@
         }
 
         .env-card .env-icon {
-            font-size: 2.2em;
+            font-size: var(--font-xl);
             margin-bottom: 0;
             flex-shrink: 0;
         }
 
         .env-card .env-value {
-            font-size: 2.8em;
+            font-size: var(--font-xl);
             font-weight: 600;
             margin: 0;
             color: #4ade80;
         }
 
         .env-card .env-label {
-            font-size: 1.4em;
+            font-size: var(--font-lg);
             color: #4ade80;
             font-weight: 600;
             margin-bottom: 8px;
@@ -517,7 +522,7 @@
         }
         
         .chart-title {
-            font-size: 1.5em;
+            font-size: var(--font-lg);
             color: #ffffff;
             margin-bottom: 20px;
             font-weight: 300;
@@ -538,7 +543,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 10px;
             cursor: pointer;
-            font-size: 1em;
+            font-size: var(--font-base);
             transition: all 0.3s;
             color: #ffffff;
             font-weight: 400;
@@ -576,7 +581,7 @@
     background: rgba(255, 255, 255, 0.15);
     border: 2px solid rgba(255, 215, 0, 0.5);
     border-radius: 8px;
-    font-size: 1.1em;
+    font-size: var(--font-base);
     color: white;
     cursor: pointer;
     transition: all 0.3s;
@@ -605,7 +610,7 @@
 .date-selector input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1) brightness(1.5);
     cursor: pointer;
-    font-size: 1.2em;
+    font-size: var(--font-base);
 }
         
         .date-selector label {
@@ -662,7 +667,7 @@
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            font-size: 1em;
+            font-size: var(--font-base);
             color: white;
         }
         
@@ -674,7 +679,7 @@
         
         .error-message {
             color: #f87171;
-            font-size: 0.9em;
+            font-size: var(--font-xs);
             margin-top: 10px;
             display: none;
         }
@@ -683,7 +688,7 @@
             text-align: center;
             padding: 50px;
             color: white;
-            font-size: 1.2em;
+            font-size: var(--font-base);
         }
         
         /* PHASE 3: Info Header */
@@ -708,13 +713,13 @@
         
         .info-label {
             color: #9ca3af;
-            font-size: 1.4em;
+            font-size: var(--font-lg);
             font-weight: 500;
         }
         
         .info-value {
             color: #FFD700;
-            font-size: 1.6em;
+            font-size: var(--font-lg);
             font-weight: 700;
         }
         
@@ -734,7 +739,7 @@
             text-align: center;
             color: #ffffff;
             margin-top: 30px;
-            font-size: 1.6em;
+            font-size: var(--font-lg);
             position: relative;
             z-index: 10;
             font-weight: 500;
@@ -803,7 +808,7 @@
 
         .data-mode-toggle .toggle-label {
             color: #aaa;
-            font-size: 1.1em;
+            font-size: var(--font-base);
             font-weight: 500;
         }
 
@@ -815,7 +820,7 @@
             border-radius: 10px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 1.1em;
+            font-size: var(--font-base);
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
@@ -867,7 +872,7 @@
         }
 
         .tou-breakdown-card .label {
-            font-size: 1.3em;
+            font-size: var(--font-base);
             color: #aaaaaa;
             margin-bottom: 20px;
             font-weight: 500;
@@ -902,7 +907,7 @@
             font-weight: 700;
             padding: 6px 16px;
             border-radius: 6px;
-            font-size: 1.1em;
+            font-size: var(--font-base);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
@@ -926,7 +931,7 @@
         }
 
         .tou-value {
-            font-size: 1.5em;
+            font-size: var(--font-lg);
             font-weight: 700;
             color: #ffd700;
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
@@ -943,14 +948,14 @@
         }
 
         .financial-value {
-            font-size: 3em;
+            font-size: var(--font-xl);
             color: #ffd700;
             font-weight: 700;
             text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
         }
 
         .financial-value .currency {
-            font-size: 0.6em;
+            font-size: var(--font-xs);
             font-weight: 500;
             opacity: 0.8;
         }
@@ -980,7 +985,7 @@
         }
 
         .savings-period {
-            font-size: 0.9em;
+            font-size: var(--font-xs);
             font-weight: 700;
             padding: 4px 12px;
             border-radius: 5px;
@@ -1005,14 +1010,14 @@
         }
 
         .savings-amount {
-            font-size: 1.3em;
+            font-size: var(--font-base);
             font-weight: 700;
             color: #ffd700;
         }
 
         /* Financial Overview Tab Specific */
         .financial-hero {
-            font-size: 4em;
+            font-size: var(--font-xl);
             color: #ffd700;
             font-weight: 900;
             text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
@@ -1030,15 +1035,15 @@
         /* Tablet and below (< 1024px) */
         @media (max-width: 1024px) {
             .header-content h1 {
-                font-size: 3em;
+                font-size: var(--font-xl);
             }
             
             .powered-by {
-                font-size: 1.4em;
+                font-size: var(--font-lg);
             }
             
             .env-impact-title {
-                font-size: 2.8em;
+                font-size: var(--font-xl);
             }
             
             /* Environmental sections - 2 columns on tablet */
@@ -1072,12 +1077,12 @@
             }
             
             .header-content h1 {
-                font-size: 2em;
+                font-size: var(--font-xl);
                 text-align: center;
             }
             
             .powered-by {
-                font-size: 1em;
+                font-size: var(--font-base);
                 text-align: center;
             }
             
@@ -1114,20 +1119,20 @@
             }
             
             .stat-card .label {
-                font-size: 1em;
+                font-size: var(--font-base);
             }
             
             .stat-card .value {
-                font-size: 3em;
+                font-size: var(--font-xl);
             }
             
             .stat-card .subvalue {
-                font-size: 1.1em;
+                font-size: var(--font-base);
             }
             
             /* Section headers */
             .section-header h2 {
-                font-size: 1.8em;
+                font-size: var(--font-lg);
             }
             
             /* Environmental impact header */
@@ -1136,16 +1141,16 @@
             }
             
             .env-impact-title {
-                font-size: 1.8em;
+                font-size: var(--font-lg);
             }
             
             .tree-decoration {
-                font-size: 1em;
+                font-size: var(--font-base);
                 margin: 0 8px;
             }
             
             .grass-decoration {
-                font-size: 0.6em;
+                font-size: var(--font-xs);
                 margin: 0 5px;
             }
             
@@ -1166,15 +1171,15 @@
             }
             
             .env-card .env-icon {
-                font-size: 1.8em;
+                font-size: var(--font-lg);
             }
             
             .env-card .env-value {
-                font-size: 2em;
+                font-size: var(--font-xl);
             }
             
             .env-card .env-label {
-                font-size: 1.1em;
+                font-size: var(--font-base);
             }
             
             /* Public view environmental sections - stack vertically */
@@ -1190,7 +1195,7 @@
             
             .tab {
                 padding: 10px 16px;
-                font-size: 0.9em;
+                font-size: var(--font-xs);
             }
             
             /* Phase 2: Data mode toggle responsive */
@@ -1211,11 +1216,11 @@
             
             /* Phase 2: Financial values smaller on mobile */
             .financial-value {
-                font-size: 2.5em;
+                font-size: var(--font-xl);
             }
             
             .financial-hero {
-                font-size: 2.5em;
+                font-size: var(--font-xl);
             }
             
             /* Date selector */
@@ -1227,16 +1232,16 @@
             
             .date-selector input, .date-selector select {
                 width: 100%;
-                font-size: 1em;
+                font-size: var(--font-base);
             }
             
             .date-selector label {
-                font-size: 1em;
+                font-size: var(--font-base);
             }
             
             .btn {
                 width: 100%;
-                font-size: 1em;
+                font-size: var(--font-base);
             }
             
             /* Chart containers */
@@ -1245,12 +1250,12 @@
             }
             
             .chart-title {
-                font-size: 1.2em;
+                font-size: var(--font-base);
             }
             
             /* Update time */
             .update-time {
-                font-size: 1.2em;
+                font-size: var(--font-base);
                 margin-top: 20px;
             }
             
@@ -1268,39 +1273,39 @@
             .user-avatar {
                 width: 30px;
                 height: 30px;
-                font-size: 0.9em;
+                font-size: var(--font-xs);
             }
         }
         
         /* Very small mobile devices (< 480px) */
         @media (max-width: 480px) {
             .header-content h1 {
-                font-size: 1.6em;
+                font-size: var(--font-lg);
             }
             
             .powered-by {
-                font-size: 0.9em;
+                font-size: var(--font-xs);
             }
             
             .stat-card .value {
-                font-size: 2.5em;
+                font-size: var(--font-xl);
             }
             
             .env-impact-title {
-                font-size: 1.4em;
+                font-size: var(--font-lg);
             }
             
             .env-card .env-value {
-                font-size: 1.6em;
+                font-size: var(--font-lg);
             }
             
             .env-card .env-label {
-                font-size: 1em;
+                font-size: var(--font-base);
             }
             
             .tab {
                 padding: 8px 12px;
-                font-size: 0.85em;
+                font-size: var(--font-xs);
             }
         }
         
@@ -1311,11 +1316,11 @@
             }
             
             .header-content h1 {
-                font-size: 4.5em;
+                font-size: var(--font-xl);
             }
             
             .stat-card .value {
-                font-size: 5em;
+                font-size: var(--font-xl);
             }
         }
         
@@ -1358,17 +1363,17 @@
         }
         
         .interval-label strong {
-            font-size: 1.2em;
+            font-size: var(--font-base);
             color: #ffffff;
         }
         
         .interval-label small {
-            font-size: 0.9em;
+            font-size: var(--font-xs);
             color: #aaaaaa;
         }
         
         .field-option span {
-            font-size: 1.1em;
+            font-size: var(--font-base);
             color: #ffffff;
             font-weight: 500;
         }
@@ -1554,11 +1559,11 @@
                         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                             <thead>
                                 <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
-                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: 0.9em;">Period</th>
-                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Generation</th>
-                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Utility Cost</th>
-                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">PPA Cost</th>
-                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: 0.9em;">Savings</th>
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: var(--font-xs);">Period</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Generation</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Utility Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">PPA Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: var(--font-xs);">Savings</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1626,7 +1631,7 @@
                                     <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
                                         R<span id="daily-ppa-total">--</span>
                                     </td>
-                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: 1.1em;">
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: var(--font-base);">
                                         R<span id="daily-total-savings">--</span>
                                     </td>
                                 </tr>
@@ -1708,11 +1713,11 @@
                         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                             <thead>
                                 <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
-                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: 0.9em;">Period</th>
-                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Generation</th>
-                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Utility Cost</th>
-                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">PPA Cost</th>
-                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: 0.9em;">Savings</th>
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: var(--font-xs);">Period</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Generation</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Utility Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">PPA Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: var(--font-xs);">Savings</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1780,7 +1785,7 @@
                                     <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
                                         R<span id="monthly-ppa-total">--</span>
                                     </td>
-                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: 1.1em;">
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: var(--font-base);">
                                         R<span id="monthly-total-savings">--</span>
                                     </td>
                                 </tr>
@@ -1843,11 +1848,11 @@
                         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                             <thead>
                                 <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
-                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: 0.9em;">Period</th>
-                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Generation</th>
-                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">Utility Cost</th>
-                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: 0.9em;">PPA Cost</th>
-                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: 0.9em;">Savings</th>
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: var(--font-xs);">Period</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Generation</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Utility Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">PPA Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: var(--font-xs);">Savings</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1915,7 +1920,7 @@
                                     <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
                                         R<span id="lifetime-ppa-total">--</span>
                                     </td>
-                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: 1.1em;">
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: var(--font-base);">
                                         R<span id="lifetime-total-savings">--</span>
                                     </td>
                                 </tr>
@@ -1958,10 +1963,10 @@
                     <div class="stat-card large financial-card" style="grid-column: span 2;">
                         <div class="label">💰 Total Lifetime Savings</div>
                         <div class="value financial-hero">
-                            <span style="font-size: 0.5em; font-weight: 500;">R</span>
+                            <span style="font-size: var(--font-xs); font-weight: 500;">R</span>
                             <span id="financial-lifetime-savings">--</span>
                         </div>
-                        <div class="subvalue" style="font-size: 1.2em; margin-top: 10px;">
+                        <div class="subvalue" style="font-size: var(--font-base); margin-top: 10px;">
                             Since system commissioning
                         </div>
                     </div>
@@ -2028,9 +2033,9 @@
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
-                                    <th style="text-align: left; padding: 12px; color: #ffffff; font-size: 1.1em;">Period</th>
-                                    <th style="text-align: right; padding: 12px; color: #ffffff; font-size: 1.1em;">Generation (kWh)</th>
-                                    <th style="text-align: right; padding: 12px; color: #ffffff; font-size: 1.1em;">Percentage</th>
+                                    <th style="text-align: left; padding: 12px; color: #ffffff; font-size: var(--font-base);">Period</th>
+                                    <th style="text-align: right; padding: 12px; color: #ffffff; font-size: var(--font-base);">Generation (kWh)</th>
+                                    <th style="text-align: right; padding: 12px; color: #ffffff; font-size: var(--font-base);">Percentage</th>
                                 </tr>
                             </thead>
                             <tbody id="tou-distribution-table">
@@ -2047,21 +2052,21 @@
             <div id="report-tab" class="tab-content">
                 <div class="section-header">
                     <h2>Data Export & Reporting</h2>
-                    <p style="color: #aaaaaa; font-size: 1.1em; margin-top: 10px;">Download generation data in various formats and time intervals</p>
+                    <p style="color: #aaaaaa; font-size: var(--font-base); margin-top: 10px;">Download generation data in various formats and time intervals</p>
                 </div>
                 
                 <div class="stats-grid" style="grid-template-columns: 1fr; gap: 30px;">
                     <!-- Date Range Selection -->
                     <div class="stat-card" style="padding: 30px;">
-                        <h3 style="color: #FFD700; margin-bottom: 20px; font-size: 1.4em;">📅 Select Date Range</h3>
+                        <h3 style="color: #FFD700; margin-bottom: 20px; font-size: var(--font-lg);">📅 Select Date Range</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                             <div>
                                 <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">Start Date:</label>
-                                <input type="date" id="report-start-date" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                                <input type="date" id="report-start-date" style="width: 100%; padding: 12px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
                             </div>
                             <div>
                                 <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">End Date:</label>
-                                <input type="date" id="report-end-date" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                                <input type="date" id="report-end-date" style="width: 100%; padding: 12px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
                             </div>
                         </div>
                         <div style="display: flex; gap: 15px; flex-wrap: wrap;">
@@ -2075,7 +2080,7 @@
                     
                     <!-- Data Interval Selection -->
                     <div class="stat-card" style="padding: 30px;">
-                        <h3 style="color: #FFD700; margin-bottom: 20px; font-size: 1.4em;">⏱️ Select Data Interval</h3>
+                        <h3 style="color: #FFD700; margin-bottom: 20px; font-size: var(--font-lg);">⏱️ Select Data Interval</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                             <label class="interval-option">
                                 <input type="radio" name="interval" value="5min" checked>
@@ -2117,7 +2122,7 @@
                     
                     <!-- Data Fields Selection -->
                     <div class="stat-card" style="padding: 30px;">
-                        <h3 style="color: #FFD700; margin-bottom: 20px; font-size: 1.4em;">📋 Select Data Fields</h3>
+                        <h3 style="color: #FFD700; margin-bottom: 20px; font-size: var(--font-lg);">📋 Select Data Fields</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
                             <label class="field-option">
                                 <input type="checkbox" name="fields" value="generation" checked>
@@ -2156,47 +2161,47 @@
                     
                     <!-- Download Button & Status -->
                     <div class="stat-card" style="padding: 30px; text-align: center;">
-                        <button onclick="generateReport()" class="btn" style="padding: 18px 50px; font-size: 1.3em; background: linear-gradient(135deg, #FFD700, #FFA500); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);">
+                        <button onclick="generateReport()" class="btn" style="padding: 18px 50px; font-size: var(--font-base); background: linear-gradient(135deg, #FFD700, #FFA500); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);">
                             📥 Generate & Download CSV Report
                         </button>
-                        <div id="report-status" style="margin-top: 20px; font-size: 1.1em; color: #4ade80;"></div>
-                        <div id="report-info" style="margin-top: 15px; color: #aaaaaa; font-size: 1em;"></div>
+                        <div id="report-status" style="margin-top: 20px; font-size: var(--font-base); color: #4ade80;"></div>
+                        <div id="report-info" style="margin-top: 15px; color: #aaaaaa; font-size: var(--font-base);"></div>
                     </div>
                     
                     <!-- Monthly Word Document Report -->
                     <div class="stat-card" style="padding: 30px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 2px solid rgba(255,215,0,0.3); display: none;">
-                        <h3 style="color: #FFD700; margin-bottom: 15px; font-size: 1.8em;">Monthly Performance Report (Word Document)</h3>
-                        <p style="color: #aaaaaa; margin-bottom: 25px; font-size: 1.2em;">Generate a comprehensive monthly report with performance data, financial summary, and warranty status</p>
+                        <h3 style="color: #FFD700; margin-bottom: 15px; font-size: var(--font-lg);">Monthly Performance Report (Word Document)</h3>
+                        <p style="color: #aaaaaa; margin-bottom: 25px; font-size: var(--font-base);">Generate a comprehensive monthly report with performance data, financial summary, and warranty status</p>
                         <div style="margin-bottom: 25px;">
-                            <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px; font-size: 1.2em;">Report Month:</label>
-                            <input type="month" id="word-report-month" style="width: 100%; padding: 14px; font-size: 1.2em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                            <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px; font-size: var(--font-base);">Report Month:</label>
+                            <input type="month" id="word-report-month" style="width: 100%; padding: 14px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
                         </div>
-                        <button onclick="generateWordReport()" class="btn" style="padding: 20px 60px; font-size: 1.4em; background: linear-gradient(135deg, #4ade80, #22c55e); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4);">
+                        <button onclick="generateWordReport()" class="btn" style="padding: 20px 60px; font-size: var(--font-lg); background: linear-gradient(135deg, #4ade80, #22c55e); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4);">
                             Generate Word Report
                         </button>
-                        <div id="word-report-status" style="margin-top: 20px; font-size: 1.2em; color: #4ade80;"></div>
+                        <div id="word-report-status" style="margin-top: 20px; font-size: var(--font-base); color: #4ade80;"></div>
                     </div>
                 </div>
             </div>
             
             <!-- Downtime Tab -->
             <div id="downtime-tab" class="tab-content">
-                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: 2.5em;">System Downtime Analysis</h2>
+                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: var(--font-xl);">System Downtime Analysis</h2>
                 
                 <!-- Date Range Selection -->
                 <div class="card" style="padding: 30px; margin-bottom: 30px;">
-                    <h3 style="color: #FFD700; margin-bottom: 20px; font-size: 1.4em;">Select Analysis Period</h3>
+                    <h3 style="color: #FFD700; margin-bottom: 20px; font-size: var(--font-lg);">Select Analysis Period</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                         <div>
                             <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">Start Date:</label>
-                            <input type="date" id="downtime-start-date" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                            <input type="date" id="downtime-start-date" style="width: 100%; padding: 12px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
                         </div>
                         <div>
                             <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">End Date:</label>
-                            <input type="date" id="downtime-end-date" style="width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                            <input type="date" id="downtime-end-date" style="width: 100%; padding: 12px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
                         </div>
                         <div style="display: flex; align-items: flex-end;">
-                            <button onclick="loadDowntimeAnalysis()" class="btn" style="width: 100%; padding: 12px; font-size: 1.1em; background: linear-gradient(135deg, #FFD700, #FFA500); color: #000000; font-weight: 700;">
+                            <button onclick="loadDowntimeAnalysis()" class="btn" style="width: 100%; padding: 12px; font-size: var(--font-base); background: linear-gradient(135deg, #FFD700, #FFA500); color: #000000; font-weight: 700;">
                                 Analyze Downtime
                             </button>
                         </div>
@@ -2233,22 +2238,22 @@
                 
                 <!-- Downtime Events Table -->
                 <div class="card" style="padding: 30px;">
-                    <h3 style="color: #FFD700; margin-bottom: 25px; font-size: 1.8em;">Downtime Events</h3>
+                    <h3 style="color: #FFD700; margin-bottom: 25px; font-size: var(--font-lg);">Downtime Events</h3>
                     <div id="downtime-table-container" style="overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr style="background: rgba(255, 215, 0, 0.1); border-bottom: 2px solid #FFD700;">
-                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">Date</th>
-                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">Start Time</th>
-                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">End Time</th>
-                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">Duration</th>
-                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: 1.2em;">Lost Gen (kWh)</th>
-                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: 1.2em;">Financial Loss (ZAR)</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Date</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Start Time</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">End Time</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Duration</th>
+                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Lost Gen (kWh)</th>
+                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Financial Loss (ZAR)</th>
                                 </tr>
                             </thead>
                             <tbody id="downtime-table-body">
                                 <tr>
-                                    <td colspan="6" style="padding: 40px; text-align: center; color: #aaaaaa; font-size: 1.1em;">
+                                    <td colspan="6" style="padding: 40px; text-align: center; color: #aaaaaa; font-size: var(--font-base);">
                                         Select a date range and click "Analyze Downtime" to view results
                                     </td>
                                 </tr>
@@ -2260,7 +2265,7 @@
             
             <!-- Warranty Tab -->
             <div id="warranty-tab" class="tab-content">
-                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: 2.5em;">System Warranty Overview</h2>
+                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: var(--font-xl);">System Warranty Overview</h2>
                 
                 <div id="warrantyChartsGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-bottom: 40px;">
                     <!-- Individual donut charts will be generated here -->
@@ -2268,17 +2273,17 @@
                 
                 <!-- Warranty Data Table -->
                 <div class="card" style="padding: 30px;">
-                    <h3 style="color: #FFD700; margin-bottom: 25px; font-size: 1.8em;">Warranty Details</h3>
+                    <h3 style="color: #FFD700; margin-bottom: 25px; font-size: var(--font-lg);">Warranty Details</h3>
                     <div style="overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr style="background: rgba(255, 215, 0, 0.1); border-bottom: 2px solid #FFD700;">
-                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">Item</th>
-                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: 1.2em;">Start Date</th>
-                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">Duration (Months)</th>
-                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">End Date</th>
-                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">Days Remaining</th>
-                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: 1.2em;">Status</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Item</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Start Date</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Duration (Months)</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">End Date</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Days Remaining</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="warranty-table-body">
@@ -3094,26 +3099,26 @@
                         <td style="padding: 15px;">
                             <span style="color: #ffffff; font-weight: 600;">Peak</span>
                         </td>
-                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: 1.1em;">${formatNumber(peakValue, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: var(--font-base);">${formatNumber(peakValue, 0)} kWh</td>
                         <td style="padding: 15px; text-align: right; color: #ffffff; font-weight: 600;">${peakPct}%</td>
                     </tr>
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
                         <td style="padding: 15px;">
                             <span style="color: #ffffff; font-weight: 600;">Standard</span>
                         </td>
-                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: 1.1em;">${formatNumber(standardValue, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: var(--font-base);">${formatNumber(standardValue, 0)} kWh</td>
                         <td style="padding: 15px; text-align: right; color: #ffffff; font-weight: 600;">${standardPct}%</td>
                     </tr>
                     <tr>
                         <td style="padding: 15px;">
                             <span style="color: #ffffff; font-weight: 600;">Off-Peak</span>
                         </td>
-                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: 1.1em;">${formatNumber(offPeakValue, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: var(--font-base);">${formatNumber(offPeakValue, 0)} kWh</td>
                         <td style="padding: 15px; text-align: right; color: #ffffff; font-weight: 600;">${offPeakPct}%</td>
                     </tr>
                     <tr style="border-top: 2px solid rgba(255,255,255,0.3); font-weight: bold;">
-                        <td style="padding: 15px; color: #ffffff; font-size: 1.1em;">Total</td>
-                        <td style="padding: 15px; text-align: right; color: #4ade80; font-weight: 700; font-size: 1.2em;">${formatNumber(total, 0)} kWh</td>
+                        <td style="padding: 15px; color: #ffffff; font-size: var(--font-base);">Total</td>
+                        <td style="padding: 15px; text-align: right; color: #4ade80; font-weight: 700; font-size: var(--font-base);">${formatNumber(total, 0)} kWh</td>
                         <td style="padding: 15px; text-align: right; color: #ffffff;">100%</td>
                     </tr>
                 `;
@@ -3469,7 +3474,7 @@
             if (events.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" style="padding: 40px; text-align: center; color: #4ade80; font-size: 1.1em;">
+                        <td colspan="6" style="padding: 40px; text-align: center; color: #4ade80; font-size: var(--font-base);">
                             ✅ No significant downtime detected in selected period
                         </td>
                     </tr>
@@ -3501,12 +3506,12 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                 
                 return `
                     <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                        <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.date}</td>
-                        <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.startTime}</td>
-                        <td style="padding: 20px; color: #ffffff; font-size: 1.1em;">${event.endTime}</td>
-                        <td style="padding: 20px; text-align: center; color: ${severityColor}; font-weight: 600; font-size: 1.1em;">${duration}</td>
-                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: 1.1em;" title="${touBreakdown}">${event.lostGeneration.toFixed(1)}</td>
-                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: 1.1em;" title="${touBreakdown}">R ${event.financialLoss.toFixed(2)}</td>
+                        <td style="padding: 20px; color: #ffffff; font-size: var(--font-base);">${event.date}</td>
+                        <td style="padding: 20px; color: #ffffff; font-size: var(--font-base);">${event.startTime}</td>
+                        <td style="padding: 20px; color: #ffffff; font-size: var(--font-base);">${event.endTime}</td>
+                        <td style="padding: 20px; text-align: center; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);">${duration}</td>
+                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);" title="${touBreakdown}">${event.lostGeneration.toFixed(1)}</td>
+                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);" title="${touBreakdown}">R ${event.financialLoss.toFixed(2)}</td>
                     </tr>
                 `;
             }).join('');
@@ -4745,15 +4750,15 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                 card.className = 'card';
                 card.style.padding = '25px';
                 card.innerHTML = `
-                    <h3 style="text-align: center; margin-bottom: 15px; font-size: 1.4em; color: #ffffff;">${item.item}</h3>
+                    <h3 style="text-align: center; margin-bottom: 15px; font-size: var(--font-lg); color: #ffffff;">${item.item}</h3>
                     <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div style="width: 16px; height: 16px; background: #a3e635; border-radius: 3px;"></div>
-                            <span style="color: #ffffff; font-size: 1.1em;">Remaining</span>
+                            <span style="color: #ffffff; font-size: var(--font-base);">Remaining</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div style="width: 16px; height: 16px; background: #3b3b4f; border-radius: 3px;"></div>
-                            <span style="color: #ffffff; font-size: 1.1em;">Elapsed</span>
+                            <span style="color: #ffffff; font-size: var(--font-base);">Elapsed</span>
                         </div>
                     </div>
                     <div style="height: 250px; display: flex; justify-content: center; align-items: center;">
@@ -4870,12 +4875,12 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                 
                 return `
                     <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                        <td style="padding: 20px; color: ${w.color}; font-weight: 500; font-size: 1.15em;">${w.item}</td>
-                        <td style="padding: 20px; color: #cccccc; font-size: 1.1em;">${w.startDate}</td>
-                        <td style="padding: 20px; text-align: center; color: #cccccc; font-size: 1.1em;">${w.durationMonths}</td>
-                        <td style="padding: 20px; text-align: center; color: #cccccc; font-size: 1.1em;">${endDateStr}</td>
-                        <td style="padding: 20px; text-align: center; color: ${statusColor}; font-weight: 600; font-size: 1.1em;">${daysText}</td>
-                        <td style="padding: 20px; text-align: center; color: ${statusColor}; font-weight: 600; font-size: 1.1em;">${statusText}</td>
+                        <td style="padding: 20px; color: ${w.color}; font-weight: 500; font-size: var(--font-base);">${w.item}</td>
+                        <td style="padding: 20px; color: #cccccc; font-size: var(--font-base);">${w.startDate}</td>
+                        <td style="padding: 20px; text-align: center; color: #cccccc; font-size: var(--font-base);">${w.durationMonths}</td>
+                        <td style="padding: 20px; text-align: center; color: #cccccc; font-size: var(--font-base);">${endDateStr}</td>
+                        <td style="padding: 20px; text-align: center; color: ${statusColor}; font-weight: 600; font-size: var(--font-base);">${daysText}</td>
+                        <td style="padding: 20px; text-align: center; color: ${statusColor}; font-weight: 600; font-size: var(--font-base);">${statusText}</td>
                     </tr>
                 `;
             }).join('');
@@ -7684,8 +7689,8 @@ async function loadPast30Days() {
                 document.getElementById('loading').innerHTML = `
                     <div style="color: #f87171;">
                         <p>⚠️ Error loading dashboard data</p>
-                        <p style="font-size: 0.9em; margin-top: 10px;">Error: ${error.message}</p>
-                        <p style="font-size: 0.8em; margin-top: 10px; color: #888;">
+                        <p style="font-size: var(--font-xs); margin-top: 10px;">Error: ${error.message}</p>
+                        <p style="font-size: var(--font-xs); margin-top: 10px; color: #888;">
                             Check browser console (F12) for details<br>
                             Repository: GenergyDashboard/1stAveSpar
                         </p>
