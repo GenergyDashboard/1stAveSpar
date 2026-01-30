@@ -5499,9 +5499,10 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     borderWidth: 2,
                     pointRadius: 0,
                     tension: 0.4,
-                    spanGaps: false,  // Don't draw lines through null values
+                    spanGaps: false,
                     yAxisID: 'y',
-                    order: 0
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
                 },
                 {
                     label: 'Expected Load (MTD Avg)',
@@ -5514,7 +5515,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y',
-                    order: 0
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
                 },
                 {
                     label: 'Actual Grid (MTD Avg)',
@@ -5525,9 +5527,10 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     borderWidth: 2,
                     pointRadius: 0,
                     tension: 0.4,
-                    spanGaps: false,  // Don't draw lines through null values
+                    spanGaps: false,
                     yAxisID: 'y',
-                    order: 0
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
                 },
                 {
                     label: 'Expected Grid (MTD Avg)',
@@ -5540,7 +5543,8 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     pointRadius: 0,
                     tension: 0.4,
                     yAxisID: 'y',
-                    order: 0
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
                 }
             ]
         },
@@ -5986,7 +5990,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
-                    order: 1
+                    order: 1,
+                    hidden: true  // PHASE 2: Hide from graph
                 },
                 {
                     label: 'Expected Load (Avg)',
@@ -5999,7 +6004,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
-                    order: 1
+                    order: 1,
+                    hidden: true  // PHASE 2: Hide from graph
                 },
                 {
                     label: 'Actual Grid (Avg)',
@@ -6011,7 +6017,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
-                    order: 0
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
                 },
                 {
                     label: 'Expected Grid (Avg)',
@@ -6024,7 +6031,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, irradia
                     pointRadius: 0,
                     tension: 0,
                     yAxisID: 'y',
-                    order: 0
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
                 }
             ]
         },
