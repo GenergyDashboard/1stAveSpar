@@ -118,9 +118,10 @@ def get_tou_period(date_str, hour, minute=0):
     # Weekdays
     if is_summer:
         # Summer (Sept - April) - Weekdays
-        if (7 <= decimal_hour < 10) or (18 <= decimal_hour < 20):
+        # FIX: Peak is 7-9am (not 7-10am) and 6-8pm
+        if (7 <= decimal_hour < 9) or (18 <= decimal_hour < 20):
             return 'peak'
-        elif (6 <= decimal_hour < 7) or (10 <= decimal_hour < 18) or (20 <= decimal_hour < 22):
+        elif (6 <= decimal_hour < 7) or (9 <= decimal_hour < 18) or (20 <= decimal_hour < 22):
             return 'standard'
         else:
             return 'off_peak'
