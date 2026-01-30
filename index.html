@@ -6227,8 +6227,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
             datasets: [
                 {
                     label: 'Actual Load (kWh)',
-                    data: actualLoadLine,
-                    type: 'bar',  // PHASE 7: Change to bars
+                    data: records.map(d => d.actual_load_kwh || 0),  // Daily sums
+                    type: 'bar',
                     backgroundColor: 'rgba(239, 68, 68, 0.7)',
                     borderColor: '#ef4444',
                     borderWidth: 2,
@@ -6237,7 +6237,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                 },
                 {
                     label: 'Expected Load (kWh)',
-                    data: expectedLoadLine,
+                    data: expectedLoadLine,  // Average line
                     type: 'line',
                     borderColor: '#ef4444',
                     backgroundColor: 'transparent',
@@ -6250,8 +6250,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                 },
                 {
                     label: 'Actual Grid (kWh)',
-                    data: actualGridLine,
-                    type: 'bar',  // PHASE 7: Change to bars
+                    data: records.map(d => d.actual_grid_kwh || 0),  // Daily sums
+                    type: 'bar',
                     backgroundColor: 'rgba(249, 115, 22, 0.7)',
                     borderColor: '#f97316',
                     borderWidth: 2,
@@ -7466,7 +7466,17 @@ async function loadPast30Days() {
     }
 }
 
+        let lastDataLoad = 0;  // Track when data was last loaded
+        const MIN_RELOAD_INTERVAL = 30000;  // 30 seconds minimum between reloads
+        
         async function loadData() {
+            // Prevent reloading if data was just loaded (within 30 seconds)
+            const now = Date.now();
+            if (now - lastDataLoad < MIN_RELOAD_INTERVAL) {
+                console.log('⏭️ Skipping reload - data was just loaded');
+                return;
+            }
+            
             try {
                 const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
                 console.log('Base path:', basePath);
@@ -7482,6 +7492,7 @@ async function loadPast30Days() {
                 }
                 
                 dashboardData = await response.json();
+                lastDataLoad = Date.now();  // Update last load timestamp
                 console.log('✓ Dashboard data loaded successfully');
                 console.log('Dashboard data structure:', dashboardData);
                 
