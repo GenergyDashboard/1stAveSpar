@@ -213,12 +213,19 @@ def migrate_data(dashboard_json_path, xls_directory='data/daily'):
             if record_date in daily_records_map:
                 old_gen = daily_records_map[record_date].get('generation_kwh', 0)
                 new_gen = record['generation_kwh']
+                old_grid = daily_records_map[record_date].get('actual_grid_kwh', 0)
+                new_grid = record['actual_grid_kwh']
                 
-                # Always update today's record, and update others if generation changed significantly
-                if record_date == today or abs(old_gen - new_gen) > 1.0:
+                # FORCE UPDATE: Always update if Grid sign is wrong (negative)
+                # OR if it's today OR if generation changed significantly
+                force_update = old_grid < 0  # Fix negative Grid values
+                
+                if force_update or record_date == today or abs(old_gen - new_gen) > 1.0:
                     daily_records_map[record_date] = record
                     updated_count += 1
-                    if record_date == today:
+                    if force_update and record_date != today:
+                        print(f"  🔧 FIXED GRID SIGN: {record_date}: Grid={old_grid:.1f}→{new_grid:.1f} kWh")
+                    elif record_date == today:
                         print(f"  🔄 UPDATED (today): {record_date}: Gen={new_gen:.1f} kWh, Load={record['actual_load_kwh']:.1f} kWh, Grid={record['actual_grid_kwh']:.1f} kWh")
                     else:
                         print(f"  🔄 Updated: {record_date}: {old_gen:.1f} → {new_gen} kWh")
