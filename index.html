@@ -239,7 +239,10 @@
 /* Remove kWh from all financial/currency values */
 .financial-value::after,
 .financial-hero::after,
-.financial-card .value::after {
+.financial-card .value::after,
+#financial-peak-savings::after,
+#financial-standard-savings::after,
+#financial-off-peak-savings::after {
     content: '';
 }
 
@@ -5808,6 +5811,15 @@ async function loadMonthlyData() {
         const monthRecords = dashData.daily_records.filter(record => 
             record.date.startsWith(selectedMonthYear)
         );
+        
+        console.log(`📅 Loading data for ${selectedMonthYear}`);
+        console.log(`   Total records in dashboard: ${dashData.daily_records.length}`);
+        console.log(`   Records for this month: ${monthRecords.length}`);
+        if (monthRecords.length > 0) {
+            const firstDate = monthRecords[0].date;
+            const lastDate = monthRecords[monthRecords.length - 1].date;
+            console.log(`   Date range: ${firstDate} to ${lastDate}`);
+        }
         
         if (monthRecords.length === 0) {
             alert(`No data available for ${selectedMonthYear}`);
