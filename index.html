@@ -3405,10 +3405,11 @@
             // Weekdays
             if (isSummer) {
                 // Summer (Sept - April) - Weekdays
-                if ((decimalHour >= 7 && decimalHour < 10) || (decimalHour >= 18 && decimalHour < 20)) {
+                // FIX: Peak is 7-9am (not 7-10am) and 6-8pm
+                if ((decimalHour >= 7 && decimalHour < 9) || (decimalHour >= 18 && decimalHour < 20)) {
                     return 'peak';
                 } else if ((decimalHour >= 6 && decimalHour < 7) || 
-                          (decimalHour >= 10 && decimalHour < 18) || 
+                          (decimalHour >= 9 && decimalHour < 18) || 
                           (decimalHour >= 20 && decimalHour < 22)) {
                     return 'standard';
                 } else {
