@@ -249,6 +249,13 @@
             display: block;
         }
         
+        /* PHASE 4: Align Expected text across all stat cards */
+        .stat-card .subvalue {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
         .performance {
             margin-top: 8px;
             font-size: 0.95em;
@@ -1936,22 +1943,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="chart-container">
-                    <h3 class="chart-title">Actual vs Expected Generation</h3>
-                    <div class="scrollable-chart">
-                        <div style="min-width: 1200px;">
-                            <canvas id="lifetimeActualVsExpectedChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="chart-container">
-                    <h3 class="chart-title">Monthly Performance %</h3>
-                    <div class="scrollable-chart">
-                        <div style="min-width: 1200px;">
-                            <canvas id="lifetimePerformanceLineChart"></canvas>
-                        </div>
-                    </div>
-                </div>
+                
+                <!-- PHASE 4: Removed "Actual vs Expected Generation" and "Monthly Performance %" graphs -->
                 
                 <!-- PHASE 3: New TOU Savings Graph -->
                 <div class="chart-container" style="margin-top: 30px;">
@@ -2331,7 +2324,8 @@
     </div>
 
     <script>
-        let dailyChart, monthlyChart, monthlyLoadGridChart, lifetimeMonthlyChart, lifetimeActualVsExpectedChart, lifetimePerformanceLineChart, lifetimeTouSavingsChart;
+        let dailyChart, monthlyChart, monthlyLoadGridChart, lifetimeMonthlyChart, lifetimeTouSavingsChart;
+        // PHASE 4: Removed lifetimeActualVsExpectedChart and lifetimePerformanceLineChart
         let financialMonthlyTouChart, financialCumulativeChart, financialTouPieChart;
         let dashboardData = null;
         let isLoggedIn = false;
@@ -2475,8 +2469,7 @@
     }
     
     loadLifetimeMonthlyBreakdown();
-    loadLifetimeActualVsExpectedChart();
-    loadLifetimePerformanceLineChart();
+    // PHASE 4: Removed loadLifetimeActualVsExpectedChart() and loadLifetimePerformanceLineChart()
 }
         
         function switchClientTab(tab) {
@@ -2487,8 +2480,7 @@
             
             if (tab === 'lifetime') {
                 loadLifetimeMonthlyBreakdown();
-                loadLifetimeActualVsExpectedChart();
-                loadLifetimePerformanceLineChart();
+                // PHASE 4: Removed loadLifetimeActualVsExpectedChart() and loadLifetimePerformanceLineChart()
                 loadLifetimeTouSavingsChart();  // PHASE 3
             } else if (tab === 'monthly') {
                 // Restore saved selection or default to current month
@@ -2672,8 +2664,7 @@
             } else if (tabText.includes('lifetime')) {
                 // Reload all lifetime charts
                 loadLifetimeMonthlyBreakdown();
-                loadLifetimeActualVsExpectedChart();
-                loadLifetimePerformanceLineChart();
+                // PHASE 4: Removed loadLifetimeActualVsExpectedChart() and loadLifetimePerformanceLineChart()
             }
         }
         
@@ -5196,17 +5187,47 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
         .then(predictionsData => {
             let expectedLoad = 0, expectedGrid = 0, expectedPVCoverage = 0;
             
-            if (predictionsData.daily_predictions && predictionsData.daily_predictions[selectedDate]) {
-                const dayPredictions = predictionsData.daily_predictions[selectedDate];
-                const expectedLoadData = dayPredictions.load_kw || [];
-                const expectedGridData = dayPredictions.grid_kw || [];
+            // PHASE 4 FIX: Calculate MTD average instead of single day sum
+            if (predictionsData.daily_predictions) {
+                const today = new Date().toISOString().split('T')[0];
+                const currentMonthKey = today.substring(0, 7); // "2026-01"
+                const selectedMonthKey = selectedDate.substring(0, 7);
+                const isPastMonth = selectedMonthKey < currentMonthKey;
                 
-                expectedLoad = expectedLoadData.reduce((sum, val) => sum + val, 0);
-                expectedGrid = expectedGridData.reduce((sum, val) => sum + val, 0);
-                // FIX: Use totalPredicted (expected generation) not totalGeneration (actual)
+                // For past months: use entire month average
+                // For current month: use MTD average (up to selected date)
+                const dateFilter = isPastMonth 
+                    ? (date => date.startsWith(selectedMonthKey))
+                    : (date => date.startsWith(selectedMonthKey) && date <= selectedDate);
+                
+                let totalDailyLoad = 0, totalDailyGrid = 0, dayCount = 0;
+                
+                Object.keys(predictionsData.daily_predictions)
+                    .filter(dateFilter)
+                    .forEach(date => {
+                        const dayPredictions = predictionsData.daily_predictions[date];
+                        
+                        // Sum daily load
+                        if (dayPredictions.load_kw && Array.isArray(dayPredictions.load_kw)) {
+                            const dailyLoad = dayPredictions.load_kw.reduce((sum, val) => sum + val, 0);
+                            totalDailyLoad += dailyLoad;
+                        }
+                        
+                        // Sum daily grid
+                        if (dayPredictions.grid_kw && Array.isArray(dayPredictions.grid_kw)) {
+                            const dailyGrid = dayPredictions.grid_kw.reduce((sum, val) => sum + Math.abs(val), 0);
+                            totalDailyGrid += dailyGrid;
+                        }
+                        
+                        dayCount++;
+                    });
+                
+                // Calculate MTD averages
+                expectedLoad = dayCount > 0 ? totalDailyLoad / dayCount : 0;
+                expectedGrid = dayCount > 0 ? totalDailyGrid / dayCount : 0;
                 expectedPVCoverage = expectedLoad > 0 ? ((totalPredicted / expectedLoad) * 100) : 0;
                 
-                console.log(`Expected values from predictions file: Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}, PV Coverage=${expectedPVCoverage.toFixed(1)}%`);
+                console.log(`✅ PHASE 4: Expected values (MTD avg, ${dayCount} days): Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}, PV Coverage=${expectedPVCoverage.toFixed(1)}%`);
             }
             
             // Calculate % differences
