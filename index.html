@@ -7580,7 +7580,8 @@ async function loadPast30Days() {
                 // ===================================================================
                 // COMPATIBILITY LAYER: Convert new structure to old structure
                 // ===================================================================
-                if (dashboardData.daily_records && !dashboardData.today) {
+                // Always use daily_records if available (it's more current than root-level data)
+                if (dashboardData.daily_records && dashboardData.daily_records.length > 0) {
                     console.log('📊 Converting new data structure to legacy format...');
                     
                     const today = new Date().toISOString().split('T')[0];
