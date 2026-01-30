@@ -7618,37 +7618,42 @@ async function loadPast30Days() {
                         };
                     }
                     
-                    if (monthSummary) {
-                        dashboardData.month = {
-                            generation_kwh: monthSummary.total_generation_kwh || 0,
-                            expected_kwh: monthSummary.expected_generation_kwh || 0,
-                            performance_percent: monthSummary.performance_percent || 0,
-                            env_impact: {
-                                co2_kg: (monthSummary.total_generation_kwh || 0) * 0.99,
-                                trees: Math.floor((monthSummary.total_generation_kwh || 0) / 21.77),
-                                homes_day: ((monthSummary.total_generation_kwh || 0) / 30).toFixed(1)
-                            }
-                        };
-                    }
+                    // CALCULATE month total from daily_records (always current)
+                    const monthRecords = dashboardData.daily_records.filter(r => r.date.startsWith(thisMonth));
+                    const monthTotalKwh = monthRecords.reduce((sum, r) => sum + (r.generation_kwh || 0), 0);
                     
-                    if (dashboardData.lifetime_summary) {
-                        dashboardData.lifetime = {
-                            total_generation_kwh: dashboardData.lifetime_summary.total_generation_kwh || 0,
-                            total_generation_mwh: (dashboardData.lifetime_summary.total_generation_kwh || 0) / 1000,
-                            days_active: dashboardData.lifetime_summary.days_active || 0,
-                            env_impact: {
-                                co2_kg: (dashboardData.lifetime_summary.total_generation_kwh || 0) * 0.99,
-                                trees: Math.floor((dashboardData.lifetime_summary.total_generation_kwh || 0) / 21.77),
-                                homes_day: ((dashboardData.lifetime_summary.total_generation_kwh || 0) / 30).toFixed(1)
-                            }
-                        };
-                    }
+                    dashboardData.month = {
+                        generation_kwh: monthTotalKwh,
+                        expected_kwh: monthSummary?.expected_generation_kwh || 0,
+                        performance_percent: monthSummary?.performance_percent || 0,
+                        env_impact: {
+                            co2_kg: monthTotalKwh * 0.99,
+                            trees: Math.floor(monthTotalKwh / 21.77),
+                            homes_day: (monthTotalKwh / 30).toFixed(1)
+                        }
+                    };
                     
-                    console.log('✓ Legacy format created:', {
-                        today: dashboardData.today?.generation_kwh,
-                        yesterday: dashboardData.yesterday?.generation_kwh,
-                        month: dashboardData.month?.generation_kwh,
-                        lifetime: dashboardData.lifetime?.total_generation_kwh
+                    // CALCULATE lifetime total from daily_records (always current)
+                    const lifetimeTotalKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.generation_kwh || 0), 0);
+                    
+                    dashboardData.lifetime = {
+                        total_generation_kwh: lifetimeTotalKwh,
+                        total_generation_mwh: lifetimeTotalKwh / 1000,
+                        days_active: dashboardData.daily_records.length,
+                        env_impact: {
+                            co2_kg: lifetimeTotalKwh * 0.99,
+                            trees: Math.floor(lifetimeTotalKwh / 21.77),
+                            homes_day: (lifetimeTotalKwh / 30).toFixed(1)
+                        }
+                    };
+                    
+                    console.log('✓ Legacy format created from daily_records:', {
+                        today: dashboardData.today?.generation_kwh?.toFixed(1),
+                        yesterday: dashboardData.yesterday?.generation_kwh?.toFixed(1),
+                        month: dashboardData.month?.generation_kwh?.toFixed(1),
+                        monthDays: monthRecords.length,
+                        lifetime: dashboardData.lifetime?.total_generation_kwh?.toFixed(1),
+                        lifetimeDays: dashboardData.daily_records.length
                     });
                 }
                 // ===================================================================
