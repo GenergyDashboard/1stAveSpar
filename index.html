@@ -1832,14 +1832,7 @@
                         <div class="value" id="lifetime-perf">--</div>
                         <div class="subvalue"><span id="lifetime-perf-diff">--</span> kWh <span id="lifetime-perf-status">--</span></div>
                     </div>
-                    <div class="stat-card">
-                        <div class="label">Days Active</div>
-                        <div class="value" id="lifetime-days">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label">System Capacity</div>
-                        <div class="value" id="system-cap">71.59 kWp</div>
-                    </div>
+                    <!-- PHASE 7: Removed Days Active and System Capacity cards (moved to header) -->
                 </div>
                 
                 <!-- TOU Breakdown & Savings Card - Table Format -->
@@ -5102,7 +5095,7 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
     } else if (viewingToday && dashboardData && dashboardData.today) {
         // Fallback to old structure for backward compatibility
         totalGeneration = dashboardData.today.generation_kwh;
-        totalPredicted = dashboardData.today.expected_kwh;
+        totalPredicted = dashboardData.today.expected_kwh;  // RESTORE: Use sum of day (correct)
         peakPower = dashboardData.today.peak_power_kw;
         avgPower = dashboardData.today.avg_power_kw;
     } else {
@@ -5188,47 +5181,36 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
         .then(predictionsData => {
             let expectedLoad = 0, expectedGrid = 0, expectedPVCoverage = 0;
             
-            // PHASE 4 FIX: Calculate MTD average instead of single day sum
+            // CORRECT: Use MONTHLY AVERAGE for expected Load/Grid (same as PV)
             if (predictionsData.daily_predictions) {
-                const today = new Date().toISOString().split('T')[0];
-                const currentMonthKey = today.substring(0, 7); // "2026-01"
-                const selectedMonthKey = selectedDate.substring(0, 7);
-                const isPastMonth = selectedMonthKey < currentMonthKey;
+                const monthKey = selectedDate.substring(0, 7); // "2026-01"
+                let totalMonthlyLoad = 0, totalMonthlyGrid = 0, dayCount = 0;
                 
-                // For past months: use entire month average
-                // For current month: use MTD average (up to selected date)
-                const dateFilter = isPastMonth 
-                    ? (date => date.startsWith(selectedMonthKey))
-                    : (date => date.startsWith(selectedMonthKey) && date <= selectedDate);
-                
-                let totalDailyLoad = 0, totalDailyGrid = 0, dayCount = 0;
-                
+                // Sum all days in the month
                 Object.keys(predictionsData.daily_predictions)
-                    .filter(dateFilter)
+                    .filter(date => date.startsWith(monthKey))
                     .forEach(date => {
                         const dayPredictions = predictionsData.daily_predictions[date];
                         
-                        // Sum daily load
                         if (dayPredictions.load_kw && Array.isArray(dayPredictions.load_kw)) {
                             const dailyLoad = dayPredictions.load_kw.reduce((sum, val) => sum + val, 0);
-                            totalDailyLoad += dailyLoad;
+                            totalMonthlyLoad += dailyLoad;
                         }
                         
-                        // Sum daily grid
                         if (dayPredictions.grid_kw && Array.isArray(dayPredictions.grid_kw)) {
                             const dailyGrid = dayPredictions.grid_kw.reduce((sum, val) => sum + Math.abs(val), 0);
-                            totalDailyGrid += dailyGrid;
+                            totalMonthlyGrid += dailyGrid;
                         }
                         
                         dayCount++;
                     });
                 
-                // Calculate MTD averages
-                expectedLoad = dayCount > 0 ? totalDailyLoad / dayCount : 0;
-                expectedGrid = dayCount > 0 ? totalDailyGrid / dayCount : 0;
+                // Calculate monthly average
+                expectedLoad = dayCount > 0 ? totalMonthlyLoad / dayCount : 0;
+                expectedGrid = dayCount > 0 ? totalMonthlyGrid / dayCount : 0;
                 expectedPVCoverage = expectedLoad > 0 ? ((totalPredicted / expectedLoad) * 100) : 0;
                 
-                console.log(`✅ PHASE 4: Expected values (MTD avg, ${dayCount} days): Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}, PV Coverage=${expectedPVCoverage.toFixed(1)}%`);
+                console.log(`✅ Expected values (monthly avg): Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}, PV Coverage=${expectedPVCoverage.toFixed(1)}%`);
             }
             
             // Calculate % differences
@@ -5856,15 +5838,15 @@ async function loadMonthlyData() {
         const targetProgress = expectedForDaysWithData > 0 ? ((monthlyGen / expectedForDaysWithData) * 100).toFixed(1) : 0;
         
         document.getElementById('monthly-gen').textContent = formatKwh(monthlyGen);
-        document.getElementById('monthly-expected').textContent = formatNumber(expectedMonthly);
+        document.getElementById('monthly-expected').textContent = formatNumber(expectedForDaysWithData);  // MTD not full month
         document.getElementById('monthly-days-count').textContent = daysWithData;
         document.getElementById('monthly-target-perf').textContent = formatNumber(targetProgress);
-        document.getElementById('monthly-actual-gen').textContent = formatNumber(monthlyGen);
-        document.getElementById('monthly-target-gen').textContent = formatNumber(expectedForDaysWithData);
+        document.getElementById('monthly-actual-gen').textContent = monthlyGen.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        document.getElementById('monthly-target-gen').textContent = expectedForDaysWithData.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         
         const perfEl = document.getElementById('monthly-perf');
-        perfEl.textContent = `${performanceFull}% of expected (full month)`;
-        perfEl.className = 'performance ' + (performanceFull >= 100 ? 'positive' : 'negative');
+        perfEl.textContent = `${targetProgress}% of expected`;  // Use MTD performance
+        perfEl.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
         
         const targetPerfEl = document.querySelector('#monthly-target-perf').parentElement.querySelector('.performance');
         if (!targetPerfEl) {
@@ -6245,15 +6227,13 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
             datasets: [
                 {
                     label: 'Actual Load (kWh)',
-                    data: actualLoadLine,  // FIX: Use calculated line, not records
-                    type: 'line',
+                    data: actualLoadLine,
+                    type: 'bar',  // PHASE 7: Change to bars
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
                     borderColor: '#ef4444',
-                    backgroundColor: 'transparent',
-                    borderWidth: 3,
-                    pointRadius: 0,
-                    tension: 0,
+                    borderWidth: 2,
                     yAxisID: 'y',
-                    order: 2
+                    order: 3
                 },
                 {
                     label: 'Expected Load (kWh)',
@@ -6270,13 +6250,11 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                 },
                 {
                     label: 'Actual Grid (kWh)',
-                    data: actualGridLine,  // FIX: Use calculated line, not records
-                    type: 'line',
+                    data: actualGridLine,
+                    type: 'bar',  // PHASE 7: Change to bars
+                    backgroundColor: 'rgba(249, 115, 22, 0.7)',
                     borderColor: '#f97316',
-                    backgroundColor: 'transparent',
-                    borderWidth: 3,
-                    pointRadius: 0,
-                    tension: 0,
+                    borderWidth: 2,
                     yAxisID: 'y',
                     order: 2
                 },
@@ -7209,9 +7187,12 @@ async function loadLifetimeTouSavingsChart() {
         }
         
         const monthLabels = [];
-        const peakSavings = [];
-        const standardSavings = [];
-        const offPeakSavings = [];
+        const peakSavingsActual = [];
+        const standardSavingsActual = [];
+        const offPeakSavingsActual = [];
+        const peakSavingsPredicted = [];
+        const standardSavingsPredicted = [];
+        const offPeakSavingsPredicted = [];
         
         monthKeys.forEach(monthKey => {
             const monthData = data.monthly_summaries[monthKey];
@@ -7221,10 +7202,23 @@ async function loadLifetimeTouSavingsChart() {
                 const date = new Date(year, parseInt(month) - 1);
                 monthLabels.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
                 
-                // Extract savings by TOU period
-                peakSavings.push(monthData.financial.savings.peak_savings_zar || 0);
-                standardSavings.push(monthData.financial.savings.standard_savings_zar || 0);
-                offPeakSavings.push(monthData.financial.savings.off_peak_savings_zar || 0);
+                // Extract ACTUAL savings by TOU period
+                peakSavingsActual.push(monthData.financial.savings.peak_savings_zar || 0);
+                standardSavingsActual.push(monthData.financial.savings.standard_savings_zar || 0);
+                offPeakSavingsActual.push(monthData.financial.savings.off_peak_savings_zar || 0);
+                
+                // Calculate PREDICTED savings (use expected generation * rates)
+                // For now, use actual as fallback - would need predicted TOU breakdown from backend
+                if (monthData.financial_expected && monthData.financial_expected.savings) {
+                    peakSavingsPredicted.push(monthData.financial_expected.savings.peak_savings_zar || 0);
+                    standardSavingsPredicted.push(monthData.financial_expected.savings.standard_savings_zar || 0);
+                    offPeakSavingsPredicted.push(monthData.financial_expected.savings.off_peak_savings_zar || 0);
+                } else {
+                    // Use actual values as fallback until backend provides predicted
+                    peakSavingsPredicted.push(monthData.financial.savings.peak_savings_zar || 0);
+                    standardSavingsPredicted.push(monthData.financial.savings.standard_savings_zar || 0);
+                    offPeakSavingsPredicted.push(monthData.financial.savings.off_peak_savings_zar || 0);
+                }
             }
         });
         
@@ -7239,26 +7233,58 @@ async function loadLifetimeTouSavingsChart() {
             data: {
                 labels: monthLabels,
                 datasets: [
+                    // Predicted (lighter colors, dashed border)
                     {
-                        label: 'Peak Savings (R)',
-                        data: peakSavings,
+                        label: 'Peak Predicted (R)',
+                        data: peakSavingsPredicted,
+                        backgroundColor: 'rgba(239, 68, 68, 0.4)',
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        stack: 'predicted'
+                    },
+                    {
+                        label: 'Standard Predicted (R)',
+                        data: standardSavingsPredicted,
+                        backgroundColor: 'rgba(59, 130, 246, 0.4)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        stack: 'predicted'
+                    },
+                    {
+                        label: 'Off-Peak Predicted (R)',
+                        data: offPeakSavingsPredicted,
+                        backgroundColor: 'rgba(34, 197, 94, 0.4)',
+                        borderColor: '#22c55e',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        stack: 'predicted'
+                    },
+                    // Actual (darker colors, solid)
+                    {
+                        label: 'Peak Actual (R)',
+                        data: peakSavingsActual,
                         backgroundColor: 'rgba(239, 68, 68, 0.8)',
                         borderColor: '#ef4444',
-                        borderWidth: 2
+                        borderWidth: 2,
+                        stack: 'actual'
                     },
                     {
-                        label: 'Standard Savings (R)',
-                        data: standardSavings,
+                        label: 'Standard Actual (R)',
+                        data: standardSavingsActual,
                         backgroundColor: 'rgba(59, 130, 246, 0.8)',
                         borderColor: '#3b82f6',
-                        borderWidth: 2
+                        borderWidth: 2,
+                        stack: 'actual'
                     },
                     {
-                        label: 'Off-Peak Savings (R)',
-                        data: offPeakSavings,
+                        label: 'Off-Peak Actual (R)',
+                        data: offPeakSavingsActual,
                         backgroundColor: 'rgba(34, 197, 94, 0.8)',
                         borderColor: '#22c55e',
-                        borderWidth: 2
+                        borderWidth: 2,
+                        stack: 'actual'
                     }
                 ]
             },
@@ -7627,6 +7653,9 @@ async function loadPast30Days() {
             // Auto-refresh every 2 minutes (more frequent for TV display)
             setInterval(loadData, 2 * 60 * 1000);
             
+            // DISABLED: Auto-refresh was causing generation values to change unexpectedly
+            // Users can manually refresh the page if they want updated data
+            /*
             // Also refresh when page becomes visible (for background tabs)
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden) {
@@ -7640,8 +7669,9 @@ async function loadPast30Days() {
                 console.log('Window focused - refreshing data');
                 loadData();
             });
+            */
             
-            console.log('✓ Auto-refresh enabled: Every 2 minutes + on visibility change');
+            console.log('✓ Auto-refresh enabled: Every 2 minutes');
         });
     </script>
 </body>
