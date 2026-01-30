@@ -5805,6 +5805,10 @@ async function loadMonthlyData() {
         const month = parseInt(selectedMonth);
         const monthKey = selectedMonth;  // "01", "02", etc.
         
+        console.log(`📊 Calculating expected for ${selectedMonthYear}, monthKey=${monthKey}`);
+        console.log(`   monthly_predictions_base available:`, !!dashboardData.monthly_predictions_base);
+        console.log(`   monthKey in predictions:`, dashboardData.monthly_predictions_base?.[monthKey] ? 'YES' : 'NO');
+        
         if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
             // Calculate degradation factor for this specific year
             const commissioningDate = new Date(dashboardData.system.commissioning_date);
@@ -5831,14 +5835,18 @@ async function loadMonthlyData() {
             const avgDailyPrediction = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
             expectedForDaysWithData = avgDailyPrediction * daysWithData;
             
-            console.log(`${selectedMonthYear}: Base=${baseKwh.toFixed(2)} kWh, Years=${yearsActive.toFixed(2)}, Degradation=${degradationPercent.toFixed(2)}%, Factor=${degradationFactor.toFixed(4)}, Expected=${expectedMonthly.toFixed(2)} kWh`);
+            console.log(`   ✅ Base=${baseKwh.toFixed(2)} kWh, Years=${yearsActive.toFixed(2)}, Degradation=${degradationPercent.toFixed(2)}%, Expected=${expectedMonthly.toFixed(2)} kWh`);
         } else {
             // Fallback if base predictions not available
-            console.warn(`No base prediction for month ${monthKey}, using average`);
+            console.warn(`⚠️ No base prediction for month ${monthKey}, using fallback`);
             const daysInMonth = new Date(year, month, 0).getDate();
             expectedMonthly = 316 * daysInMonth;
             expectedForDaysWithData = 316 * daysWithData;
         }
+        
+        // Ensure values are valid numbers
+        expectedMonthly = expectedMonthly || 0;
+        expectedForDaysWithData = expectedForDaysWithData || 0;
         
         // Overall performance for the full month
         const performanceFull = expectedMonthly > 0 ? ((monthlyGen / expectedMonthly) * 100).toFixed(1) : 0;
@@ -6236,16 +6244,19 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
             datasets: [
                 {
                     label: 'Actual Load (kWh)',
-                    data: records.map(d => d.load_kwh || 0),
-                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                    data: actualLoadLine,  // FIX: Use calculated line, not records
+                    type: 'line',
                     borderColor: '#ef4444',
-                    borderWidth: 2,
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0,
                     yAxisID: 'y',
                     order: 2
                 },
                 {
                     label: 'Expected Load (kWh)',
-                    data: actualLoadLine,
+                    data: expectedLoadLine,
                     type: 'line',
                     borderColor: '#ef4444',
                     backgroundColor: 'transparent',
@@ -6258,10 +6269,13 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                 },
                 {
                     label: 'Actual Grid (kWh)',
-                    data: records.map(d => d.grid_kwh || 0),
-                    backgroundColor: 'rgba(249, 115, 22, 0.7)',
+                    data: actualGridLine,  // FIX: Use calculated line, not records
+                    type: 'line',
                     borderColor: '#f97316',
-                    borderWidth: 2,
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0,
                     yAxisID: 'y',
                     order: 2
                 },
@@ -7519,8 +7533,14 @@ async function loadPast30Days() {
                 }
                 
                 const headerDaysActive = document.getElementById('header-days-active');
-                if (headerDaysActive && dashboardData.lifetime && dashboardData.lifetime.days_active) {
-                    headerDaysActive.textContent = dashboardData.lifetime.days_active;
+                if (headerDaysActive) {
+                    // Try multiple possible locations for days_active
+                    const daysActive = dashboardData.lifetime?.days_active || 
+                                      dashboardData.lifetime_summary?.days_active || 
+                                      (dashboardData.daily_records ? dashboardData.daily_records.length : null);
+                    if (daysActive) {
+                        headerDaysActive.textContent = daysActive;
+                    }
                 }
                 
                 // Handle yesterday's data - either from dashboard_data.json or calculate from today
