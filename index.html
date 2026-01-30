@@ -7597,23 +7597,33 @@ async function loadPast30Days() {
                     
                     // Build legacy structure
                     if (todayRecord) {
+                        const todayKwh = todayRecord.generation_kwh || 0;
                         dashboardData.today = {
-                            generation_kwh: todayRecord.generation_kwh || 0,
+                            generation_kwh: todayKwh,
                             env_impact: {
-                                co2_kg: (todayRecord.generation_kwh || 0) * 0.99,
-                                trees: Math.floor((todayRecord.generation_kwh || 0) / 21.77),
-                                homes_day: ((todayRecord.generation_kwh || 0) / 30).toFixed(1)
+                                co2_offset_tons: todayKwh * 0.001,
+                                trees_equivalent: todayKwh * 0.045,
+                                households_offset: todayKwh * 0.102,
+                                km_driven_offset: todayKwh * 3.98,
+                                km_flown_offset: todayKwh * 0.081,
+                                coal_saved_kg: todayKwh * 0.548,
+                                water_saved_litres: todayKwh * 1.4
                             }
                         };
                     }
                     
                     if (yesterdayRecord) {
+                        const yesterdayKwh = yesterdayRecord.generation_kwh || 0;
                         dashboardData.yesterday = {
-                            generation_kwh: yesterdayRecord.generation_kwh || 0,
+                            generation_kwh: yesterdayKwh,
                             env_impact: {
-                                co2_kg: (yesterdayRecord.generation_kwh || 0) * 0.99,
-                                trees: Math.floor((yesterdayRecord.generation_kwh || 0) / 21.77),
-                                homes_day: ((yesterdayRecord.generation_kwh || 0) / 30).toFixed(1)
+                                co2_offset_tons: yesterdayKwh * 0.001,
+                                trees_equivalent: yesterdayKwh * 0.045,
+                                households_offset: yesterdayKwh * 0.102,
+                                km_driven_offset: yesterdayKwh * 3.98,
+                                km_flown_offset: yesterdayKwh * 0.081,
+                                coal_saved_kg: yesterdayKwh * 0.548,
+                                water_saved_litres: yesterdayKwh * 1.4
                             }
                         };
                     }
@@ -7627,9 +7637,13 @@ async function loadPast30Days() {
                         expected_kwh: monthSummary?.expected_generation_kwh || 0,
                         performance_percent: monthSummary?.performance_percent || 0,
                         env_impact: {
-                            co2_kg: monthTotalKwh * 0.99,
-                            trees: Math.floor(monthTotalKwh / 21.77),
-                            homes_day: (monthTotalKwh / 30).toFixed(1)
+                            co2_offset_tons: monthTotalKwh * 0.001,
+                            trees_equivalent: monthTotalKwh * 0.045,
+                            households_offset: monthTotalKwh * 0.102,
+                            km_driven_offset: monthTotalKwh * 3.98,
+                            km_flown_offset: monthTotalKwh * 0.081,
+                            coal_saved_kg: monthTotalKwh * 0.548,
+                            water_saved_litres: monthTotalKwh * 1.4
                         }
                     };
                     
@@ -7641,9 +7655,13 @@ async function loadPast30Days() {
                         total_generation_mwh: lifetimeTotalKwh / 1000,
                         days_active: dashboardData.daily_records.length,
                         env_impact: {
-                            co2_kg: lifetimeTotalKwh * 0.99,
-                            trees: Math.floor(lifetimeTotalKwh / 21.77),
-                            homes_day: (lifetimeTotalKwh / 30).toFixed(1)
+                            co2_offset_tons: lifetimeTotalKwh * 0.001,
+                            trees_equivalent: lifetimeTotalKwh * 0.045,
+                            households_offset: lifetimeTotalKwh * 0.102,
+                            km_driven_offset: lifetimeTotalKwh * 3.98,
+                            km_flown_offset: lifetimeTotalKwh * 0.081,
+                            coal_saved_kg: lifetimeTotalKwh * 0.548,
+                            water_saved_litres: lifetimeTotalKwh * 1.4
                         }
                     };
                     
