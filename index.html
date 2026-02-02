@@ -3001,8 +3001,8 @@
         }
         
         function loadFinancialTouPieChart() {
-            if (!dashboardData || !dashboardData.lifetime_summary) {
-                console.warn('No dashboard data or lifetime summary for TOU pie chart');
+            if (!dashboardData || !dashboardData.lifetime) {
+                console.warn('No dashboard data or lifetime data for TOU pie chart');
                 return;
             }
             
@@ -3013,7 +3013,7 @@
             }
             
             const ctx = canvasElement.getContext('2d');
-            const lifetime = dashboardData.lifetime_summary;
+            const lifetime = dashboardData.lifetime;
             const tou = lifetime.tou_breakdown;
             
             console.log('TOU Pie Chart - tou_breakdown:', tou);
@@ -7650,10 +7650,27 @@ async function loadPast30Days() {
                     // CALCULATE lifetime total from daily_records (always current)
                     const lifetimeTotalKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.generation_kwh || 0), 0);
                     
+                    // CALCULATE lifetime TOU breakdown from daily_records
+                    const lifetimeTouBreakdown = dashboardData.daily_records.reduce((acc, r) => {
+                        if (r.tou_breakdown) {
+                            acc.peak_kwh += r.tou_breakdown.peak_kwh || 0;
+                            acc.standard_kwh += r.tou_breakdown.standard_kwh || 0;
+                            acc.off_peak_kwh += r.tou_breakdown.off_peak_kwh || 0;
+                        }
+                        return acc;
+                    }, { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 });
+                    
+                    // CALCULATE lifetime Load/Grid from daily_records
+                    const lifetimeLoadKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.actual_load_kwh || 0), 0);
+                    const lifetimeGridKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.actual_grid_kwh || 0), 0);
+                    
                     dashboardData.lifetime = {
                         total_generation_kwh: lifetimeTotalKwh,
                         total_generation_mwh: lifetimeTotalKwh / 1000,
                         days_active: dashboardData.daily_records.length,
+                        actual_load_kwh: lifetimeLoadKwh,
+                        actual_grid_kwh: lifetimeGridKwh,
+                        tou_breakdown: lifetimeTouBreakdown,
                         env_impact: {
                             co2_offset_tons: lifetimeTotalKwh * 0.001,
                             trees_equivalent: lifetimeTotalKwh * 0.045,
@@ -7665,13 +7682,17 @@ async function loadPast30Days() {
                         }
                     };
                     
+                    const touTotal = lifetimeTouBreakdown.peak_kwh + lifetimeTouBreakdown.standard_kwh + lifetimeTouBreakdown.off_peak_kwh;
                     console.log('✓ Legacy format created from daily_records:', {
                         today: dashboardData.today?.generation_kwh?.toFixed(1),
                         yesterday: dashboardData.yesterday?.generation_kwh?.toFixed(1),
                         month: dashboardData.month?.generation_kwh?.toFixed(1),
                         monthDays: monthRecords.length,
                         lifetime: dashboardData.lifetime?.total_generation_kwh?.toFixed(1),
-                        lifetimeDays: dashboardData.daily_records.length
+                        lifetimeDays: dashboardData.daily_records.length,
+                        lifetimeTouTotal: touTotal.toFixed(1),
+                        lifetimeLoad: lifetimeLoadKwh.toFixed(1),
+                        lifetimeGrid: lifetimeGridKwh.toFixed(1)
                     });
                 }
                 // ===================================================================
@@ -7794,13 +7815,13 @@ async function loadPast30Days() {
                 setTextIfExists('monthly-perf', `${dashboardData.month.performance_percent || 0}% of expected`);
                 
                 setTextIfExists('lifetime-gen', formatNumber(lifetimeKwh, 0));
-                setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime_summary.days_active || 0, 0));
+                setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active || 0, 0));
                 
                 createEnvCards(dashboardData.lifetime.env_impact, 'client-env-lifetime');
                 
                 // Phase 2: Update TOU and Financial data for Lifetime tab
-                if (dashboardData.lifetime_summary) {
-                    updateTouBreakdown('lifetime', dashboardData.lifetime_summary);
+                if (dashboardData.lifetime) {
+                    updateTouBreakdown('lifetime', dashboardData.lifetime);
                 }
                 
                 document.getElementById('loading').style.display = 'none';
