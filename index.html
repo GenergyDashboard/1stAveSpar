@@ -2950,11 +2950,21 @@
                 const touKwh = monthlyData[m].tou;
                 const monthDate = m + '-01'; // First day of month for season detection
                 
+                console.log(`📊 Month ${m} TOU:`, touKwh);
+                
                 // Calculate financial savings for this month
                 const financial = calculateTOUFinancials(touKwh, monthDate);
-                const monthlySavings = financial.savings?.total_savings_zar || 0;
+                
+                console.log(`📊 Month ${m} Financial:`, {
+                    utility: financial.utility?.total,
+                    ppa: financial.ppa?.total,
+                    savings: financial.savings?.total
+                });
+                
+                const monthlySavings = financial.savings?.total || 0;  // ✅ Use .total not .total_savings_zar
                 
                 cumulative += monthlySavings;
+                console.log(`📊 Month ${m} Cumulative so far: R${cumulative.toFixed(2)}`);
                 return cumulative;
             });
             
@@ -6289,17 +6299,40 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
         }
     });
     
-    // Phase 2: Update TOU and Financial data
-    if (dashboardData && dashboardData.monthly_summaries) {
+    // Phase 2: Update TOU and Financial data - Calculate from daily_records
+    if (dashboardData && dashboardData.daily_records) {
         const selectedYear = document.getElementById('yearSelector').value;
         const selectedMonth = document.getElementById('monthSelector').value;
         const monthKey = `${selectedYear}-${selectedMonth}`;
-        const monthlyData = dashboardData.monthly_summaries[monthKey];
-        if (monthlyData) {
-            // Add month field for seasonal rate calculation
-            monthlyData.month = monthKey;
-            updateTouBreakdown('monthly', monthlyData);
-        }
+        
+        // Calculate monthly TOU from daily_records for this month
+        const monthlyTOU = { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
+        let totalGeneration = 0;
+        
+        dashboardData.daily_records.forEach(record => {
+            if (record.date.startsWith(monthKey)) {
+                totalGeneration += record.generation_kwh || 0;
+                if (record.tou_breakdown) {
+                    monthlyTOU.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                    monthlyTOU.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                    monthlyTOU.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+                }
+            }
+        });
+        
+        console.log(`📊 Monthly TOU calculated from daily_records for ${monthKey}:`, {
+            generation: totalGeneration.toFixed(2),
+            tou: monthlyTOU,
+            touTotal: (monthlyTOU.peak_kwh + monthlyTOU.standard_kwh + monthlyTOU.off_peak_kwh).toFixed(2)
+        });
+        
+        // Create monthly data object for updateTouBreakdown
+        const monthlyData = {
+            tou_breakdown: monthlyTOU,
+            month: monthKey
+        };
+        
+        updateTouBreakdown('monthly', monthlyData);
     }
     
     // PHASE 3: Create Load & Grid comparison chart
