@@ -7663,6 +7663,18 @@ async function loadPast30Days() {
                         missing: dashboardData.daily_records.length - recordsWithTou.length - recordsWithoutTouButWithHourly.length
                     });
                     
+                    // Debug: Show sample record without TOU to see structure
+                    if (recordsWithoutTouButWithHourly.length > 0) {
+                        const sampleRecord = recordsWithoutTouButWithHourly[0];
+                        console.log(`📊 Sample record WITHOUT tou_breakdown:`, {
+                            date: sampleRecord.date,
+                            generation_kwh: sampleRecord.generation_kwh,
+                            hourly_data_length: sampleRecord.hourly_data?.length,
+                            first_hour_data: sampleRecord.hourly_data?.[0],
+                            hourly_data_sample: sampleRecord.hourly_data?.slice(0, 3)
+                        });
+                    }
+                    
                     // Helper function to calculate TOU from hourly data
                     const calculateTouFromHourlyData = (date, hourlyData) => {
                         const tou = { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
@@ -7703,6 +7715,7 @@ async function loadPast30Days() {
                         } else if (r.hourly_data && r.hourly_data.length > 0) {
                             // Calculate TOU from hourly data
                             const calculatedTou = calculateTouFromHourlyData(r.date, r.hourly_data);
+                            console.log(`  📊 Calculated TOU for ${r.date}: Peak=${calculatedTou.peak_kwh.toFixed(2)}, Standard=${calculatedTou.standard_kwh.toFixed(2)}, Off-Peak=${calculatedTou.off_peak_kwh.toFixed(2)}, Total=${(calculatedTou.peak_kwh + calculatedTou.standard_kwh + calculatedTou.off_peak_kwh).toFixed(2)} (expected: ${r.generation_kwh?.toFixed(2)})`);
                             acc.peak_kwh += calculatedTou.peak_kwh;
                             acc.standard_kwh += calculatedTou.standard_kwh;
                             acc.off_peak_kwh += calculatedTou.off_peak_kwh;
@@ -7737,22 +7750,20 @@ async function loadPast30Days() {
                     const touDiff = Math.abs(touTotal - lifetimeTotalKwh);
                     const touMatch = touDiff < 1; // Within 1 kWh tolerance
                     
-                    console.log('✓ Legacy format created from daily_records:', {
-                        today: dashboardData.today?.generation_kwh?.toFixed(1),
-                        yesterday: dashboardData.yesterday?.generation_kwh?.toFixed(1),
-                        month: dashboardData.month?.generation_kwh?.toFixed(1),
-                        monthDays: monthRecords.length,
-                        lifetime: lifetimeTotalKwh.toFixed(1),
-                        lifetimeDays: dashboardData.daily_records.length,
-                        lifetimeTouPeak: lifetimeTouBreakdown.peak_kwh.toFixed(1),
-                        lifetimeTouStandard: lifetimeTouBreakdown.standard_kwh.toFixed(1),
-                        lifetimeTouOffPeak: lifetimeTouBreakdown.off_peak_kwh.toFixed(1),
-                        lifetimeTouTotal: touTotal.toFixed(1),
-                        touVsLifetimeDiff: touDiff.toFixed(1),
-                        touMatches: touMatch ? '✅' : `❌ (${touDiff.toFixed(1)} kWh difference)`,
-                        lifetimeLoad: lifetimeLoadKwh.toFixed(1),
-                        lifetimeGrid: lifetimeGridKwh.toFixed(1)
-                    });
+                    console.log('✓ Legacy format created from daily_records:');
+                    console.log('  Today:', dashboardData.today?.generation_kwh?.toFixed(1), 'kWh');
+                    console.log('  Yesterday:', dashboardData.yesterday?.generation_kwh?.toFixed(1), 'kWh');
+                    console.log('  Month:', dashboardData.month?.generation_kwh?.toFixed(1), 'kWh (', monthRecords.length, 'days)');
+                    console.log('  Lifetime:', lifetimeTotalKwh.toFixed(1), 'kWh (', dashboardData.daily_records.length, 'days)');
+                    console.log('  Lifetime TOU Breakdown:');
+                    console.log('    Peak:', lifetimeTouBreakdown.peak_kwh.toFixed(1), 'kWh');
+                    console.log('    Standard:', lifetimeTouBreakdown.standard_kwh.toFixed(1), 'kWh');
+                    console.log('    Off-Peak:', lifetimeTouBreakdown.off_peak_kwh.toFixed(1), 'kWh');
+                    console.log('    TOU Total:', touTotal.toFixed(1), 'kWh');
+                    console.log('  TOU vs Lifetime Difference:', touDiff.toFixed(1), 'kWh');
+                    console.log('  TOU Matches Lifetime:', touMatch ? '✅ YES' : '❌ NO');
+                    console.log('  Lifetime Load:', lifetimeLoadKwh.toFixed(1), 'kWh');
+                    console.log('  Lifetime Grid:', lifetimeGridKwh.toFixed(1), 'kWh');
                 }
                 // ===================================================================
                 // END COMPATIBILITY LAYER
