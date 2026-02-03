@@ -6308,10 +6308,17 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
         // Calculate monthly TOU from daily_records for this month
         const monthlyTOU = { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
         let totalGeneration = 0;
+        let recordCount = 0;
+        
+        console.log(`📊 Calculating monthly TOU for ${monthKey}...`);
         
         dashboardData.daily_records.forEach(record => {
             if (record.date.startsWith(monthKey)) {
+                recordCount++;
                 totalGeneration += record.generation_kwh || 0;
+                
+                console.log(`  ${record.date}: Gen=${record.generation_kwh?.toFixed(2)}, TOU={peak:${record.tou_breakdown?.peak_kwh?.toFixed(2)}, std:${record.tou_breakdown?.standard_kwh?.toFixed(2)}, off:${record.tou_breakdown?.off_peak_kwh?.toFixed(2)}}`);
+                
                 if (record.tou_breakdown) {
                     monthlyTOU.peak_kwh += record.tou_breakdown.peak_kwh || 0;
                     monthlyTOU.standard_kwh += record.tou_breakdown.standard_kwh || 0;
@@ -6320,11 +6327,9 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
             }
         });
         
-        console.log(`📊 Monthly TOU calculated from daily_records for ${monthKey}:`, {
-            generation: totalGeneration.toFixed(2),
-            tou: monthlyTOU,
-            touTotal: (monthlyTOU.peak_kwh + monthlyTOU.standard_kwh + monthlyTOU.off_peak_kwh).toFixed(2)
-        });
+        const touTotal = monthlyTOU.peak_kwh + monthlyTOU.standard_kwh + monthlyTOU.off_peak_kwh;
+        
+        console.log(`📊 Monthly TOU calculated from daily_records for ${monthKey}: {generation: '${totalGeneration.toFixed(2)}', recordCount: ${recordCount}, tou: {peak: ${monthlyTOU.peak_kwh.toFixed(2)}, std: ${monthlyTOU.standard_kwh.toFixed(2)}, off: ${monthlyTOU.off_peak_kwh.toFixed(2)}}, touTotal: '${touTotal.toFixed(2)}'}`);
         
         // Create monthly data object for updateTouBreakdown
         const monthlyData = {
@@ -7802,6 +7807,10 @@ async function loadPast30Days() {
                                 console.log(`     Hourly data: ${r.hourly_data.length} hours, sample hour 7:`, r.hourly_data[7]);
                                 console.log(`     Recalculated: total=${calcTotal.toFixed(2)}, peak=${calculatedTou.peak_kwh.toFixed(2)}, std=${calculatedTou.standard_kwh.toFixed(2)}, off=${calculatedTou.off_peak_kwh.toFixed(2)}`);
                                 console.log(`     Match: ${Math.abs(calcTotal - genTotal) < 0.1 ? '✅' : '❌'} (diff=${Math.abs(calcTotal - genTotal).toFixed(2)})`);
+                                
+                                // CRITICAL: Update the record itself so monthly calculations use correct values!
+                                r.tou_breakdown = calculatedTou;
+                                
                                 useTou = calculatedTou;
                                 recalculatedCount++;
                             } else {
