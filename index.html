@@ -756,11 +756,78 @@
             display: block;
         }
         
-        .env-sections-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 30px;
+        .env-table-container {
             margin-top: 30px;
+            overflow-x: auto;
+        }
+        
+        .env-impact-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .env-impact-table thead th {
+            background: rgba(76, 175, 80, 0.2);
+            color: #ffffff;
+            padding: 20px 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 2px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .env-impact-table thead th:first-child {
+            text-align: left;
+            background: transparent;
+            border-bottom: 2px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .env-impact-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background-color 0.2s;
+        }
+        
+        .env-impact-table tbody tr:hover {
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .env-impact-table tbody tr:last-child {
+            border-bottom: none;
+        }
+        
+        .env-metric-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 15px;
+            font-weight: 600;
+            color: #4CAF50;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        
+        .env-metric-label .env-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        
+        .env-impact-table td.env-value {
+            text-align: center;
+            padding: 20px 15px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #4CAF50;
+        }
+        
+        .env-impact-table td.env-value .unit {
+            font-size: 16px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            margin-left: 6px;
         }
         
         .public-stats-grid {
@@ -1049,10 +1116,24 @@
                 font-size: var(--font-xl);
             }
             
-            /* Environmental sections - 2 columns on tablet */
-            .env-sections-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
+            /* Environmental table - smaller font on tablet */
+            .env-impact-table thead th {
+                font-size: 16px;
+                padding: 15px 10px;
+            }
+            
+            .env-metric-label {
+                font-size: 12px;
+                padding: 15px 10px;
+            }
+            
+            .env-impact-table td.env-value {
+                font-size: 20px;
+                padding: 15px 10px;
+            }
+            
+            .env-impact-table td.env-value .unit {
+                font-size: 14px;
             }
             
             /* Public stats - 2 columns on tablet */
@@ -1163,10 +1244,39 @@
                 gap: 12px;
             }
             
-            /* Environmental sections - single column on mobile */
-            .env-sections-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
+            /* Environmental table - mobile responsive */
+            .env-table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .env-impact-table {
+                min-width: 600px;
+            }
+            
+            .env-impact-table thead th {
+                font-size: 14px;
+                padding: 12px 8px;
+            }
+            
+            .env-metric-label {
+                font-size: 11px;
+                padding: 12px 8px;
+                gap: 8px;
+            }
+            
+            .env-metric-label .env-icon {
+                font-size: 20px;
+            }
+            
+            .env-impact-table td.env-value {
+                font-size: 18px;
+                padding: 12px 8px;
+            }
+            
+            .env-impact-table td.env-value .unit {
+                font-size: 12px;
+            }
             }
             
             .env-card {
@@ -1298,12 +1408,23 @@
                 font-size: var(--font-lg);
             }
             
-            .env-card .env-value {
-                font-size: var(--font-lg);
+            .env-impact-table thead th {
+                font-size: 12px;
+                padding: 10px 6px;
             }
             
-            .env-card .env-label {
-                font-size: var(--font-base);
+            .env-metric-label {
+                font-size: 10px;
+                padding: 10px 6px;
+            }
+            
+            .env-impact-table td.env-value {
+                font-size: 16px;
+                padding: 10px 6px;
+            }
+            
+            .env-impact-table td.env-value .unit {
+                font-size: 11px;
             }
             
             .tab {
@@ -1458,38 +1579,60 @@
                 </div>
             </div>
             
-            <div class="env-sections-grid">
-                <!-- Yesterday -->
-                <div>
-                    <div class="section-header" style="margin-top: 0;">
-                        <h2>📊 Yesterday</h2>
-                    </div>
-                    <div class="env-grid" id="pub-env-yesterday"></div>
-                </div>
-                
-                <!-- Today -->
-                <div>
-                    <div class="section-header" style="margin-top: 0;">
-                        <h2>📅 Today</h2>
-                    </div>
-                    <div class="env-grid" id="pub-env-today"></div>
-                </div>
-                
-                <!-- This Month -->
-                <div>
-                    <div class="section-header" style="margin-top: 0;">
-                        <h2>🗓️ This Month</h2>
-                    </div>
-                    <div class="env-grid" id="pub-env-month"></div>
-                </div>
-                
-                <!-- Lifetime -->
-                <div>
-                    <div class="section-header" style="margin-top: 0;">
-                        <h2>📈 Lifetime</h2>
-                    </div>
-                    <div class="env-grid" id="pub-env-lifetime"></div>
-                </div>
+            <div class="env-table-container">
+                <table class="env-impact-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>📊 Yesterday</th>
+                            <th>📅 Today</th>
+                            <th>🗓️ This Month</th>
+                            <th>📈 Lifetime</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="env-metric-label">
+                                <div class="env-icon">🌳</div>
+                                <span>TREES EQUIVALENT</span>
+                            </td>
+                            <td class="env-value" id="pub-env-yesterday-trees">--</td>
+                            <td class="env-value" id="pub-env-today-trees">--</td>
+                            <td class="env-value" id="pub-env-month-trees">--</td>
+                            <td class="env-value" id="pub-env-lifetime-trees">--</td>
+                        </tr>
+                        <tr>
+                            <td class="env-metric-label">
+                                <div class="env-icon">🏠</div>
+                                <span>HOUSEHOLDS POWERED</span>
+                            </td>
+                            <td class="env-value" id="pub-env-yesterday-homes">--</td>
+                            <td class="env-value" id="pub-env-today-homes">--</td>
+                            <td class="env-value" id="pub-env-month-homes">--</td>
+                            <td class="env-value" id="pub-env-lifetime-homes">--</td>
+                        </tr>
+                        <tr>
+                            <td class="env-metric-label">
+                                <div class="env-icon">⛏️</div>
+                                <span>COAL SAVED</span>
+                            </td>
+                            <td class="env-value" id="pub-env-yesterday-coal">--</td>
+                            <td class="env-value" id="pub-env-today-coal">--</td>
+                            <td class="env-value" id="pub-env-month-coal">--</td>
+                            <td class="env-value" id="pub-env-lifetime-coal">--</td>
+                        </tr>
+                        <tr>
+                            <td class="env-metric-label">
+                                <div class="env-icon">💧</div>
+                                <span>WATER SAVED</span>
+                            </td>
+                            <td class="env-value" id="pub-env-yesterday-water">--</td>
+                            <td class="env-value" id="pub-env-today-water">--</td>
+                            <td class="env-value" id="pub-env-month-water">--</td>
+                            <td class="env-value" id="pub-env-lifetime-water">--</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
         
@@ -4939,8 +5082,53 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
             }).join('');
         }
         
+        function populateEnvTable(yesterdayData, todayData, monthData, lifetimeData) {
+            // Trees
+            document.getElementById('pub-env-yesterday-trees').innerHTML = 
+                `${formatNumber(yesterdayData.trees_equivalent)} <span class="unit">trees</span>`;
+            document.getElementById('pub-env-today-trees').innerHTML = 
+                `${formatNumber(todayData.trees_equivalent)} <span class="unit">trees</span>`;
+            document.getElementById('pub-env-month-trees').innerHTML = 
+                `${formatNumber(monthData.trees_equivalent)} <span class="unit">trees</span>`;
+            document.getElementById('pub-env-lifetime-trees').innerHTML = 
+                `${formatNumber(lifetimeData.trees_equivalent)} <span class="unit">trees</span>`;
+            
+            // Households
+            document.getElementById('pub-env-yesterday-homes').innerHTML = 
+                `${formatNumber(yesterdayData.households_offset, 2)} <span class="unit">homes</span>`;
+            document.getElementById('pub-env-today-homes').innerHTML = 
+                `${formatNumber(todayData.households_offset, 2)} <span class="unit">homes</span>`;
+            document.getElementById('pub-env-month-homes').innerHTML = 
+                `${formatNumber(monthData.households_offset, 2)} <span class="unit">homes</span>`;
+            document.getElementById('pub-env-lifetime-homes').innerHTML = 
+                `${formatNumber(lifetimeData.households_offset, 2)} <span class="unit">homes</span>`;
+            
+            // Coal
+            document.getElementById('pub-env-yesterday-coal').innerHTML = 
+                `${formatNumber(yesterdayData.coal_saved_kg)} <span class="unit">kg</span>`;
+            document.getElementById('pub-env-today-coal').innerHTML = 
+                `${formatNumber(todayData.coal_saved_kg)} <span class="unit">kg</span>`;
+            document.getElementById('pub-env-month-coal').innerHTML = 
+                `${formatNumber(monthData.coal_saved_kg)} <span class="unit">kg</span>`;
+            document.getElementById('pub-env-lifetime-coal').innerHTML = 
+                `${formatNumber(lifetimeData.coal_saved_kg)} <span class="unit">kg</span>`;
+            
+            // Water
+            document.getElementById('pub-env-yesterday-water').innerHTML = 
+                `${formatNumber(yesterdayData.water_saved_litres)} <span class="unit">litres</span>`;
+            document.getElementById('pub-env-today-water').innerHTML = 
+                `${formatNumber(todayData.water_saved_litres)} <span class="unit">litres</span>`;
+            document.getElementById('pub-env-month-water').innerHTML = 
+                `${formatNumber(monthData.water_saved_litres)} <span class="unit">litres</span>`;
+            document.getElementById('pub-env-lifetime-water').innerHTML = 
+                `${formatNumber(lifetimeData.water_saved_litres)} <span class="unit">litres</span>`;
+        }
+
+        // Keep old function for backward compatibility (client view uses it)
         function createEnvCards(data, containerId) {
             const container = document.getElementById(containerId);
+            if (!container) return;
+            
             container.innerHTML = `
                 <div class="env-card">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
@@ -8001,10 +8189,13 @@ async function loadPast30Days() {
                 
                 setTextIfExists('pub-lifetime-gen', formatNumber(lifetimeKwh, 0));
                 
-                createEnvCards(yesterdayEnv, 'pub-env-yesterday');
-                createEnvCards(dashboardData.today.env_impact, 'pub-env-today');
-                createEnvCards(dashboardData.month.env_impact, 'pub-env-month');
-                createEnvCards(dashboardData.lifetime.env_impact, 'pub-env-lifetime');
+                // Populate environmental impact table
+                populateEnvTable(
+                    yesterdayEnv, 
+                    dashboardData.today.env_impact, 
+                    dashboardData.month.env_impact, 
+                    dashboardData.lifetime.env_impact
+                );
                 
                 setTextIfExists('monthly-gen', formatNumber(dashboardData.month.generation_kwh) + ' kWh');
                 setTextIfExists('monthly-expected', formatNumber(dashboardData.month.expected_kwh || 0));
