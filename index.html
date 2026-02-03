@@ -7715,8 +7715,15 @@ async function loadPast30Days() {
                                 validCount++;
                             } else if (r.hourly_data && r.hourly_data.length > 0) {
                                 // TOU doesn't match - recalculate from hourly data
-                                console.log(`  ⚠️ Recalculating TOU for ${r.date}: existing TOU total=${touTotal.toFixed(2)}, generation=${genTotal.toFixed(2)}, diff=${diff.toFixed(2)}`);
-                                useTou = calculateTouFromHourlyData(r.date, r.hourly_data);
+                                const calculatedTou = calculateTouFromHourlyData(r.date, r.hourly_data);
+                                const calcTotal = calculatedTou.peak_kwh + calculatedTou.standard_kwh + calculatedTou.off_peak_kwh;
+                                console.log(`  ⚠️ Recalculating TOU for ${r.date}:`);
+                                console.log(`     Existing: total=${touTotal.toFixed(2)}, peak=${r.tou_breakdown.peak_kwh?.toFixed(2)}, std=${r.tou_breakdown.standard_kwh?.toFixed(2)}, off=${r.tou_breakdown.off_peak_kwh?.toFixed(2)}`);
+                                console.log(`     Generation: ${genTotal.toFixed(2)} kWh`);
+                                console.log(`     Hourly data: ${r.hourly_data.length} hours, sample hour 7:`, r.hourly_data[7]);
+                                console.log(`     Recalculated: total=${calcTotal.toFixed(2)}, peak=${calculatedTou.peak_kwh.toFixed(2)}, std=${calculatedTou.standard_kwh.toFixed(2)}, off=${calculatedTou.off_peak_kwh.toFixed(2)}`);
+                                console.log(`     Match: ${Math.abs(calcTotal - genTotal) < 0.1 ? '✅' : '❌'} (diff=${Math.abs(calcTotal - genTotal).toFixed(2)})`);
+                                useTou = calculatedTou;
                                 recalculatedCount++;
                             } else {
                                 // Use existing even if wrong (no hourly data to recalculate)
