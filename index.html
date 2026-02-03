@@ -7663,17 +7663,11 @@ async function loadPast30Days() {
                         missing: dashboardData.daily_records.length - recordsWithTou.length - recordsWithoutTouButWithHourly.length
                     });
                     
-                    // Debug: Show sample record without TOU to see structure
-                    if (recordsWithoutTouButWithHourly.length > 0) {
-                        const sampleRecord = recordsWithoutTouButWithHourly[0];
-                        console.log(`📊 Sample record WITHOUT tou_breakdown:`, {
-                            date: sampleRecord.date,
-                            generation_kwh: sampleRecord.generation_kwh,
-                            hourly_data_length: sampleRecord.hourly_data?.length,
-                            first_hour_data: sampleRecord.hourly_data?.[0],
-                            hourly_data_sample: sampleRecord.hourly_data?.slice(0, 3)
-                        });
-                    }
+                    console.log(`📊 Checking TOU breakdowns for accuracy...`);
+                    
+                    let recalculatedCount = 0;
+                    let validCount = 0;
+                    let noDataCount = 0;
                     
                     // Helper function to calculate TOU from hourly data
                     const calculateTouFromHourlyData = (date, hourlyData) => {
@@ -7707,22 +7701,53 @@ async function loadPast30Days() {
                     };
                     
                     const lifetimeTouBreakdown = dashboardData.daily_records.reduce((acc, r) => {
+                        let useTou = null;
+                        
+                        // Check if existing tou_breakdown is valid
                         if (r.tou_breakdown) {
-                            // Use existing TOU breakdown
-                            acc.peak_kwh += r.tou_breakdown.peak_kwh || 0;
-                            acc.standard_kwh += r.tou_breakdown.standard_kwh || 0;
-                            acc.off_peak_kwh += r.tou_breakdown.off_peak_kwh || 0;
+                            const touTotal = (r.tou_breakdown.peak_kwh || 0) + (r.tou_breakdown.standard_kwh || 0) + (r.tou_breakdown.off_peak_kwh || 0);
+                            const genTotal = r.generation_kwh || 0;
+                            const diff = Math.abs(touTotal - genTotal);
+                            
+                            // If TOU breakdown matches generation (within 0.1 kWh), use it
+                            if (diff < 0.1) {
+                                useTou = r.tou_breakdown;
+                                validCount++;
+                            } else if (r.hourly_data && r.hourly_data.length > 0) {
+                                // TOU doesn't match - recalculate from hourly data
+                                console.log(`  ⚠️ Recalculating TOU for ${r.date}: existing TOU total=${touTotal.toFixed(2)}, generation=${genTotal.toFixed(2)}, diff=${diff.toFixed(2)}`);
+                                useTou = calculateTouFromHourlyData(r.date, r.hourly_data);
+                                recalculatedCount++;
+                            } else {
+                                // Use existing even if wrong (no hourly data to recalculate)
+                                console.log(`  ⚠️ TOU mismatch for ${r.date} but no hourly_data: using existing TOU anyway`);
+                                useTou = r.tou_breakdown;
+                                noDataCount++;
+                            }
                         } else if (r.hourly_data && r.hourly_data.length > 0) {
-                            // Calculate TOU from hourly data
-                            const calculatedTou = calculateTouFromHourlyData(r.date, r.hourly_data);
-                            console.log(`  📊 Calculated TOU for ${r.date}: Peak=${calculatedTou.peak_kwh.toFixed(2)}, Standard=${calculatedTou.standard_kwh.toFixed(2)}, Off-Peak=${calculatedTou.off_peak_kwh.toFixed(2)}, Total=${(calculatedTou.peak_kwh + calculatedTou.standard_kwh + calculatedTou.off_peak_kwh).toFixed(2)} (expected: ${r.generation_kwh?.toFixed(2)})`);
-                            acc.peak_kwh += calculatedTou.peak_kwh;
-                            acc.standard_kwh += calculatedTou.standard_kwh;
-                            acc.off_peak_kwh += calculatedTou.off_peak_kwh;
+                            // No TOU breakdown - calculate from hourly data
+                            console.log(`  📊 Calculating TOU for ${r.date} from hourly_data`);
+                            useTou = calculateTouFromHourlyData(r.date, r.hourly_data);
+                            recalculatedCount++;
+                        } else {
+                            noDataCount++;
                         }
-                        // If neither exists, don't add anything (skip this record)
+                        
+                        if (useTou) {
+                            acc.peak_kwh += useTou.peak_kwh || 0;
+                            acc.standard_kwh += useTou.standard_kwh || 0;
+                            acc.off_peak_kwh += useTou.off_peak_kwh || 0;
+                        }
+                        
                         return acc;
                     }, { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 });
+                    
+                    console.log(`📊 TOU Validation Summary:`, {
+                        valid: validCount,
+                        recalculated: recalculatedCount,
+                        noData: noDataCount,
+                        total: dashboardData.daily_records.length
+                    });
                     
                     // CALCULATE lifetime Load/Grid from daily_records
                     const lifetimeLoadKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.actual_load_kwh || 0), 0);
