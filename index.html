@@ -2911,13 +2911,32 @@
         }
         
         function loadFinancialCumulativeChart() {
-            if (!dashboardData || !dashboardData.monthly_summaries) return;
+            if (!dashboardData || !dashboardData.daily_records) return;
             
             const ctx = document.getElementById('financialCumulativeChart').getContext('2d');
-            const monthlySummaries = dashboardData.monthly_summaries;
+            
+            // Group daily_records by month and calculate TOU/financial for each month
+            const monthlyData = {};
+            
+            dashboardData.daily_records.forEach(record => {
+                const yearMonth = record.date.substring(0, 7); // "2025-11"
+                
+                if (!monthlyData[yearMonth]) {
+                    monthlyData[yearMonth] = {
+                        tou: { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 }
+                    };
+                }
+                
+                // Sum TOU breakdown (using recalculated values if available)
+                if (record.tou_breakdown) {
+                    monthlyData[yearMonth].tou.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                    monthlyData[yearMonth].tou.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                    monthlyData[yearMonth].tou.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+                }
+            });
             
             // Sort months
-            const sortedMonths = Object.keys(monthlySummaries).sort();
+            const sortedMonths = Object.keys(monthlyData).sort();
             
             const labels = sortedMonths.map(month => {
                 const [year, mon] = month.split('-');
@@ -2925,11 +2944,23 @@
                 return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
             });
             
-            // Calculate cumulative savings
+            // Calculate cumulative savings using corrected TOU data
             let cumulative = 0;
             const cumulativeData = sortedMonths.map(m => {
-                cumulative += monthlySummaries[m].financial?.total_savings_zar || 0;
+                const touKwh = monthlyData[m].tou;
+                const monthDate = m + '-01'; // First day of month for season detection
+                
+                // Calculate financial savings for this month
+                const financial = calculateTOUFinancials(touKwh, monthDate);
+                const monthlySavings = financial.savings?.total_savings_zar || 0;
+                
+                cumulative += monthlySavings;
                 return cumulative;
+            });
+            
+            console.log(`📊 Cumulative Savings Chart - Calculated from daily_records:`, {
+                months: sortedMonths.length,
+                finalCumulative: cumulative.toFixed(2)
             });
             
             if (financialCumulativeChart) {
