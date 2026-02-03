@@ -7651,12 +7651,63 @@ async function loadPast30Days() {
                     const lifetimeTotalKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.generation_kwh || 0), 0);
                     
                     // CALCULATE lifetime TOU breakdown from daily_records
+                    // For records with tou_breakdown, use it
+                    // For records without tou_breakdown but with hourly_data, calculate it
+                    const recordsWithTou = dashboardData.daily_records.filter(r => r.tou_breakdown);
+                    const recordsWithoutTouButWithHourly = dashboardData.daily_records.filter(r => !r.tou_breakdown && r.hourly_data && r.hourly_data.length > 0);
+                    
+                    console.log(`📊 Calculating lifetime TOU:`, {
+                        totalRecords: dashboardData.daily_records.length,
+                        withTouBreakdown: recordsWithTou.length,
+                        withoutTouButWithHourly: recordsWithoutTouButWithHourly.length,
+                        missing: dashboardData.daily_records.length - recordsWithTou.length - recordsWithoutTouButWithHourly.length
+                    });
+                    
+                    // Helper function to calculate TOU from hourly data
+                    const calculateTouFromHourlyData = (date, hourlyData) => {
+                        const tou = { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
+                        const dayOfWeek = new Date(date).getDay(); // 0=Sunday, 6=Saturday
+                        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                        
+                        hourlyData.forEach((hourData, hour) => {
+                            const pv_kw = hourData.pv_kw || 0;
+                            
+                            if (isWeekend) {
+                                // Weekends: 6-22 is standard, rest is off-peak
+                                if (hour >= 6 && hour < 22) {
+                                    tou.standard_kwh += pv_kw;
+                                } else {
+                                    tou.off_peak_kwh += pv_kw;
+                                }
+                            } else {
+                                // Weekdays: 7-10 and 18-21 is peak, 6-7, 10-18, 21-22 is standard, rest is off-peak
+                                if ((hour >= 7 && hour < 10) || (hour >= 18 && hour < 21)) {
+                                    tou.peak_kwh += pv_kw;
+                                } else if ((hour >= 6 && hour < 7) || (hour >= 10 && hour < 18) || (hour >= 21 && hour < 22)) {
+                                    tou.standard_kwh += pv_kw;
+                                } else {
+                                    tou.off_peak_kwh += pv_kw;
+                                }
+                            }
+                        });
+                        
+                        return tou;
+                    };
+                    
                     const lifetimeTouBreakdown = dashboardData.daily_records.reduce((acc, r) => {
                         if (r.tou_breakdown) {
+                            // Use existing TOU breakdown
                             acc.peak_kwh += r.tou_breakdown.peak_kwh || 0;
                             acc.standard_kwh += r.tou_breakdown.standard_kwh || 0;
                             acc.off_peak_kwh += r.tou_breakdown.off_peak_kwh || 0;
+                        } else if (r.hourly_data && r.hourly_data.length > 0) {
+                            // Calculate TOU from hourly data
+                            const calculatedTou = calculateTouFromHourlyData(r.date, r.hourly_data);
+                            acc.peak_kwh += calculatedTou.peak_kwh;
+                            acc.standard_kwh += calculatedTou.standard_kwh;
+                            acc.off_peak_kwh += calculatedTou.off_peak_kwh;
                         }
+                        // If neither exists, don't add anything (skip this record)
                         return acc;
                     }, { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 });
                     
@@ -7683,14 +7734,22 @@ async function loadPast30Days() {
                     };
                     
                     const touTotal = lifetimeTouBreakdown.peak_kwh + lifetimeTouBreakdown.standard_kwh + lifetimeTouBreakdown.off_peak_kwh;
+                    const touDiff = Math.abs(touTotal - lifetimeTotalKwh);
+                    const touMatch = touDiff < 1; // Within 1 kWh tolerance
+                    
                     console.log('✓ Legacy format created from daily_records:', {
                         today: dashboardData.today?.generation_kwh?.toFixed(1),
                         yesterday: dashboardData.yesterday?.generation_kwh?.toFixed(1),
                         month: dashboardData.month?.generation_kwh?.toFixed(1),
                         monthDays: monthRecords.length,
-                        lifetime: dashboardData.lifetime?.total_generation_kwh?.toFixed(1),
+                        lifetime: lifetimeTotalKwh.toFixed(1),
                         lifetimeDays: dashboardData.daily_records.length,
+                        lifetimeTouPeak: lifetimeTouBreakdown.peak_kwh.toFixed(1),
+                        lifetimeTouStandard: lifetimeTouBreakdown.standard_kwh.toFixed(1),
+                        lifetimeTouOffPeak: lifetimeTouBreakdown.off_peak_kwh.toFixed(1),
                         lifetimeTouTotal: touTotal.toFixed(1),
+                        touVsLifetimeDiff: touDiff.toFixed(1),
+                        touMatches: touMatch ? '✅' : `❌ (${touDiff.toFixed(1)} kWh difference)`,
                         lifetimeLoad: lifetimeLoadKwh.toFixed(1),
                         lifetimeGrid: lifetimeGridKwh.toFixed(1)
                     });
