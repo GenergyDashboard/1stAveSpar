@@ -7676,23 +7676,27 @@ async function loadPast30Days() {
                         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                         
                         hourlyData.forEach((hourData, hour) => {
-                            const pv_kw = hourData.pv_kw || 0;
+                            // The field is generation_kw (in kW) - need to convert to kWh
+                            // intervals = number of 5-min intervals in this hour (12 = full hour)
+                            const generation_kw = hourData.generation_kw || 0;
+                            const intervals = hourData.intervals || 12;
+                            const generation_kwh = generation_kw * (intervals * 5 / 60); // Convert to kWh
                             
                             if (isWeekend) {
                                 // Weekends: 6-22 is standard, rest is off-peak
                                 if (hour >= 6 && hour < 22) {
-                                    tou.standard_kwh += pv_kw;
+                                    tou.standard_kwh += generation_kwh;
                                 } else {
-                                    tou.off_peak_kwh += pv_kw;
+                                    tou.off_peak_kwh += generation_kwh;
                                 }
                             } else {
                                 // Weekdays: 7-10 and 18-21 is peak, 6-7, 10-18, 21-22 is standard, rest is off-peak
                                 if ((hour >= 7 && hour < 10) || (hour >= 18 && hour < 21)) {
-                                    tou.peak_kwh += pv_kw;
+                                    tou.peak_kwh += generation_kwh;
                                 } else if ((hour >= 6 && hour < 7) || (hour >= 10 && hour < 18) || (hour >= 21 && hour < 22)) {
-                                    tou.standard_kwh += pv_kw;
+                                    tou.standard_kwh += generation_kwh;
                                 } else {
-                                    tou.off_peak_kwh += pv_kw;
+                                    tou.off_peak_kwh += generation_kwh;
                                 }
                             }
                         });
