@@ -2766,41 +2766,47 @@
         // Financial savings now calculated in updateTouBreakdown
         
         function loadFinancialOverview() {
-            if (!dashboardData || !dashboardData.lifetime_summary) {
-                console.log('No financial data available');
+            if (!dashboardData || !dashboardData.daily_records) {
+                console.log('No daily records available for financial overview');
                 return;
             }
             
-            const lifetime = dashboardData.lifetime_summary;
-            const financial = lifetime.financial;
+            // Calculate lifetime TOU from daily_records (same as updateTouBreakdown does)
+            const lifetimeTOU = { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
             
-            if (!financial) {
-                console.log('No financial data in lifetime summary');
-                return;
-            }
+            dashboardData.daily_records.forEach(record => {
+                if (record.tou_breakdown) {
+                    lifetimeTOU.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                    lifetimeTOU.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                    lifetimeTOU.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+                }
+            });
+            
+            // Calculate financial from TOU (using current date for season)
+            const dateStr = new Date().toISOString().split('T')[0];
+            const financials = calculateTOUFinancials(lifetimeTOU, dateStr);
+            
+            console.log('📊 Financial Overview - Calculated from daily_records:', {
+                tou: lifetimeTOU,
+                utility: financials.utility.total,
+                ppa: financials.ppa.total,
+                savings: financials.savings.total
+            });
             
             // Update hero card
-            document.getElementById('financial-lifetime-savings').textContent = formatNumber(financial.total_savings_zar, 2);
+            document.getElementById('financial-lifetime-savings').textContent = formatNumber(financials.savings.total, 2);
             
-            // Update TOU breakdown stats (SAVINGS in ZAR only, strip any kWh text)
-            const total = financial.total_savings_zar;
+            // Update TOU breakdown stats (SAVINGS in ZAR only)
+            const total = financials.savings.total;
             
-            // Helper to parse numeric value and strip units
-            const parseValue = (val) => {
-                if (typeof val === 'string') {
-                    return parseFloat(val.replace(/[^0-9.-]/g, '')) || 0;
-                }
-                return val || 0;
-            };
+            document.getElementById('financial-peak-savings').textContent = formatNumber(financials.savings.peak, 2);
+            document.getElementById('financial-peak-pct').textContent = formatNumber((financials.savings.peak / total) * 100, 1);
             
-            document.getElementById('financial-peak-savings').textContent = formatNumber(parseValue(financial.peak_savings_zar), 2);
-            document.getElementById('financial-peak-pct').textContent = formatNumber((parseValue(financial.peak_savings_zar) / total) * 100, 1);
+            document.getElementById('financial-standard-savings').textContent = formatNumber(financials.savings.standard, 2);
+            document.getElementById('financial-standard-pct').textContent = formatNumber((financials.savings.standard / total) * 100, 1);
             
-            document.getElementById('financial-standard-savings').textContent = formatNumber(parseValue(financial.standard_savings_zar), 2);
-            document.getElementById('financial-standard-pct').textContent = formatNumber((parseValue(financial.standard_savings_zar) / total) * 100, 1);
-            
-            document.getElementById('financial-off-peak-savings').textContent = formatNumber(parseValue(financial.off_peak_savings_zar), 2);
-            document.getElementById('financial-off-peak-pct').textContent = formatNumber((parseValue(financial.off_peak_savings_zar) / total) * 100, 1);
+            document.getElementById('financial-off-peak-savings').textContent = formatNumber(financials.savings.off_peak, 2);
+            document.getElementById('financial-off-peak-pct').textContent = formatNumber((financials.savings.off_peak / total) * 100, 1);
             
             // Load charts
             loadFinancialMonthlyTouChart();
