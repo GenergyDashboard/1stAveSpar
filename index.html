@@ -2939,13 +2939,34 @@
         }
         
         function loadFinancialMonthlyTouChart() {
-            if (!dashboardData || !dashboardData.monthly_summaries) return;
+            if (!dashboardData || !dashboardData.daily_records) return;
             
             const ctx = document.getElementById('financialMonthlyTouChart').getContext('2d');
-            const monthlySummaries = dashboardData.monthly_summaries;
+            
+            // Calculate monthly TOU from daily_records (same as cumulative/lifetime charts)
+            const monthlyData = {};
+            
+            dashboardData.daily_records.forEach(record => {
+                const yearMonth = record.date.substring(0, 7); // "YYYY-MM"
+                if (!monthlyData[yearMonth]) {
+                    monthlyData[yearMonth] = {
+                        generation: 0,
+                        tou: { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 }
+                    };
+                }
+                
+                monthlyData[yearMonth].generation += record.generation_kwh || 0;
+                
+                // Sum TOU breakdown (using recalculated values from V11+)
+                if (record.tou_breakdown) {
+                    monthlyData[yearMonth].tou.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                    monthlyData[yearMonth].tou.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                    monthlyData[yearMonth].tou.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+                }
+            });
             
             // Sort months
-            const sortedMonths = Object.keys(monthlySummaries).sort();
+            const sortedMonths = Object.keys(monthlyData).sort();
             
             const labels = sortedMonths.map(month => {
                 const [year, mon] = month.split('-');
@@ -2953,9 +2974,27 @@
                 return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
             });
             
-            const peakData = sortedMonths.map(m => monthlySummaries[m].financial?.peak_savings_zar || 0);
-            const standardData = sortedMonths.map(m => monthlySummaries[m].financial?.standard_savings_zar || 0);
-            const offPeakData = sortedMonths.map(m => monthlySummaries[m].financial?.off_peak_savings_zar || 0);
+            // Calculate savings from corrected TOU
+            const peakData = sortedMonths.map(m => {
+                const touKwh = monthlyData[m].tou;
+                const monthDate = m + '-01';
+                const financial = calculateTOUFinancials(touKwh, monthDate);
+                return financial.savings.peak || 0;
+            });
+            
+            const standardData = sortedMonths.map(m => {
+                const touKwh = monthlyData[m].tou;
+                const monthDate = m + '-01';
+                const financial = calculateTOUFinancials(touKwh, monthDate);
+                return financial.savings.standard || 0;
+            });
+            
+            const offPeakData = sortedMonths.map(m => {
+                const touKwh = monthlyData[m].tou;
+                const monthDate = m + '-01';
+                const financial = calculateTOUFinancials(touKwh, monthDate);
+                return financial.savings.off_peak || 0;
+            });
             
             if (financialMonthlyTouChart) {
                 financialMonthlyTouChart.destroy();
@@ -7019,7 +7058,7 @@ async function loadLifetimeMonthlyBreakdown() {
         // Scale Performance to fit on primary axis with Generation
         // Performance is 0-150%, scale it to match generation range
         const maxGeneration = Math.max(...monthGeneration);
-        const scaledPerformance = monthPerformance.map(perf => (perf / 100) * (maxGeneration * 0.8));
+        const scaledPerformance = cumulativePerformance.map(perf => (perf / 100) * (maxGeneration * 0.8));
         
         lifetimeMonthlyChart = new Chart(ctx, {
             type: 'bar',
@@ -7046,7 +7085,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         order: 2
                     },
                     {
-                        label: 'Performance (%)',
+                        label: 'Cumulative Performance (%)',
                         data: scaledPerformance,
                         type: 'line',
                         borderColor: '#FFD700',
@@ -7058,7 +7097,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         yAxisID: 'y',
                         order: 1,
                         // Store original performance values for tooltip
-                        originalData: monthPerformance
+                        originalData: cumulativePerformance
                     },
                     {
                         label: 'Actual Load (kWh)',
@@ -7150,17 +7189,21 @@ async function loadLifetimeMonthlyBreakdown() {
                         callbacks: {
                             label: function(context) {
                                 if (context.datasetIndex === 0) {
-                                    return 'Expected: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                    return 'Expected Gen: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else if (context.datasetIndex === 1) {
-                                    return 'Actual: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                    return 'Actual Gen: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else if (context.datasetIndex === 2) {
                                     // Show actual performance % from originalData
                                     const actualPerf = context.dataset.originalData[context.dataIndex];
-                                    return 'Performance: ' + actualPerf.toFixed(1) + '%';
+                                    return 'Cumulative Performance: ' + actualPerf.toFixed(1) + '%';
                                 } else if (context.datasetIndex === 3) {
-                                    return 'Load: ' + context.parsed.y.toFixed(0) + ' kWh';
-                                } else {
-                                    return 'Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                    return 'Actual Load: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 4) {
+                                    return 'Expected Load: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 5) {
+                                    return 'Actual Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 6) {
+                                    return 'Expected Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 }
                             }
                         }
@@ -7552,8 +7595,29 @@ async function loadLifetimeTouSavingsChart() {
         
         const data = await response.json();
         
-        // Extract monthly summaries and sort by date
-        const monthKeys = Object.keys(data.monthly_summaries || {}).sort();
+        // Calculate monthly TOU from daily_records (same as cumulative chart)
+        const monthlyData = {};
+        
+        data.daily_records.forEach(record => {
+            const yearMonth = record.date.substring(0, 7); // "YYYY-MM"
+            if (!monthlyData[yearMonth]) {
+                monthlyData[yearMonth] = {
+                    generation: 0,
+                    tou: { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 }
+                };
+            }
+            
+            monthlyData[yearMonth].generation += record.generation_kwh || 0;
+            
+            // Sum TOU breakdown (using recalculated values from V11+)
+            if (record.tou_breakdown) {
+                monthlyData[yearMonth].tou.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                monthlyData[yearMonth].tou.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                monthlyData[yearMonth].tou.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+            }
+        });
+        
+        const monthKeys = Object.keys(monthlyData).sort();
         
         if (monthKeys.length === 0) {
             console.warn('No monthly data for TOU savings chart');
@@ -7564,58 +7628,25 @@ async function loadLifetimeTouSavingsChart() {
         const peakSavingsActual = [];
         const standardSavingsActual = [];
         const offPeakSavingsActual = [];
-        const peakSavingsPredicted = [];
-        const standardSavingsPredicted = [];
-        const offPeakSavingsPredicted = [];
+        
+        console.log('📊 TOU Savings Chart - Months:', monthKeys.length);
         
         monthKeys.forEach(monthKey => {
-            const monthData = data.monthly_summaries[monthKey];
-            if (monthData && monthData.financial && monthData.financial.savings) {
-                // Format label as "Jan 2025"
-                const [year, month] = monthKey.split('-');
-                const date = new Date(year, parseInt(month) - 1);
-                monthLabels.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
-                
-                // Extract ACTUAL savings by TOU period
-                peakSavingsActual.push(monthData.financial.savings.peak_savings_zar || 0);
-                standardSavingsActual.push(monthData.financial.savings.standard_savings_zar || 0);
-                offPeakSavingsActual.push(monthData.financial.savings.off_peak_savings_zar || 0);
-                
-                // Calculate PREDICTED savings from expected generation if financial_expected not available
-                if (monthData.financial_expected && monthData.financial_expected.savings) {
-                    peakSavingsPredicted.push(monthData.financial_expected.savings.peak_savings_zar || 0);
-                    standardSavingsPredicted.push(monthData.financial_expected.savings.standard_savings_zar || 0);
-                    offPeakSavingsPredicted.push(monthData.financial_expected.savings.off_peak_savings_zar || 0);
-                } else if (monthData.tou_breakdown_expected) {
-                    // Calculate predicted savings from expected TOU breakdown
-                    const expectedTOU = monthData.tou_breakdown_expected;
-                    const monthDate = monthKey + '-15'; // Use mid-month for rate determination
-                    const rates = getTOURates(monthDate);
-                    
-                    const utilityExpected = {
-                        peak: expectedTOU.peak_kwh * rates.peak,
-                        standard: expectedTOU.standard_kwh * rates.standard,
-                        off_peak: expectedTOU.off_peak_kwh * rates.off_peak
-                    };
-                    const ppaExpected = {
-                        peak: expectedTOU.peak_kwh * 1.50,
-                        standard: expectedTOU.standard_kwh * 1.50,
-                        off_peak: expectedTOU.off_peak_kwh * 1.50
-                    };
-                    
-                    peakSavingsPredicted.push(utilityExpected.peak - ppaExpected.peak);
-                    standardSavingsPredicted.push(utilityExpected.standard - ppaExpected.standard);
-                    offPeakSavingsPredicted.push(utilityExpected.off_peak - ppaExpected.off_peak);
-                } else {
-                    // Last resort: Don't show predicted bars if no data available
-                    peakSavingsPredicted.push(0);
-                    standardSavingsPredicted.push(0);
-                    offPeakSavingsPredicted.push(0);
-                }
-            }
+            // Format label as "Jan 2025"
+            const [year, month] = monthKey.split('-');
+            const date = new Date(year, parseInt(month) - 1);
+            monthLabels.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+            
+            // Calculate financial savings from corrected TOU
+            const touKwh = monthlyData[monthKey].tou;
+            const monthDate = monthKey + '-01'; // First day of month for season detection
+            const financial = calculateTOUFinancials(touKwh, monthDate);
+            
+            // Extract savings by TOU period
+            peakSavingsActual.push(financial.savings.peak || 0);
+            standardSavingsActual.push(financial.savings.standard || 0);
+            offPeakSavingsActual.push(financial.savings.off_peak || 0);
         });
-        
-        console.log('📊 TOU Savings Chart - Months:', monthLabels.length);
         
         // Create chart
         const ctx = document.getElementById('lifetimeTouSavingsChart').getContext('2d');
@@ -7626,58 +7657,29 @@ async function loadLifetimeTouSavingsChart() {
             data: {
                 labels: monthLabels,
                 datasets: [
-                    // Predicted (lighter colors, dashed border)
                     {
-                        label: 'Peak Predicted (R)',
-                        data: peakSavingsPredicted,
-                        backgroundColor: 'rgba(239, 68, 68, 0.4)',
-                        borderColor: '#ef4444',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        stack: 'predicted'
-                    },
-                    {
-                        label: 'Standard Predicted (R)',
-                        data: standardSavingsPredicted,
-                        backgroundColor: 'rgba(245, 158, 11, 0.4)',  // Orange to match TOU table
-                        borderColor: '#f59e0b',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        stack: 'predicted'
-                    },
-                    {
-                        label: 'Off-Peak Predicted (R)',
-                        data: offPeakSavingsPredicted,
-                        backgroundColor: 'rgba(16, 185, 129, 0.4)',  // Green to match TOU table
-                        borderColor: '#10b981',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        stack: 'predicted'
-                    },
-                    // Actual (darker colors, solid)
-                    {
-                        label: 'Peak Actual (R)',
+                        label: 'Peak Savings (R)',
                         data: peakSavingsActual,
                         backgroundColor: 'rgba(239, 68, 68, 0.8)',
                         borderColor: '#ef4444',
                         borderWidth: 2,
-                        stack: 'actual'
+                        stack: 'stack0'
                     },
                     {
-                        label: 'Standard Actual (R)',
+                        label: 'Standard Savings (R)',
                         data: standardSavingsActual,
                         backgroundColor: 'rgba(245, 158, 11, 0.8)',  // Orange to match TOU table
                         borderColor: '#f59e0b',
                         borderWidth: 2,
-                        stack: 'actual'
+                        stack: 'stack0'
                     },
                     {
-                        label: 'Off-Peak Actual (R)',
+                        label: 'Off-Peak Savings (R)',
                         data: offPeakSavingsActual,
                         backgroundColor: 'rgba(16, 185, 129, 0.8)',  // Green to match TOU table
                         borderColor: '#10b981',
                         borderWidth: 2,
-                        stack: 'actual'
+                        stack: 'stack0'
                     }
                 ]
             },
