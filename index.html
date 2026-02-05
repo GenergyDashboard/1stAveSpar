@@ -8203,8 +8203,52 @@ async function loadPast30Days() {
                 );
                 
                 setTextIfExists('monthly-gen', formatNumber(dashboardData.month.generation_kwh) + ' kWh');
-                setTextIfExists('monthly-expected', formatNumber(dashboardData.month.expected_kwh || 0));
-                setTextIfExists('monthly-perf', `${dashboardData.month.performance_percent || 0}% of expected`);
+                
+                // Calculate expected value if missing from JSON
+                let monthlyExpectedValue = dashboardData.month.expected_kwh;
+                let monthlyPerfValue = dashboardData.month.performance_percent;
+                
+                if (!monthlyExpectedValue || monthlyExpectedValue === 0) {
+                    // Calculate it from base predictions with degradation
+                    const today = new Date();
+                    const thisMonth = today.toISOString().substring(0, 7); // YYYY-MM
+                    const monthKey = thisMonth.replace('-', '_'); // e.g., "2026_02"
+                    
+                    if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+                        // Calculate years active and degradation
+                        const installDate = new Date(dashboardData.system.install_date);
+                        const yearsActive = (today - installDate) / (365.25 * 24 * 60 * 60 * 1000);
+                        
+                        let degradationPercent;
+                        if (yearsActive < 1) {
+                            degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                        } else {
+                            degradationPercent = (dashboardData.system.degradation_year_1 + 
+                                (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                        }
+                        
+                        const degradationFactor = 1 - (degradationPercent / 100);
+                        const baseKwh = dashboardData.monthly_predictions_base[monthKey].base_kwh;
+                        
+                        // Get days with data for this month
+                        const monthRecords = dashboardData.daily_records?.filter(r => r.date.startsWith(thisMonth)) || [];
+                        const daysWithData = monthRecords.length;
+                        
+                        // Calculate expected for days with data (MTD)
+                        const avgDailyPrediction = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
+                        monthlyExpectedValue = avgDailyPrediction * daysWithData;
+                        
+                        // Recalculate performance
+                        if (monthlyExpectedValue > 0) {
+                            monthlyPerfValue = ((dashboardData.month.generation_kwh / monthlyExpectedValue) * 100).toFixed(1);
+                        }
+                        
+                        console.log(`✓ Calculated missing monthly expected: ${monthlyExpectedValue.toFixed(2)} kWh for ${daysWithData} days (${monthlyPerfValue}% performance)`);
+                    }
+                }
+                
+                setTextIfExists('monthly-expected', formatNumber(monthlyExpectedValue || 0));
+                setTextIfExists('monthly-perf', `${monthlyPerfValue || 0}% of expected`);
                 
                 setTextIfExists('lifetime-gen', formatNumber(lifetimeKwh, 0));
                 setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active || 0, 0));
