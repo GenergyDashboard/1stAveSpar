@@ -7586,14 +7586,12 @@ async function loadLifetimePerformanceLineChart() {
 // PHASE 3: Load Lifetime TOU Savings Chart
 async function loadLifetimeTouSavingsChart() {
     try {
-        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-        const response = await fetch(`${basePath}data/dashboard_data.json`.replace('//', '/'));
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        // Use the validated global dashboardData instead of fetching fresh
+        if (!dashboardData || !dashboardData.daily_records) {
+            console.error('Dashboard data not loaded');
+            return;
         }
-        
-        const data = await response.json();
+        const data = dashboardData;
         
         // Calculate monthly TOU from daily_records (same as cumulative chart)
         const monthlyData = {};
