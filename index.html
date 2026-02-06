@@ -6878,6 +6878,20 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     }
                 }
             },
+            plugins: [{
+                id: 'syncAxes',
+                afterUpdate: function(chart) {
+                    // Sync y1 axis to match y axis range
+                    if (chart.scales.y && chart.scales.y1) {
+                        const yMax = chart.scales.y.max;
+                        const yMin = chart.scales.y.min;
+                        if (chart.scales.y1.max !== yMax || chart.scales.y1.min !== yMin) {
+                            chart.scales.y1.options.max = yMax;
+                            chart.scales.y1.options.min = yMin;
+                        }
+                    }
+                }
+            }],
             scales: {
                 x: {
                     ticks: { 
@@ -6908,7 +6922,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     display: true,
                     position: 'right',
                     beginAtZero: true,
-                    // No max - let it auto-scale to match y axis
                     title: {
                         display: true,
                         text: `PV Coverage (%) - Actual: ${actualPVCoverage.toFixed(1)}% | Expected: ${expectedPVCoverage.toFixed(1)}%`,
