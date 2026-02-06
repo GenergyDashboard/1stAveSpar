@@ -4702,7 +4702,9 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                     const gen = hourData.pv_kw || hourData.generation_kw || 0;
                     const load = hourData.load_kw || 0;
                     const grid = Math.abs(hourData.grid_kw || 0);
-                    const irr = hourData.irradiation_wm2 || 0;
+                    
+                    // Get irradiation from predictions (it's stored hourly in predictions file)
+                    const irr = predData?.daily_predictions?.[date]?.irradiation_wm2?.[actualHour] || 0;
                     
                     let row = timestamp;
                     // Values are already in kW, convert to kWh (kW * 1 hour)
@@ -4780,7 +4782,12 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                     const predTotal = pred ? pred.grid_kw.reduce((a,b) => a+b, 0) : 0;
                     row += `,${predTotal.toFixed(2)}`;
                 }
-                if (fields.includes('irradiation')) row += `,${(record.irradiation_wh_m2 || 0).toFixed(0)}`;
+                if (fields.includes('irradiation')) {
+                    // Get total daily irradiation from predictions
+                    const pred = predData?.daily_predictions?.[record.date];
+                    const irrTotal = pred?.irradiation_wm2 ? pred.irradiation_wm2.reduce((a,b) => a+b, 0) : 0;
+                    row += `,${irrTotal.toFixed(0)}`;
+                }
                 if (fields.includes('performance')) {
                     const pred = predData?.daily_predictions?.[record.date];
                     const predTotal = pred ? pred.pv_kw.reduce((a,b) => a+b, 0) : 0;
@@ -5974,6 +5981,19 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     yAxisID: 'y',
                     order: 0,
                     hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Predicted Irradiation (W/m²)',
+                    data: full24HourData.irradiation,
+                    type: 'line',
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y1',
+                    order: 3
                 }
             ]
         },
@@ -6025,7 +6045,12 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                                 label += ': ';
                             }
                             if (context.parsed.y !== null) {
-                                label += context.parsed.y.toFixed(1) + ' kW';
+                                // Irradiation uses W/m², everything else uses kW
+                                if (label.includes('Irradiation')) {
+                                    label += context.parsed.y.toFixed(0) + ' W/m²';
+                                } else {
+                                    label += context.parsed.y.toFixed(1) + ' kW';
+                                }
                             }
                             return label;
                         }
@@ -6061,6 +6086,25 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                     grid: { 
                         color: 'rgba(255, 255, 255, 0.15)',
                         drawBorder: false
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Irradiation (W/m²)',
+                        color: '#fbbf24',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    ticks: {
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: {
+                        drawOnChartArea: false
                     }
                 }
             }
@@ -6516,6 +6560,19 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     yAxisID: 'y',
                     order: 0,
                     hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Predicted Irradiation (Wh/m²)',
+                    data: irradiationData,
+                    type: 'line',
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y1',
+                    order: 5
                 }
             ]
         },
@@ -6543,7 +6600,12 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                             if (label) {
                                 label += ': ';
                             }
-                            label += context.parsed.y.toFixed(1) + ' kWh';
+                            // Irradiation uses Wh/m², everything else uses kWh
+                            if (label.includes('Irradiation')) {
+                                label += context.parsed.y.toFixed(0) + ' Wh/m²';
+                            } else {
+                                label += context.parsed.y.toFixed(1) + ' kWh';
+                            }
                             return label;
                         }
                     }
@@ -6573,6 +6635,25 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                         font: { size: 14, weight: '500' }
                     },
                     grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Irradiation (Wh/m²)',
+                        color: '#fbbf24',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    ticks: {
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
                 }
             }
         }
@@ -8052,10 +8133,42 @@ async function loadPast30Days() {
                     const monthRecords = dashboardData.daily_records.filter(r => r.date.startsWith(thisMonth));
                     const monthTotalKwh = monthRecords.reduce((sum, r) => sum + (r.generation_kwh || 0), 0);
                     
+                    // Calculate expected_kwh if not in monthly_summaries
+                    let monthExpectedKwh = monthSummary?.expected_generation_kwh || 0;
+                    let monthPerformancePercent = monthSummary?.performance_percent || 0;
+                    
+                    if (!monthExpectedKwh || monthExpectedKwh === 0) {
+                        // Calculate from base predictions with degradation
+                        const monthNum = thisMonth.split('-')[1]; // "02" from "2026-02"
+                        if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthNum]) {
+                            const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                            const now = new Date();
+                            const yearsActive = (now - commissioningDate) / (365.25 * 24 * 60 * 60 * 1000);
+                            
+                            let degradationPercent;
+                            if (yearsActive < 1) {
+                                degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                            } else {
+                                degradationPercent = (dashboardData.system.degradation_year_1 + 
+                                    (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                            }
+                            
+                            const degradationFactor = 1 - (degradationPercent / 100);
+                            const avgDailyPrediction = dashboardData.monthly_predictions_base[monthNum].avg_daily_kwh * degradationFactor;
+                            monthExpectedKwh = avgDailyPrediction * monthRecords.length; // MTD
+                            
+                            if (monthExpectedKwh > 0) {
+                                monthPerformancePercent = ((monthTotalKwh / monthExpectedKwh) * 100).toFixed(1);
+                            }
+                            
+                            console.log(`✓ [Compatibility] Calculated monthly expected: ${monthExpectedKwh.toFixed(2)} kWh for ${monthRecords.length} days (${monthPerformancePercent}%)`);
+                        }
+                    }
+                    
                     dashboardData.month = {
                         generation_kwh: monthTotalKwh,
-                        expected_kwh: monthSummary?.expected_generation_kwh || 0,
-                        performance_percent: monthSummary?.performance_percent || 0,
+                        expected_kwh: monthExpectedKwh,
+                        performance_percent: monthPerformancePercent,
                         env_impact: {
                             co2_offset_tons: monthTotalKwh * 0.001,
                             trees_equivalent: monthTotalKwh * 0.045,
@@ -8316,16 +8429,20 @@ async function loadPast30Days() {
                 let monthlyExpectedValue = dashboardData.month.expected_kwh;
                 let monthlyPerfValue = dashboardData.month.performance_percent;
                 
+                console.log(`📊 [loadData] Monthly expected from JSON: ${monthlyExpectedValue}`);
+                
                 if (!monthlyExpectedValue || monthlyExpectedValue === 0) {
                     // Calculate it from base predictions with degradation
                     const today = new Date();
                     const thisMonth = today.toISOString().substring(0, 7); // YYYY-MM
-                    const monthKey = thisMonth.replace('-', '_'); // e.g., "2026_02"
+                    const monthKey = thisMonth.split('-')[1]; // e.g., "02" from "2026-02"
+                    
+                    console.log(`📊 [loadData] Calculating expected for month ${thisMonth}, key=${monthKey}`);
                     
                     if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
                         // Calculate years active and degradation
-                        const installDate = new Date(dashboardData.system.install_date);
-                        const yearsActive = (today - installDate) / (365.25 * 24 * 60 * 60 * 1000);
+                        const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                        const yearsActive = (today - commissioningDate) / (365.25 * 24 * 60 * 60 * 1000);
                         
                         let degradationPercent;
                         if (yearsActive < 1) {
@@ -8352,6 +8469,8 @@ async function loadPast30Days() {
                         }
                         
                         console.log(`✓ Calculated missing monthly expected: ${monthlyExpectedValue.toFixed(2)} kWh for ${daysWithData} days (${monthlyPerfValue}% performance)`);
+                    } else {
+                        console.warn(`⚠️ [loadData] Could not find predictions for month key ${monthKey}`);
                     }
                 }
                 
