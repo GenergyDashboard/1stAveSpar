@@ -6024,12 +6024,19 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
                 const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
                 labels.forEach(label => {
                     const dataset = chart.data.datasets[label.datasetIndex];
-                    // Make Expected/Predicted show as hollow circles
+                    
+                    // Make Expected/Predicted/Irradiation show as hollow circles with border
                     if (label.text.includes('Expected') || label.text.includes('Predicted')) {
                         label.pointStyle = 'circle';
-                        label.fillStyle = 'rgba(0,0,0,0)';
+                        label.fillStyle = 'transparent';  // Transparent fill
                         label.strokeStyle = dataset.borderColor;
-                        label.lineWidth = 2;
+                        label.lineWidth = 3;  // Thicker border for visibility
+                    } else {
+                        // Make Actual items show as filled circles
+                        label.pointStyle = 'circle';
+                        label.fillStyle = dataset.borderColor || dataset.backgroundColor;
+                        label.strokeStyle = dataset.borderColor || dataset.backgroundColor;
+                        label.lineWidth = 0;
                     }
                 });
                 return labels;
