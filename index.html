@@ -7480,54 +7480,9 @@ async function loadLifetimeMonthlyBreakdown() {
         const ctx = document.getElementById('lifetimeMonthlyChart').getContext('2d');
         if (lifetimeMonthlyChart) lifetimeMonthlyChart.destroy();
         
-        // Custom plugin to draw horizontal lines across each bar for Load/Grid
-        const horizontalLinesPlugin = {
-            id: 'horizontalLines',
-            afterDatasetsDraw: (chart) => {
-                const {ctx, chartArea, scales} = chart;
-                const {left, right} = chartArea;
-                const xScale = scales.x;
-                const y1Scale = scales.y1; // Load/Grid axis
-                
-                // Get bar width from the actual bar chart
-                const barWidth = chart.getDatasetMeta(0).data[0]?.width || 60;
-                const halfBarWidth = barWidth / 2;
-                
-                // Draw lines for Load/Grid datasets (datasets 3-6)
-                [
-                    {data: monthActualLoad, color: '#ef4444', width: 3, dash: []},
-                    {data: monthExpectedLoad, color: '#ef4444', width: 2, dash: [5, 5]},
-                    {data: monthActualGrid, color: '#f97316', width: 3, dash: []},
-                    {data: monthExpectedGrid, color: '#f97316', width: 2, dash: [5, 5]}
-                ].forEach((dataset, idx) => {
-                    dataset.data.forEach((value, i) => {
-                        if (value != null && value > 0) {
-                            const x = xScale.getPixelForValue(i);
-                            const y = y1Scale.getPixelForValue(value);
-                            
-                            ctx.save();
-                            ctx.strokeStyle = dataset.color;
-                            ctx.lineWidth = dataset.width;
-                            ctx.setLineDash(dataset.dash);
-                            ctx.beginPath();
-                            ctx.moveTo(x - halfBarWidth, y);
-                            ctx.lineTo(x + halfBarWidth, y);
-                            ctx.stroke();
-                            ctx.restore();
-                        }
-                    });
-                });
-            }
-        };
-        
-        // Scale Performance to fit on primary axis with Generation
-        // Performance is 0-150%, scale it to match generation range
-        const maxGeneration = Math.max(...monthGeneration);
-        const scaledPerformance = cumulativePerformance.map(perf => (perf / 100) * (maxGeneration * 0.8));
         
         lifetimeMonthlyChart = new Chart(ctx, {
             type: 'bar',
-            plugins: [horizontalLinesPlugin],
             data: {
                 labels: monthLabels,
                 datasets: [
@@ -7539,6 +7494,7 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderWidth: 1,
                         borderRadius: 5,
                         yAxisID: 'y',
+                        stack: 'stack0',
                         order: 3
                     },
                     {
@@ -7547,22 +7503,30 @@ async function loadLifetimeMonthlyBreakdown() {
                         backgroundColor: '#4ade80',
                         borderRadius: 5,
                         yAxisID: 'y',
+                        stack: 'stack0',
                         order: 2
                     },
                     {
-                        label: 'Cumulative Performance (%)',
-                        data: scaledPerformance,
-                        type: 'line',
-                        borderColor: '#FFD700',
-                        backgroundColor: 'transparent',
-                        borderWidth: 3,
-                        pointRadius: 5,
-                        pointBackgroundColor: '#FFD700',
-                        tension: 0.4,
+                        label: 'Expected Grid (kWh)',
+                        data: monthExpectedGrid,
+                        backgroundColor: 'rgba(249, 115, 22, 0.5)',
+                        borderColor: '#f97316',
+                        borderWidth: 1,
+                        borderRadius: 5,
                         yAxisID: 'y',
-                        order: 1,
-                        // Store original performance values for tooltip
-                        originalData: cumulativePerformance
+                        stack: 'stack0',
+                        order: 1
+                    },
+                    {
+                        label: 'Actual Grid (kWh)',
+                        data: monthActualGrid,
+                        backgroundColor: 'rgba(249, 115, 22, 0.7)',
+                        borderColor: '#f97316',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        yAxisID: 'y',
+                        stack: 'stack0',
+                        order: 1
                     },
                     {
                         label: 'Actual Load (kWh)',
@@ -7571,15 +7535,10 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderColor: '#ef4444',
                         backgroundColor: 'transparent',
                         borderWidth: 3,
-                        pointRadius: 6,
-                        pointStyle: 'line',
-                        pointBorderWidth: 3,
-                        pointBorderColor: '#ef4444',
-                        tension: 0,
-                        showLine: false,
-                        yAxisID: 'y1',
-                        order: 0,
-                        hidden: true
+                        pointRadius: 0,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        order: 0
                     },
                     {
                         label: 'Expected Load (kWh)',
@@ -7588,51 +7547,24 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderColor: '#ef4444',
                         backgroundColor: 'transparent',
                         borderWidth: 2,
-                        pointRadius: 6,
-                        pointStyle: 'line',
-                        pointBorderWidth: 2,
-                        pointBorderColor: '#ef4444',
                         borderDash: [5, 5],
-                        tension: 0,
-                        showLine: false,
-                        yAxisID: 'y1',
-                        order: 0,
-                        hidden: true
+                        pointRadius: 0,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        order: 0
                     },
                     {
-                        label: 'Actual Grid (kWh)',
-                        data: monthActualGrid,
+                        label: 'Cumulative Performance (%)',
+                        data: cumulativePerformance,
                         type: 'line',
-                        borderColor: '#f97316',
+                        borderColor: '#FFD700',
                         backgroundColor: 'transparent',
                         borderWidth: 3,
-                        pointRadius: 6,
-                        pointStyle: 'line',
-                        pointBorderWidth: 3,
-                        pointBorderColor: '#f97316',
-                        tension: 0,
-                        showLine: false,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#FFD700',
+                        tension: 0.4,
                         yAxisID: 'y1',
-                        order: 0,
-                        hidden: true
-                    },
-                    {
-                        label: 'Expected Grid (kWh)',
-                        data: monthExpectedGrid,
-                        type: 'line',
-                        borderColor: '#f97316',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        pointRadius: 6,
-                        pointStyle: 'line',
-                        pointBorderWidth: 2,
-                        pointBorderColor: '#f97316',
-                        borderDash: [5, 5],
-                        tension: 0,
-                        showLine: false,
-                        yAxisID: 'y1',
-                        order: 0,
-                        hidden: true
+                        order: 0
                     }
                 ]
             },
@@ -7671,17 +7603,15 @@ async function loadLifetimeMonthlyBreakdown() {
                                 } else if (context.datasetIndex === 1) {
                                     return 'Actual Gen: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else if (context.datasetIndex === 2) {
-                                    // Show actual performance % from originalData
-                                    const actualPerf = context.dataset.originalData[context.dataIndex];
-                                    return 'Cumulative Performance: ' + actualPerf.toFixed(1) + '%';
-                                } else if (context.datasetIndex === 3) {
-                                    return 'Actual Load: ' + context.parsed.y.toFixed(0) + ' kWh';
-                                } else if (context.datasetIndex === 4) {
-                                    return 'Expected Load: ' + context.parsed.y.toFixed(0) + ' kWh';
-                                } else if (context.datasetIndex === 5) {
-                                    return 'Actual Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
-                                } else if (context.datasetIndex === 6) {
                                     return 'Expected Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 3) {
+                                    return 'Actual Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 4) {
+                                    return 'Actual Load: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 5) {
+                                    return 'Expected Load: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 6) {
+                                    return 'Cumulative Performance: ' + context.parsed.y.toFixed(1) + '%';
                                 }
                             }
                         }
@@ -7700,10 +7630,11 @@ async function loadLifetimeMonthlyBreakdown() {
                         display: true,
                         position: 'left',
                         beginAtZero: true,
+                        stacked: true,
                         title: { 
                             display: true, 
-                            text: 'Generation (kWh)',
-                            color: '#4ade80',
+                            text: 'Energy (kWh) - Generation, Grid, Load',
+                            color: '#ffffff',
                             font: { size: 16, weight: 'bold' }
                         },
                         ticks: { 
@@ -7719,13 +7650,16 @@ async function loadLifetimeMonthlyBreakdown() {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Load / Grid (kWh)',
-                            color: '#ef4444',
+                            text: 'Cumulative Performance (%)',
+                            color: '#FFD700',
                             font: { size: 16, weight: 'bold' }
                         },
                         ticks: {
                             color: '#ffffff',
-                            font: { size: 14, weight: '500' }
+                            font: { size: 14, weight: '500' },
+                            callback: function(value) {
+                                return value.toFixed(0) + '%';
+                            }
                         },
                         grid: {
                             drawOnChartArea: false
