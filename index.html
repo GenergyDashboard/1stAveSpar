@@ -6696,8 +6696,8 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
                                 color: '#ffffff',
                                 font: { size: 16, weight: 'bold' },
                                 filter: function(item, chart) {
-                                    // Hide Load and Grid items - they go in toggleables
-                                    if (item.text.includes('Load') || item.text.includes('Grid')) {
+                                    // Hide PV Generation - it goes in toggleables
+                                    if (item.text.includes('PV') || item.text.includes('Generation')) {
                                         return false;
                                     }
                                     return true;
@@ -6750,7 +6750,7 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
             if (toggleList) {
                 toggleList.innerHTML = '';
                 
-                const toggleableLabels = ['Actual Load', 'Expected Load', 'Actual Grid', 'Expected Grid'];
+                const toggleableLabels = ['Actual PV Generation'];
                 
                 monthlyLoadGridChart.data.datasets.forEach((dataset, index) => {
                     if (toggleableLabels.some(label => dataset.label.includes(label))) {
