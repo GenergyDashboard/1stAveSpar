@@ -1,121 +1,8555 @@
-#!/usr/bin/env python3
-"""
-Fetch current irradiation data from Open-Meteo API and update predictions file
-Runs daily to keep irradiation data current
-"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1st Avenue Spar: Solar Generation</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS for parsing Excel files in browser -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+    <style>
+        :root {
+            /* Standardized Font Sizes - Only 4 sizes used throughout */
+            --font-xs: 0.85em;    /* Small text: captions, helper text, percentages */
+            --font-base: 1.1em;   /* Default: labels, descriptions, body text */
+            --font-lg: 1.5em;     /* Headers: card titles, section headers */
+            --font-xl: 2.5em;     /* Hero: main values, large stats */
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000000;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        @keyframes glow {
+            0%, 100% { 
+                text-shadow: 0 0 5px #4ade80, 0 0 10px #4ade80;
+            }
+            50% { 
+                text-shadow: 0 0 10px #4ade80, 0 0 15px #4ade80;
+            }
+        }
+        
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        @keyframes grass-sway {
+            0%, 100% { transform: rotate(-1deg); }
+            50% { transform: rotate(1deg); }
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 20px 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .header-content h1 {
+            color: #ffffff;
+            font-size: var(--font-xl);
+            margin-bottom: 5px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+        
+        .powered-by {
+            font-size: var(--font-lg);
+            color: #888888;
+            margin-top: 5px;
+            font-weight: 300;
+        }
+        
+        .powered-by .company {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 500;
+            animation: glow 2s ease-in-out infinite;
+            font-size: var(--font-base);
+        }
+        
+        .powered-by .spar {
+            color: #ffffff;
+            font-weight: 700;
+        }
+        
+        .login-section {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+        
+        .login-section:hover {
+            opacity: 1;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: var(--font-base);
+            transition: all 0.3s;
+            font-weight: 400;
+            background: transparent;
+            color: white;
+        }
+        
+        .btn-primary {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+        
+        .btn-primary:hover {
+            background: rgba(255, 215, 0, 0.3);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 215, 0, 0.5);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+        }
+        
+        .stat-card .label {
+            color: #aaaaaa;
+            font-size: var(--font-base);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-card .value {
+    font-size: var(--font-xl);
+    font-weight: 300;
+    color: #FFD700;
+    margin-bottom: 5px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+        
+        .stat-card .value::after {
+            content: ' kWh';
+            font-size: var(--font-xs);
+            color: #FFD700;
+            font-weight: 400;
+        }
+/* Remove kWh from percentages */
+#pv-coverage::after,
+#monthly-coverage::after,
+#lifetime-coverage::after,
+#system-cap::after,
+#downtime-events-count::after,
+#downtime-total-duration::after,
+#downtime-lost-generation::after,
+#downtime-financial-loss::after {
+    content: '';
+}
+/* Remove kWh from generation/load/grid to prevent duplication issues */
+#monthly-gen::after,
+#monthly-load::after,
+#monthly-grid::after,
+#daily-gen::after,
+#daily-load::after,
+#daily-grid::after,
+#lifetime-gen::after {
+    content: '';
+}
+/* Remove kWh from all financial/currency values */
+.financial-value::after,
+.financial-hero::after,
+.financial-card .value::after,
+.stat-card .value:has(#financial-peak-savings)::after,
+.stat-card .value:has(#financial-standard-savings)::after,
+.stat-card .value:has(#financial-off-peak-savings)::after {
+    content: '';
+}
 
-import json
-import requests
-from datetime import datetime, timedelta
+#lifetime-days::after {
+    content: ' days';
+}
 
-# Configuration
-LATITUDE = -33.974268385473856
-LONGITUDE = 25.612268537267603
-FORECAST_API = "https://api.open-meteo.com/v1/forecast"
-PREDICTIONS_FILE = "predictions_2025_2044.min.json"
+#lifetime-perf::after,
+#monthly-target-perf::after {
+    content: '%';
+}
+        .stat-card .subvalue {
+            color: #888888;
+            font-size: var(--font-xs);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            min-height: 24px;  /* Ensures consistent spacing even if empty */
+        }
+        
+        .performance {
+            margin-top: 8px;
+            font-size: var(--font-xs);
+        }
+        
+        .performance.positive {
+            color: #4ade80;
+            font-weight: 500;
+        }
+        
+        .performance.negative {
+            color: #f87171;
+            font-weight: 500;
+        }
+        
+        .section-header {
+            margin: 50px 0 20px 0;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .section-header h2 {
+            color: #ffffff;
+            font-size: var(--font-xl);
+            font-weight: 300;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        
+        .env-impact-header {
+            text-align: center;
+            margin: 40px auto 40px auto;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .env-impact-title {
+            font-size: var(--font-xl);
+            color: #ffffff;
+            font-weight: 300;
+            letter-spacing: 2px;
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        
+        .tree-decoration {
+            display: inline-block;
+            font-size: var(--font-base);
+            margin: 0 15px;
+            animation: sway 3s ease-in-out infinite;
+            transform-origin: bottom center;
+        }
+        
+        .grass-decoration {
+            display: inline-block;
+            font-size: var(--font-xs);
+            margin: 0 8px;
+            animation: grass-sway 2s ease-in-out infinite;
+            transform-origin: bottom center;
+            opacity: 0.7;
+        }
+        
+        .info-dropdown {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        
+        .info-button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            opacity: 0.3;
+            color: #888;
+            font-size: var(--font-base);
+        }
+        
+        .info-button:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(74, 222, 128, 0.5);
+            color: #4ade80;
+        }
+        
+        .refresh-button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            opacity: 0.5;
+            color: #888;
+            font-size: var(--font-base);
+            margin-right: 10px;
+        }
+        
+        .refresh-button:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 215, 0, 0.5);
+            color: #FFD700;
+        }
+        
+        .refresh-button.spinning {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .info-content {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: rgba(26, 26, 26, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 25px;
+            width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .info-content.show {
+            display: block;
+        }
+        
+        .info-content h3 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            margin-top: 25px;
+            font-size: var(--font-lg);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .info-content h3:first-child {
+            margin-top: 0;
+        }
+        
+        .info-content h4 {
+            color: #4ade80;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            font-size: var(--font-lg);
+        }
+        
+        .info-content p {
+            color: #ccc;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            font-size: var(--font-base);
+        }
+        
+        .info-content code {
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: var(--font-base);
+            display: block;
+            margin-top: 8px;
+        }
+        
+        .info-content ul {
+            color: #aaa;
+            margin-left: 20px;
+            font-size: var(--font-xs);
+        }
+        
+        .info-content li {
+            margin-bottom: 8px;
+        }
+        
+        .info-section {
+            margin-bottom: 20px;
+        }
+        
+        .env-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 15px;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .env-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            transition: all 0.3s;
+        }
 
-def fetch_irradiation_forecast(days=16):
-    """
-    Fetch irradiation forecast from Open-Meteo API
-    Returns dict of date -> [24 hourly values]
-    """
-    params = {
-        "latitude": LATITUDE,
-        "longitude": LONGITUDE,
-        "hourly": "direct_radiation",
-        "timezone": "Africa/Johannesburg",
-        "forecast_days": days
+        .env-card .env-icon {
+            font-size: var(--font-xl);
+            margin-bottom: 0;
+            flex-shrink: 0;
+        }
+
+        .env-card .env-value {
+            font-size: var(--font-xl);
+            font-weight: 600;
+            margin: 0;
+            color: #4ade80;
+        }
+
+        .env-card .env-label {
+            font-size: var(--font-lg);
+            color: #4ade80;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        
+        .env-card:hover {
+            transform: scale(1.05);
+            border-color: rgba(74, 222, 128, 0.5);
+            box-shadow: 0 10px 30px rgba(74, 222, 128, 0.2);
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .chart-title {
+            font-size: var(--font-lg);
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: var(--font-base);
+            transition: all 0.3s;
+            color: #ffffff;
+            font-weight: 400;
+        }
+        
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 215, 0, 0.5);
+        }
+        
+        .tab.active {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .date-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .date-selector input, .date-selector select {
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    border-radius: 8px;
+    font-size: var(--font-base);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.date-selector input:hover, .date-selector select:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #FFD700;
+}
+
+.date-selector input:focus, .date-selector select:focus {
+    outline: none;
+    border-color: #FFD700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.date-selector select {
+    min-width: 150px;
+}
+
+.date-selector select option {
+    background: #1a1a1a;
+    color: white;
+}
+
+.date-selector input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.5);
+    cursor: pointer;
+    font-size: var(--font-base);
+}
+        
+        .date-selector label {
+            color: #aaaaaa;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #1a1a1a;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #ffffff;
+            font-weight: 300;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaaaaa;
+            font-weight: 400;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            font-size: var(--font-base);
+            color: white;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #FFD700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+        
+        .error-message {
+            color: #f87171;
+            font-size: var(--font-xs);
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+            font-size: var(--font-base);
+        }
+        
+        /* PHASE 3: Info Header */
+        .info-header {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-radius: 15px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .info-label {
+            color: #9ca3af;
+            font-size: var(--font-lg);
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #FFD700;
+            font-size: var(--font-lg);
+            font-weight: 700;
+        }
+        
+        @media (max-width: 768px) {
+            .info-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .info-item {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+        
+        .update-time {
+            text-align: center;
+            color: #ffffff;
+            margin-top: 30px;
+            font-size: var(--font-lg);
+            position: relative;
+            z-index: 10;
+            font-weight: 500;
+        }
+        
+        .public-view, .client-view {
+            display: none;
+        }
+        
+        .public-view.active, .client-view.active {
+            display: block;
+        }
+        
+        .env-table-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+        
+        .env-impact-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .env-impact-table thead th {
+            background: rgba(76, 175, 80, 0.2);
+            color: #ffffff;
+            padding: 28px 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            border-bottom: 2px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .env-impact-table thead th:first-child {
+            text-align: left;
+            background: transparent;
+            border-bottom: 2px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .env-impact-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background-color 0.2s;
+        }
+        
+        .env-impact-table tbody tr:hover {
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .env-impact-table tbody tr:last-child {
+            border-bottom: none;
+        }
+        
+        .env-metric-label {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 30px 20px;
+            font-weight: 600;
+            color: #4CAF50;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        
+        .env-metric-label .env-icon {
+            font-size: 36px;
+            flex-shrink: 0;
+        }
+        
+        .env-impact-table td.env-value {
+            text-align: center;
+            padding: 30px 20px;
+            font-size: 36px;
+            font-weight: 700;
+            color: #4CAF50;
+        }
+        
+        .public-stats-grid {
+            grid-template-columns: repeat(4, 1fr);
+            margin-bottom: 40px;
+        }
+
+        .scrollable-chart {
+            overflow-x: auto;
+            overflow-y: hidden;
+            margin-top: 20px;
+        }
+
+        .scrollable-chart::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .scrollable-chart::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .scrollable-chart::-webkit-scrollbar-thumb {
+            background: rgba(255, 215, 0, 0.5);
+            border-radius: 4px;
+        }
+
+        .scrollable-chart::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 215, 0, 0.7);
+        }
+        
+        /* ============================================
+           PHASE 2: TOU & FINANCIAL COMPONENTS
+           ============================================ */
+
+        /* Toggle Button for Expected vs Actual */
+        .data-mode-toggle {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-mode-toggle .toggle-label {
+            color: #aaa;
+            font-size: var(--font-base);
+            font-weight: 500;
+        }
+
+        .toggle-btn {
+            padding: 12px 28px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: var(--font-base);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toggle-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(74, 222, 128, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .toggle-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .toggle-btn.active {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            border-color: #4ade80;
+            color: #000000;
+            font-weight: 700;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+        }
+
+        .toggle-btn.active::before {
+            display: none;
+        }
+
+        /* TOU Breakdown Card */
+        .tou-breakdown-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tou-breakdown-card .label {
+            font-size: var(--font-base);
+            color: #aaaaaa;
+            margin-bottom: 20px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .tou-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .tou-item {
+            display: grid;
+            grid-template-columns: 140px 1fr auto;
+            gap: 20px;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .tou-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(5px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .tou-label {
+            font-weight: 700;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: var(--font-base);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tou-label.peak {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+        }
+
+        .tou-label.standard {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);
+        }
+
+        .tou-label.off-peak {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+        }
+
+        .tou-value {
+            font-size: var(--font-lg);
+            font-weight: 700;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Financial Savings Card */
+        .financial-card {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .financial-card .label {
+            color: #ffd700;
+        }
+
+        .financial-value {
+            font-size: var(--font-xl);
+            color: #ffd700;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .financial-value .currency {
+            font-size: var(--font-xs);
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .savings-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .savings-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .savings-item:hover {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: rgba(255, 215, 0, 0.4);
+            transform: translateY(-3px);
+        }
+
+        .savings-period {
+            font-size: var(--font-xs);
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .savings-period.peak {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .savings-period.standard {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .savings-period.off-peak {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .savings-amount {
+            font-size: var(--font-base);
+            font-weight: 700;
+            color: #ffd700;
+        }
+
+        /* Financial Overview Tab Specific */
+        .financial-hero {
+            font-size: var(--font-xl);
+            color: #ffd700;
+            font-weight: 900;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+            line-height: 1;
+        }
+
+        .stat-card.large {
+            grid-column: span 2;
+        }
+
+        /* ============================================
+           RESPONSIVE DESIGN - Mobile, Tablet, Desktop
+           ============================================ */
+        
+        /* Tablet and below (< 1024px) */
+        @media (max-width: 1024px) {
+            .header-content h1 {
+                font-size: var(--font-xl);
+            }
+            
+            .powered-by {
+                font-size: var(--font-lg);
+            }
+            
+            .env-impact-title {
+                font-size: var(--font-xl);
+            }
+            
+            /* Environmental table - smaller font on tablet */
+            .env-impact-table thead th {
+                font-size: 16px;
+                padding: 15px 10px;
+            }
+            
+            .env-metric-label {
+                font-size: 12px;
+                padding: 15px 10px;
+            }
+            
+            .env-impact-table td.env-value {
+                font-size: 20px;
+                padding: 15px 10px;
+            }
+            
+            /* Public stats - 2 columns on tablet */
+            .public-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            /* Phase 2: Savings breakdown single column */
+            .savings-breakdown {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Mobile devices (< 768px) */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            /* Header adjustments */
+            .header {
+                flex-direction: column;
+                padding: 15px 20px;
+                gap: 15px;
+            }
+            
+            .header-content h1 {
+                font-size: var(--font-xl);
+                text-align: center;
+            }
+            
+            .powered-by {
+                font-size: var(--font-base);
+                text-align: center;
+            }
+            
+            .login-section {
+                width: 100%;
+                justify-content: center;
+                opacity: 1;
+            }
+            
+            .info-dropdown {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .info-content {
+                width: calc(100vw - 20px);
+                right: -10px;
+            }
+            
+            /* Stats grid - single column on mobile */
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+                gap: 15px;
+            }
+            
+            /* Public stats grid - single column on mobile */
+            .public-stats-grid {
+                grid-template-columns: 1fr;
+                margin-bottom: 30px;
+            }
+            
+            .stat-card {
+                padding: 20px;
+            }
+            
+            .stat-card .label {
+                font-size: var(--font-base);
+            }
+            
+            .stat-card .value {
+                font-size: var(--font-xl);
+            }
+            
+            .stat-card .subvalue {
+                font-size: var(--font-base);
+            }
+            
+            /* Section headers */
+            .section-header h2 {
+                font-size: var(--font-lg);
+            }
+            
+            /* Environmental impact header */
+            .env-impact-header {
+                margin: 20px auto;
+            }
+            
+            .env-impact-title {
+                font-size: var(--font-lg);
+            }
+            
+            .tree-decoration {
+                font-size: var(--font-base);
+                margin: 0 8px;
+            }
+            
+            .grass-decoration {
+                font-size: var(--font-xs);
+                margin: 0 5px;
+            }
+            
+            /* Environmental impact grid - single column on mobile */
+            .env-grid {
+                grid-template-columns: 1fr !important;
+                gap: 12px;
+            }
+            
+            /* Environmental table - mobile responsive */
+            .env-table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .env-impact-table {
+                min-width: 600px;
+            }
+            
+            .env-impact-table thead th {
+                font-size: 14px;
+                padding: 12px 8px;
+            }
+            
+            .env-metric-label {
+                font-size: 11px;
+                padding: 12px 8px;
+                gap: 8px;
+            }
+            
+            .env-metric-label .env-icon {
+                font-size: 20px;
+            }
+            
+            .env-impact-table td.env-value {
+                font-size: 18px;
+                padding: 12px 8px;
+            }
+            }
+            
+            .env-card {
+                padding: 15px;
+            }
+            
+            .env-card .env-icon {
+                font-size: var(--font-lg);
+            }
+            
+            .env-card .env-value {
+                font-size: var(--font-xl);
+            }
+            
+            .env-card .env-label {
+                font-size: var(--font-base);
+            }
+            
+            /* Public view environmental sections - stack vertically */
+            #publicView > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+                gap: 20px !important;
+            }
+            
+            /* Tabs */
+            .tabs {
+                gap: 5px;
+            }
+            
+            .tab {
+                padding: 10px 16px;
+                font-size: var(--font-xs);
+            }
+            
+            /* Phase 2: Data mode toggle responsive */
+            .data-mode-toggle {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .toggle-btn {
+                width: 100%;
+                padding: 15px 20px;
+            }
+            
+            /* Phase 2: Savings breakdown single column */
+            .savings-breakdown {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Phase 2: Financial values smaller on mobile */
+            .financial-value {
+                font-size: var(--font-xl);
+            }
+            
+            .financial-hero {
+                font-size: var(--font-xl);
+            }
+            
+            /* Date selector */
+            .date-selector {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .date-selector input, .date-selector select {
+                width: 100%;
+                font-size: var(--font-base);
+            }
+            
+            .date-selector label {
+                font-size: var(--font-base);
+            }
+            
+            .btn {
+                width: 100%;
+                font-size: var(--font-base);
+            }
+            
+            /* Chart containers */
+            .chart-container {
+                padding: 15px;
+            }
+            
+            .chart-title {
+                font-size: var(--font-base);
+            }
+            
+            /* Update time */
+            .update-time {
+                font-size: var(--font-base);
+                margin-top: 20px;
+            }
+            
+            /* Modal */
+            .modal-content {
+                padding: 25px;
+                width: 95%;
+            }
+            
+            /* User info */
+            .user-info {
+                padding: 6px 12px;
+            }
+            
+            .user-avatar {
+                width: 30px;
+                height: 30px;
+                font-size: var(--font-xs);
+            }
+        }
+        
+        /* Very small mobile devices (< 480px) */
+        @media (max-width: 480px) {
+            .header-content h1 {
+                font-size: var(--font-lg);
+            }
+            
+            .powered-by {
+                font-size: var(--font-xs);
+            }
+            
+            .stat-card .value {
+                font-size: var(--font-xl);
+            }
+            
+            .env-impact-title {
+                font-size: var(--font-lg);
+            }
+            
+            .env-impact-table thead th {
+                font-size: 12px;
+                padding: 10px 6px;
+            }
+            
+            .env-metric-label {
+                font-size: 10px;
+                padding: 10px 6px;
+            }
+            
+            .env-impact-table td.env-value {
+                font-size: 16px;
+                padding: 10px 6px;
+            }
+            
+            .tab {
+                padding: 8px 12px;
+                font-size: var(--font-xs);
+            }
+        }
+        
+        /* Large screens (> 1400px) - Make better use of space */
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1600px;
+            }
+            
+            .header-content h1 {
+                font-size: var(--font-xl);
+            }
+            
+            .stat-card .value {
+                font-size: var(--font-xl);
+            }
+        }
+        
+        /* Report Tab Styling */
+        .interval-option, .field-option {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .interval-option:hover, .field-option:hover {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: rgba(255, 215, 0, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .interval-option input[type="radio"],
+        .field-option input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+        
+        .interval-option input[type="radio"]:checked + .interval-label,
+        .field-option input[type="checkbox"]:checked + span {
+            color: #FFD700;
+            font-weight: 700;
+        }
+        
+        .interval-label {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .interval-label strong {
+            font-size: var(--font-base);
+            color: #ffffff;
+        }
+        
+        .interval-label small {
+            font-size: var(--font-xs);
+            color: #aaaaaa;
+        }
+        
+        .field-option span {
+            font-size: var(--font-base);
+            color: #ffffff;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="info-dropdown">
+            <div style="display: flex; gap: 10px;">
+                <div class="refresh-button" onclick="manualRefresh()" title="Refresh data">
+                    🔄
+                </div>
+                <div class="info-button" onclick="toggleInfo()" title="Information">ℹ️</div>
+            </div>
+            <div class="info-content" id="infoContent">
+                <h3>🌍 How Environmental Benefits Are Calculated</h3>
+                
+                <div class="info-section">
+                    <h4>🌱 Understanding Environmental Impact</h4>
+                    
+                    <p><strong>🌳 Trees Equivalent</strong></p>
+                    <p>The number of mature trees that would be needed to absorb the same amount of CO₂ that we've avoided through solar generation. Based on trees absorbing approximately 22 kg of CO₂ per tree per year.</p>
+                    <code>Trees = CO₂ Avoided / 22 kg per tree per year</code>
+                    
+                    <p><strong>🏠 Homes Powered</strong></p>
+                    <p>How many homes could be powered with this amount of clean energy, based on typical consumption of 9.8 kWh per household daily.</p>
+                    <code>Households powered = Energy (kWh) / 9.8 kWh</code>
+                    
+                    <p><strong>⛏️ kg Coal Saved</strong></p>
+                    <p>The amount of coal that would need to be burned in a power plant to generate the same amount of electricity we've produced with solar energy.</p>
+                    <code>Coal Saved = Energy (kWh) × 0.548 kg coal per kWh</code>
+                    
+                    <p><strong>💧 Litres Water Saved</strong></p>
+                    <p>The amount of water saved by using solar instead of conventional power plants, which require significant amounts of water for cooling systems.</p>
+                    <code>Water Saved = Energy (kWh) × 1 L water per kWh</code>
+                </div>
+            </div>
+        </div>
+        
+        <div class="header">
+            <div class="header-content">
+                <h1>1st Avenue Spar: Solar Generation</h1>
+                <p class="powered-by">Powered by <span class="company">Genergy</span> & <span class="spar">Spar</span></p>
+            </div>
+            <div class="login-section" id="loginSection">
+                <button class="btn btn-primary" onclick="showLoginModal()">Client Login</button>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading">Loading data...</div>
+        
+        <div id="publicView" class="public-view">
+            <div class="stats-grid public-stats-grid">
+                <div class="stat-card">
+                    <div class="label">Yesterday's Total</div>
+                    <div class="value" id="pub-yesterday-gen">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Today's Total</div>
+                    <div class="value" id="pub-today-gen">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">This Month</div>
+                    <div class="value" id="pub-month-gen">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Lifetime Total</div>
+                    <div class="value" id="pub-lifetime-gen">--</div>
+                </div>
+            </div>
+            
+            <div class="env-impact-header">
+                <div class="env-impact-title">
+                    <span class="grass-decoration">🌾</span>
+                    <span class="tree-decoration">🌳</span>
+                    Environmental Impact
+                    <span class="tree-decoration">🌲</span>
+                    <span class="grass-decoration">🌿</span>
+                </div>
+            </div>
+            
+            <div class="env-table-container">
+                <table class="env-impact-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>📊 Yesterday</th>
+                            <th>📅 Today</th>
+                            <th>🗓️ This Month</th>
+                            <th>📈 Lifetime</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="env-metric-label">
+                                <div class="env-icon">🌳</div>
+                                <span>TREES EQUIVALENT</span>
+                            </td>
+                            <td class="env-value" id="pub-env-yesterday-trees">--</td>
+                            <td class="env-value" id="pub-env-today-trees">--</td>
+                            <td class="env-value" id="pub-env-month-trees">--</td>
+                            <td class="env-value" id="pub-env-lifetime-trees">--</td>
+                        </tr>
+                        <tr>
+                            <td class="env-metric-label">
+                                <div class="env-icon">🏠</div>
+                                <span>HOUSEHOLDS POWERED</span>
+                            </td>
+                            <td class="env-value" id="pub-env-yesterday-homes">--</td>
+                            <td class="env-value" id="pub-env-today-homes">--</td>
+                            <td class="env-value" id="pub-env-month-homes">--</td>
+                            <td class="env-value" id="pub-env-lifetime-homes">--</td>
+                        </tr>
+                        <tr>
+                            <td class="env-metric-label">
+                                <div class="env-icon">⛏️</div>
+                                <span>COAL SAVED (kg)</span>
+                            </td>
+                            <td class="env-value" id="pub-env-yesterday-coal">--</td>
+                            <td class="env-value" id="pub-env-today-coal">--</td>
+                            <td class="env-value" id="pub-env-month-coal">--</td>
+                            <td class="env-value" id="pub-env-lifetime-coal">--</td>
+                        </tr>
+                        <tr>
+                            <td class="env-metric-label">
+                                <div class="env-icon">💧</div>
+                                <span>WATER SAVED (Litres)</span>
+                            </td>
+                            <td class="env-value" id="pub-env-yesterday-water">--</td>
+                            <td class="env-value" id="pub-env-today-water">--</td>
+                            <td class="env-value" id="pub-env-month-water">--</td>
+                            <td class="env-value" id="pub-env-lifetime-water">--</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="clientView" class="client-view">
+            <!-- PHASE 3: Info Header -->
+            <div class="info-header">
+                <div class="info-item">
+                    <span class="info-label">Last Updated:</span>
+                    <span class="info-value" id="header-last-update">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Days Active:</span>
+                    <span class="info-value" id="header-days-active">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">System Capacity:</span>
+                    <span class="info-value">71.59 kWp</span>
+                </div>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchClientTab('daily')">Daily Generation</button>
+                <button class="tab" onclick="switchClientTab('monthly')">Monthly Overview</button>
+                <button class="tab" onclick="switchClientTab('lifetime')">Lifetime Stats</button>
+                <button class="tab" onclick="switchClientTab('financial')">Financial Overview</button>
+                <button class="tab" onclick="switchClientTab('report')">Report</button>
+                <button class="tab" onclick="switchClientTab('downtime')">Downtime</button>
+                <button class="tab" onclick="switchClientTab('warranty')">Warranty</button>
+            </div>
+            
+            <div id="daily-tab" class="tab-content active">
+                <div class="date-selector">
+                    <label>Select Date:</label>
+                    <input type="date" id="dateSelector" onchange="loadDailyData()">
+                    <button class="btn btn-secondary" onclick="loadToday()">Today</button>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">Load</div>
+                        <div class="value" id="daily-load">--</div>
+                        <div class="subvalue">Expected: <span id="daily-load-expected">--</span> kWh</div>
+                        <div class="performance" id="daily-load-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Generation</div>
+                        <div class="value" id="daily-gen">--</div>
+                        <div class="subvalue">Expected: <span id="daily-gen-expected">--</span> kWh</div>
+                        <div class="performance" id="daily-gen-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Grid</div>
+                        <div class="value" id="daily-grid">--</div>
+                        <div class="subvalue">Expected: <span id="daily-grid-expected">--</span> kWh</div>
+                        <div class="performance" id="daily-grid-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">PV Coverage</div>
+                        <div class="value" id="pv-coverage">--</div>
+                        <div class="subvalue">Expected: <span id="pv-coverage-expected">--</span>%</div>
+                        <div class="performance" id="pv-coverage-perf">--</div>
+                    </div>
+                </div>
+                
+                <!-- TOU Breakdown & Savings Card - Table Format -->
+                <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
+                    <div class="tou-breakdown-card">
+                        <div class="label">Time of Use Financial Breakdown</div>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: var(--font-xs);">Period</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Generation</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Utility Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">PPA Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: var(--font-xs);">Savings</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label peak">Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="daily-tou-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-utility-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-ppa-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="daily-savings-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label standard">Standard</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="daily-tou-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-utility-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-ppa-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="daily-savings-standard">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label off-peak">Off-Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="daily-tou-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-utility-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="daily-ppa-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="daily-savings-off-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-top: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05);">
+                                    <td style="padding: 15px; font-weight: bold; color: #FFD700;">
+                                        TOTAL
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        <span id="daily-tou-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="daily-utility-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="daily-ppa-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: var(--font-base);">
+                                        R<span id="daily-total-savings">--</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 class="chart-title">Hourly Generation Pattern</h3>
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+            
+            <div id="monthly-tab" class="tab-content">
+                <div class="date-selector">
+                    <label>Select Month:</label>
+                    <select id="monthSelector">
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                    <label>Year:</label>
+                    <select id="yearSelector"></select>
+                    <button class="btn btn-primary" onclick="loadMonthlyData()">Search</button>
+                    <button class="btn btn-secondary" onclick="loadCurrentMonth()">This Month</button>
+                    <button class="btn btn-secondary" onclick="loadPast30Days()">Past 30 Days</button>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">Load</div>
+                        <div class="value" id="monthly-load">--</div>
+                        <div class="subvalue">Expected: <span id="monthly-load-expected">--</span> kWh</div>
+                        <div class="performance" id="monthly-load-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Generation</div>
+                        <div class="value" id="monthly-gen">--</div>
+                        <div class="subvalue">Expected: <span id="monthly-expected">--</span> kWh</div>
+                        <div class="performance" id="monthly-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Grid</div>
+                        <div class="value" id="monthly-grid">--</div>
+                        <div class="subvalue">Expected: <span id="monthly-grid-expected">--</span> kWh</div>
+                        <div class="performance" id="monthly-grid-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">PV Coverage</div>
+                        <div class="value" id="monthly-coverage">--</div>
+                        <div class="subvalue">Expected: <span id="monthly-coverage-expected">--</span>%</div>
+                        <div class="performance" id="monthly-coverage-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Target Progress</div>
+                        <div class="value" id="monthly-target-perf">--</div>
+                        <div class="subvalue">
+                            <span id="monthly-actual-gen">--</span> kWh of <span id="monthly-target-gen">--</span> kWh
+                        </div>
+                        <div class="subvalue">Days with data: <span id="monthly-days-count">--</span></div>
+                    </div>
+                </div>
+                
+                <!-- TOU Breakdown & Savings Card - Table Format -->
+                <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
+                    <div class="tou-breakdown-card">
+                        <div class="label">Time of Use Financial Breakdown</div>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: var(--font-xs);">Period</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Generation</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Utility Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">PPA Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: var(--font-xs);">Savings</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label peak">Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="monthly-tou-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-utility-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-ppa-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="monthly-savings-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label standard">Standard</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="monthly-tou-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-utility-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-ppa-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="monthly-savings-standard">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label off-peak">Off-Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="monthly-tou-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-utility-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="monthly-ppa-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="monthly-savings-off-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-top: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05);">
+                                    <td style="padding: 15px; font-weight: bold; color: #FFD700;">
+                                        TOTAL
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        <span id="monthly-tou-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="monthly-utility-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="monthly-ppa-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: var(--font-base);">
+                                        R<span id="monthly-total-savings">--</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 class="chart-title">Daily Generation for Selected Month</h3>
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+                
+                <!-- PHASE 3: New Actual vs Expected Load & Grid Graph -->
+                <div class="chart-container" style="margin-top: 30px;">
+                    <h3 class="chart-title">Actual vs Expected Load & Grid</h3>
+                    <canvas id="monthlyLoadGridChart"></canvas>
+                </div>
+            </div>
+            
+            <div id="lifetime-tab" class="tab-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">Load</div>
+                        <div class="value" id="lifetime-load">--</div>
+                        <div class="subvalue">Expected: <span id="lifetime-load-expected">--</span> kWh</div>
+                        <div class="performance" id="lifetime-load-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Generation</div>
+                        <div class="value" id="lifetime-gen">--</div>
+                        <div class="subvalue">Expected: <span id="lifetime-gen-expected">--</span> kWh</div>
+                        <div class="performance" id="lifetime-gen-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Grid</div>
+                        <div class="value" id="lifetime-grid">--</div>
+                        <div class="subvalue">Expected: <span id="lifetime-grid-expected">--</span> kWh</div>
+                        <div class="performance" id="lifetime-grid-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">PV Coverage</div>
+                        <div class="value" id="lifetime-coverage">--</div>
+                        <div class="subvalue">Expected: <span id="lifetime-coverage-expected">--</span>%</div>
+                        <div class="performance" id="lifetime-coverage-perf">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Lifetime Performance</div>
+                        <div class="value" id="lifetime-perf">--</div>
+                        <div class="subvalue"><span id="lifetime-perf-diff">--</span> kWh <span id="lifetime-perf-status">--</span></div>
+                    </div>
+                    <!-- PHASE 7: Removed Days Active and System Capacity cards (moved to header) -->
+                </div>
+                
+                <!-- TOU Breakdown & Savings Card - Table Format -->
+                <div class="stats-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
+                    <div class="tou-breakdown-card">
+                        <div class="label">Lifetime Time of Use Financial Breakdown</div>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: 600; font-size: var(--font-xs);">Period</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Generation</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">Utility Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #888; font-weight: 600; font-size: var(--font-xs);">PPA Cost</th>
+                                    <th style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600; font-size: var(--font-xs);">Savings</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label peak">Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="lifetime-tou-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-utility-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-ppa-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="lifetime-savings-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label standard">Standard</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="lifetime-tou-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-utility-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-ppa-standard">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="lifetime-savings-standard">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td style="padding: 12px;">
+                                        <span class="tou-label off-peak">Off-Peak</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        <span id="lifetime-tou-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-utility-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #fff;">
+                                        R<span id="lifetime-ppa-off-peak">--</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; color: #4ade80; font-weight: 600;">
+                                        R<span id="lifetime-savings-off-peak">--</span>
+                                    </td>
+                                </tr>
+                                <tr style="border-top: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05);">
+                                    <td style="padding: 15px; font-weight: bold; color: #FFD700;">
+                                        TOTAL
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        <span id="lifetime-tou-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="lifetime-utility-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #fff;">
+                                        R<span id="lifetime-ppa-total">--</span>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #4ade80; font-size: var(--font-base);">
+                                        R<span id="lifetime-total-savings">--</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 class="chart-title">Environmental Impact</h3>
+                    <div class="env-grid" id="client-env-lifetime"></div>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Monthly Generation Breakdown</h3>
+                    <div class="scrollable-chart">
+                        <div style="min-width: 1200px;">
+                            <canvas id="lifetimeMonthlyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PHASE 4: Removed "Actual vs Expected Generation" and "Monthly Performance %" graphs -->
+                
+                <!-- PHASE 3: New TOU Savings Graph -->
+                <div class="chart-container" style="margin-top: 30px;">
+                    <h3 class="chart-title">Monthly TOU Savings Breakdown</h3>
+                    <div class="scrollable-chart">
+                        <div style="min-width: 1200px;">
+                            <canvas id="lifetimeTouSavingsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Financial Overview Tab -->
+            <div id="financial-tab" class="tab-content">
+                <!-- Hero Stats Grid -->
+                <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 30px;">
+                    <!-- Total Lifetime Savings Hero Card -->
+                    <div class="stat-card large financial-card" style="grid-column: span 2;">
+                        <div class="label">💰 Total Lifetime Savings</div>
+                        <div class="value financial-hero">
+                            <span style="font-size: var(--font-xs); font-weight: 500;">R</span>
+                            <span id="financial-lifetime-savings">--</span>
+                        </div>
+                        <div class="subvalue" style="font-size: var(--font-base); margin-top: 10px;">
+                            Since system commissioning
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOU Breakdown Stats -->
+                <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <div class="label">🔴 Peak Savings</div>
+                        <div class="value" style="color: #ef4444;">
+                            R <span id="financial-peak-savings">--</span>
+                        </div>
+                        <div class="subvalue">
+                            <span id="financial-peak-pct">--</span>% of total
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="label">🟠 Standard Savings</div>
+                        <div class="value" style="color: #f59e0b;">
+                            R <span id="financial-standard-savings">--</span>
+                        </div>
+                        <div class="subvalue">
+                            <span id="financial-standard-pct">--</span>% of total
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="label">🟢 Off-Peak Savings</div>
+                        <div class="value" style="color: #10b981;">
+                            R <span id="financial-off-peak-savings">--</span>
+                        </div>
+                        <div class="subvalue">
+                            <span id="financial-off-peak-pct">--</span>% of total
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Monthly Savings by TOU Period</h3>
+                    <div class="scrollable-chart">
+                        <div style="min-width: 1200px;">
+                            <canvas id="financialMonthlyTouChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 class="chart-title">Cumulative Savings Over Time</h3>
+                    <div class="scrollable-chart">
+                        <div style="min-width: 1200px;">
+                            <canvas id="financialCumulativeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 class="chart-title">TOU Generation Distribution</h3>
+                    <canvas id="financialTouPieChart" style="max-width: 600px; margin: 0 auto;"></canvas>
+                    
+                    <!-- TOU Data Table -->
+                    <div style="max-width: 600px; margin: 30px auto 0; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
+                                    <th style="text-align: left; padding: 12px; color: #ffffff; font-size: var(--font-base);">Period</th>
+                                    <th style="text-align: right; padding: 12px; color: #ffffff; font-size: var(--font-base);">Generation (kWh)</th>
+                                    <th style="text-align: right; padding: 12px; color: #ffffff; font-size: var(--font-base);">Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tou-distribution-table">
+                                <tr>
+                                    <td colspan="3" style="padding: 12px; color: #aaaaaa; text-align: center;">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Report Tab -->
+            <div id="report-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>Data Export & Reporting</h2>
+                    <p style="color: #aaaaaa; font-size: var(--font-base); margin-top: 10px;">Download generation data in various formats and time intervals</p>
+                </div>
+                
+                <div class="stats-grid" style="grid-template-columns: 1fr; gap: 30px;">
+                    <!-- Date Range Selection -->
+                    <div class="stat-card" style="padding: 30px;">
+                        <h3 style="color: #FFD700; margin-bottom: 20px; font-size: var(--font-lg);">📅 Select Date Range</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                            <div>
+                                <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">Start Date:</label>
+                                <input type="date" id="report-start-date" style="width: 100%; padding: 12px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                            </div>
+                            <div>
+                                <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">End Date:</label>
+                                <input type="date" id="report-end-date" style="width: 100%; padding: 12px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" onclick="setReportDateRange('today')" style="padding: 10px 20px;">Today</button>
+                            <button class="btn btn-secondary" onclick="setReportDateRange('thisWeek')" style="padding: 10px 20px;">This Week</button>
+                            <button class="btn btn-secondary" onclick="setReportDateRange('thisMonth')" style="padding: 10px 20px;">This Month</button>
+                            <button class="btn btn-secondary" onclick="setReportDateRange('lastMonth')" style="padding: 10px 20px;">Last Month</button>
+                            <button class="btn btn-secondary" onclick="setReportDateRange('lifetime')" style="padding: 10px 20px;">Lifetime</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Interval Selection -->
+                    <div class="stat-card" style="padding: 30px;">
+                        <h3 style="color: #FFD700; margin-bottom: 20px; font-size: var(--font-lg);">⏱️ Select Data Interval</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <label class="interval-option">
+                                <input type="radio" name="interval" value="5min" checked>
+                                <span class="interval-label">
+                                    <strong>5-Minute</strong>
+                                    <small>Raw data (kW)</small>
+                                </span>
+                            </label>
+                            <label class="interval-option">
+                                <input type="radio" name="interval" value="15min">
+                                <span class="interval-label">
+                                    <strong>15-Minute</strong>
+                                    <small>Aggregated (kWh)</small>
+                                </span>
+                            </label>
+                            <label class="interval-option">
+                                <input type="radio" name="interval" value="hourly">
+                                <span class="interval-label">
+                                    <strong>Hourly</strong>
+                                    <small>Aggregated (kWh)</small>
+                                </span>
+                            </label>
+                            <label class="interval-option">
+                                <input type="radio" name="interval" value="daily">
+                                <span class="interval-label">
+                                    <strong>Daily</strong>
+                                    <small>Daily totals (kWh)</small>
+                                </span>
+                            </label>
+                            <label class="interval-option">
+                                <input type="radio" name="interval" value="monthly">
+                                <span class="interval-label">
+                                    <strong>Monthly</strong>
+                                    <small>Monthly totals (kWh)</small>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Fields Selection -->
+                    <div class="stat-card" style="padding: 30px;">
+                        <h3 style="color: #FFD700; margin-bottom: 20px; font-size: var(--font-lg);">📋 Select Data Fields</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <label class="field-option">
+                                <input type="checkbox" name="fields" value="generation" checked>
+                                <span>Actual Generation</span>
+                            </label>
+                            <label class="field-option">
+                                <input type="checkbox" name="fields" value="predicted_generation" checked>
+                                <span>Predicted Generation</span>
+                            </label>
+                            <label class="field-option">
+                                <input type="checkbox" name="fields" value="load" checked>
+                                <span>Actual Load</span>
+                            </label>
+                            <label class="field-option">
+                                <input type="checkbox" name="fields" value="predicted_load" checked>
+                                <span>Predicted Load</span>
+                            </label>
+                            <label class="field-option">
+                                <input type="checkbox" name="fields" value="grid" checked>
+                                <span>Actual Grid</span>
+                            </label>
+                            <label class="field-option">
+                                <input type="checkbox" name="fields" value="predicted_grid" checked>
+                                <span>Predicted Grid</span>
+                            </label>
+                            <label class="field-option">
+                                <input type="checkbox" name="fields" value="irradiation">
+                                <span>Irradiation</span>
+                            </label>
+                            <label class="field-option">
+                                <input type="checkbox" name="fields" value="performance">
+                                <span>Performance %</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Download Button & Status -->
+                    <div class="stat-card" style="padding: 30px; text-align: center;">
+                        <button onclick="generateReport()" class="btn" style="padding: 18px 50px; font-size: var(--font-base); background: linear-gradient(135deg, #FFD700, #FFA500); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);">
+                            📥 Generate & Download CSV Report
+                        </button>
+                        <div id="report-status" style="margin-top: 20px; font-size: var(--font-base); color: #4ade80;"></div>
+                        <div id="report-info" style="margin-top: 15px; color: #aaaaaa; font-size: var(--font-base);"></div>
+                    </div>
+                    
+                    <!-- Monthly Word Document Report -->
+                    <div class="stat-card" style="padding: 30px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 2px solid rgba(255,215,0,0.3); display: none;">
+                        <h3 style="color: #FFD700; margin-bottom: 15px; font-size: var(--font-lg);">Monthly Performance Report (Word Document)</h3>
+                        <p style="color: #aaaaaa; margin-bottom: 25px; font-size: var(--font-base);">Generate a comprehensive monthly report with performance data, financial summary, and warranty status</p>
+                        <div style="margin-bottom: 25px;">
+                            <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px; font-size: var(--font-base);">Report Month:</label>
+                            <input type="month" id="word-report-month" style="width: 100%; padding: 14px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                        </div>
+                        <button onclick="generateWordReport()" class="btn" style="padding: 20px 60px; font-size: var(--font-lg); background: linear-gradient(135deg, #4ade80, #22c55e); color: #000000; font-weight: 700; box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4);">
+                            Generate Word Report
+                        </button>
+                        <div id="word-report-status" style="margin-top: 20px; font-size: var(--font-base); color: #4ade80;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Downtime Tab -->
+            <div id="downtime-tab" class="tab-content">
+                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: var(--font-xl);">System Downtime Analysis</h2>
+                
+                <!-- Date Range Selection -->
+                <div class="card" style="padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #FFD700; margin-bottom: 20px; font-size: var(--font-lg);">Select Analysis Period</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div>
+                            <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">Start Date:</label>
+                            <input type="date" id="downtime-start-date" style="width: 100%; padding: 12px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                        </div>
+                        <div>
+                            <label style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 8px;">End Date:</label>
+                            <input type="date" id="downtime-end-date" style="width: 100%; padding: 12px; font-size: var(--font-base); border-radius: 8px; border: 2px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.5); color: #ffffff;">
+                        </div>
+                        <div style="display: flex; align-items: flex-end;">
+                            <button onclick="loadDowntimeAnalysis()" class="btn" style="width: 100%; padding: 12px; font-size: var(--font-base); background: linear-gradient(135deg, #FFD700, #FFA500); color: #000000; font-weight: 700;">
+                                Analyze Downtime
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('today')" style="padding: 10px 20px;">Today</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('yesterday')" style="padding: 10px 20px;">Yesterday</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('thisWeek')" style="padding: 10px 20px;">This Week</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('lastWeek')" style="padding: 10px 20px;">Last Week</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('thisMonth')" style="padding: 10px 20px;">This Month</button>
+                        <button class="btn btn-secondary" onclick="setDowntimeRange('lastMonth')" style="padding: 10px 20px;">Last Month</button>
+                    </div>
+                </div>
+                
+                <!-- Summary Statistics -->
+                <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <div class="label">Total Downtime Events</div>
+                        <div class="value" id="downtime-events-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Total Downtime Duration</div>
+                        <div class="value" id="downtime-total-duration">0 hrs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Generation Lost</div>
+                        <div class="value" id="downtime-lost-generation">0 kWh</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Financial Loss</div>
+                        <div class="value" id="downtime-financial-loss">R 0</div>
+                    </div>
+                </div>
+                
+                <!-- Downtime Events Table -->
+                <div class="card" style="padding: 30px;">
+                    <h3 style="color: #FFD700; margin-bottom: 25px; font-size: var(--font-lg);">Downtime Events</h3>
+                    <div id="downtime-table-container" style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: rgba(255, 215, 0, 0.1); border-bottom: 2px solid #FFD700;">
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Date</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Start Time</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">End Time</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Duration</th>
+                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Lost Gen (kWh)</th>
+                                    <th style="padding: 20px; text-align: right; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Financial Loss (ZAR)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="downtime-table-body">
+                                <tr>
+                                    <td colspan="6" style="padding: 40px; text-align: center; color: #aaaaaa; font-size: var(--font-base);">
+                                        Select a date range and click "Analyze Downtime" to view results
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Warranty Tab -->
+            <div id="warranty-tab" class="tab-content">
+                <h2 style="color: #FFD700; margin-bottom: 30px; font-size: var(--font-xl);">System Warranty Overview</h2>
+                
+                <div id="warrantyChartsGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-bottom: 40px;">
+                    <!-- Individual donut charts will be generated here -->
+                </div>
+                
+                <!-- Warranty Data Table -->
+                <div class="card" style="padding: 30px;">
+                    <h3 style="color: #FFD700; margin-bottom: 25px; font-size: var(--font-lg);">Warranty Details</h3>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: rgba(255, 215, 0, 0.1); border-bottom: 2px solid #FFD700;">
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Item</th>
+                                    <th style="padding: 20px; text-align: left; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Start Date</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Duration (Months)</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">End Date</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Days Remaining</th>
+                                    <th style="padding: 20px; text-align: center; color: #FFD700; font-weight: 600; font-size: var(--font-base);">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="warranty-table-body">
+                                <!-- Data populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="update-time">
+            Last updated: <span id="last-update">--</span>
+        </div>
+    </div>
+
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Client Login</h2>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div class="error-message" id="loginError">Invalid credentials</div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Login</button>
+                    <button type="button" class="btn btn-secondary" onclick="hideLoginModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let dailyChart, monthlyChart, monthlyLoadGridChart, lifetimeMonthlyChart, lifetimeTouSavingsChart;
+        // PHASE 4: Removed lifetimeActualVsExpectedChart and lifetimePerformanceLineChart
+        let financialMonthlyTouChart, financialCumulativeChart, financialTouPieChart;
+        let dashboardData = null;
+        let isLoggedIn = false;
+        let clientCredentials = null;
+        let currentDataMode = 'expected'; // 'expected' or 'actual'
+        
+        // Check for persisted login state on page load
+        function checkPersistedAuth() {
+            const authState = localStorage.getItem('clientAuthState');
+            const authTimestamp = localStorage.getItem('clientAuthTimestamp');
+            
+            if (authState === 'logged_in' && authTimestamp) {
+                // Check if session is still valid (24 hour timeout)
+                const now = Date.now();
+                const sessionAge = now - parseInt(authTimestamp);
+                const twentyFourHours = 24 * 60 * 60 * 1000;
+                
+                if (sessionAge < twentyFourHours) {
+                    isLoggedIn = true;
+                    console.log('✓ Restored login session');
+                    return true;
+                } else {
+                    // Session expired, clear it
+                    localStorage.removeItem('clientAuthState');
+                    localStorage.removeItem('clientAuthTimestamp');
+                    console.log('ℹ️ Login session expired (24h timeout)');
+                }
+            }
+            return false;
+        }
+        
+        function toggleInfo() {
+            const infoContent = document.getElementById('infoContent');
+            infoContent.classList.toggle('show');
+        }
+        
+        async function manualRefresh() {
+            const button = document.querySelector('.refresh-button');
+            button.classList.add('spinning');
+            console.log('🔄 Manual refresh triggered');
+            
+            try {
+                await loadData();
+                console.log('✅ Manual refresh complete');
+            } catch (error) {
+                console.error('❌ Manual refresh failed:', error);
+            } finally {
+                setTimeout(() => {
+                    button.classList.remove('spinning');
+                }, 1000);
+            }
+        }
+        
+        // Close info dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.querySelector('.info-dropdown');
+            if (dropdown && !dropdown.contains(event.target)) {
+                document.getElementById('infoContent').classList.remove('show');
+            }
+        });
+        
+        async function loadCredentials() {
+            try {
+                const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+                const credPath = `${basePath}data/client_auth.json`.replace('//', '/');
+                const response = await fetch(credPath);
+                if (response.ok) {
+                    clientCredentials = await response.json();
+                    console.log('✓ Client credentials loaded');
+                }
+            } catch (error) {
+                console.log('ℹ️ Client credentials not available');
+            }
+        }
+        
+        function showLoginModal() {
+            document.getElementById('loginModal').classList.add('active');
+        }
+        
+        function hideLoginModal() {
+            document.getElementById('loginModal').classList.remove('active');
+            document.getElementById('loginError').style.display = 'none';
+        }
+        
+        function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (clientCredentials && username === clientCredentials.username && password === clientCredentials.password) {
+                isLoggedIn = true;
+                
+                // Persist login state to localStorage
+                localStorage.setItem('clientAuthState', 'logged_in');
+                localStorage.setItem('clientAuthTimestamp', Date.now().toString());
+                console.log('✓ Login state saved to localStorage');
+                
+                hideLoginModal();
+                showClientView();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+        
+        function logout() {
+            isLoggedIn = false;
+            
+            // Clear login state from localStorage
+            localStorage.removeItem('clientAuthState');
+            localStorage.removeItem('clientAuthTimestamp');
+            console.log('✓ Logged out and cleared localStorage');
+            
+            showPublicView();
+        }
+        
+        function showPublicView() {
+            document.getElementById('publicView').classList.add('active');
+            document.getElementById('clientView').classList.remove('active');
+            document.getElementById('loginSection').innerHTML = '<button class="btn btn-primary" onclick="showLoginModal()">Client Login</button>';
+        }
+        
+        function showClientView() {
+    document.getElementById('publicView').classList.remove('active');
+    document.getElementById('clientView').classList.add('active');
+    document.getElementById('loginSection').innerHTML = `
+        <div class="user-info">
+            <div class="user-avatar">C</div>
+            <span>Client</span>
+        </div>
+        <button class="btn btn-secondary" onclick="logout()">Logout</button>
+    `;
+    populateYearSelector();
+    updateDatePickerRange();
+    loadToday();
+    
+    // Check if there's a saved monthly selection, otherwise load current month
+    if (restoreMonthSelection()) {
+        loadMonthlyData();
+    } else {
+        loadCurrentMonth();
     }
     
-    print(f"📡 Fetching irradiation forecast for next {days} days...")
-    response = requests.get(FORECAST_API, params=params, timeout=30)
-    
-    if response.status_code != 200:
-        raise Exception(f"API error: {response.status_code}")
-    
-    data = response.json()
-    
-    # Parse response
-    daily_irradiation = {}
-    timestamps = data["hourly"]["time"]
-    direct_radiation = data["hourly"]["direct_radiation"]
-    
-    for timestamp, radiation in zip(timestamps, direct_radiation):
-        date = timestamp.split("T")[0]
-        hour = int(timestamp.split("T")[1].split(":")[0])
+    loadLifetimeMonthlyBreakdown();
+    // PHASE 4: Removed loadLifetimeActualVsExpectedChart() and loadLifetimePerformanceLineChart()
+}
         
-        if date not in daily_irradiation:
-            daily_irradiation[date] = [0] * 24
+        function switchClientTab(tab) {
+            document.querySelectorAll('#clientView .tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('#clientView .tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(tab + '-tab').classList.add('active');
+            
+            if (tab === 'lifetime') {
+                loadLifetimeMonthlyBreakdown();
+                // PHASE 4: Removed loadLifetimeActualVsExpectedChart() and loadLifetimePerformanceLineChart()
+                loadLifetimeTouSavingsChart();  // PHASE 3
+            } else if (tab === 'monthly') {
+                // Restore saved selection or default to current month
+                if (restoreMonthSelection()) {
+                    loadMonthlyData();
+                } else {
+                    loadCurrentMonth();
+                }
+            } else if (tab === 'financial') {
+                loadFinancialOverview();
+            } else if (tab === 'report') {
+                // Initialize report date range
+                const startInput = document.getElementById('report-start-date');
+                const endInput = document.getElementById('report-end-date');
+                if (!startInput.value || !endInput.value) {
+                    setReportDateRange('thisMonth');
+                }
+                
+                // Initialize word report month with last month
+                const wordMonthInput = document.getElementById('word-report-month');
+                if (!wordMonthInput.value) {
+                    const today = new Date();
+                    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1);
+                    const year = lastMonth.getFullYear();
+                    const month = String(lastMonth.getMonth() + 1).padStart(2, '0');
+                    wordMonthInput.value = `${year}-${month}`;
+                }
+            } else if (tab === 'warranty') {
+                loadWarrantyData();
+            } else if (tab === 'downtime') {
+                // Initialize downtime date range to this month
+                const downtimeStart = document.getElementById('downtime-start-date');
+                const downtimeEnd = document.getElementById('downtime-end-date');
+                if (!downtimeStart.value || !downtimeEnd.value) {
+                    setDowntimeRange('thisMonth');
+                }
+            }
+        }
         
-        daily_irradiation[date][hour] = int(radiation) if radiation is not None else 0
-    
-    print(f"✓ Fetched {len(daily_irradiation)} days of irradiation data")
-    return daily_irradiation
+        function formatNumber(num, decimals = 0) {
+            return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
+        
+        function formatKwh(num, decimals = 0) {
+            return formatNumber(num, decimals) + ' kWh';
+        }
+        
+        // ============================================
+        // PHASE 2: DATA MODE TOGGLE & TOU/FINANCIAL
+        // ============================================
+        
+        // TOU Rate Constants - 2026 Rates (Season-Dependent)
+        const TOU_RATES_2026 = {
+            high_season: {  // Winter: June-Aug (high demand, high rates)
+                peak: 8.21,
+                standard: 2.36,
+                off_peak: 1.71
+            },
+            low_season: {   // Summer: Jan-May, Sep-Dec (low demand, low rates)
+                peak: 3.57,
+                standard: 2.23,
+                off_peak: 1.70
+            }
+        };
+        
+        const PPA_RATE = 1.50;  // Solar PPA rate (ZAR/kWh)
+        
+        /**
+         * Determine if a date is in high-demand or low-demand season
+         * High-demand = Winter (June-Aug) when heating demand is high
+         * Low-demand = Rest of year (Jan-May, Sep-Dec)
+         * @param {string} dateStr - Date string in format "YYYY-MM-DD" or "YYYY-MM"
+         * @returns {string} - 'high_season' or 'low_season'
+         */
+        function getSeason(dateStr) {
+            if (!dateStr) {
+                // Default to weighted average if no date provided
+                return 'weighted';
+            }
+            
+            const month = parseInt(dateStr.split('-')[1]);
+            
+            // High-demand Season (Winter): June (6), July (7), August (8)
+            // Low-demand Season (Rest): Jan-May (1-5), Sep-Dec (9-12)
+            if (month >= 6 && month <= 8) {
+                return 'high_season';  // High-demand (winter)
+            } else {
+                return 'low_season';   // Low-demand (rest of year)
+            }
+        }
+        
+        /**
+         * Get TOU rates for a specific date or weighted average
+         * @param {string} dateStr - Date string or null for weighted average
+         * @returns {Object} - {peak, standard, off_peak} rates
+         */
+        function getTOURates(dateStr) {
+            const season = getSeason(dateStr);
+            console.log(`[getTOURates] dateStr=${dateStr}, season=${season}`);
+            
+            if (season === 'weighted') {
+                // For lifetime stats: weighted average (9 months low-demand, 3 months high-demand)
+                const rates = {
+                    peak: (TOU_RATES_2026.low_season.peak * 9 + TOU_RATES_2026.high_season.peak * 3) / 12,
+                    standard: (TOU_RATES_2026.low_season.standard * 9 + TOU_RATES_2026.high_season.standard * 3) / 12,
+                    off_peak: (TOU_RATES_2026.low_season.off_peak * 9 + TOU_RATES_2026.high_season.off_peak * 3) / 12
+                };
+                console.log(`[getTOURates] weighted average rates:`, rates);
+                return rates;
+            }
+            
+            const rates = TOU_RATES_2026[season];
+            console.log(`[getTOURates] ${season} rates:`, rates);
+            return rates;
+        }
+        
+        /**
+         * Calculate 3-part TOU breakdown: Utility Cost, PPA Cost, Savings
+         * @param {Object} touKwh - {peak_kwh, standard_kwh, off_peak_kwh} in kWh
+         * @param {string} dateStr - Date for seasonal rate determination (optional)
+         * @returns {Object} - {utility, ppa, savings} each with {peak, standard, off_peak, total}
+         */
+        function calculateTOUFinancials(touKwh, dateStr = null) {
+            console.log(`[calculateTOUFinancials] touKwh=`, touKwh, `dateStr=${dateStr}`);
+            
+            const peakKwh = touKwh.peak_kwh || 0;
+            const standardKwh = touKwh.standard_kwh || 0;
+            const offPeakKwh = touKwh.off_peak_kwh || 0;
+            
+            // Get appropriate rates for the date/season
+            const rates = getTOURates(dateStr);
+            
+            // Utility cost (what you would pay Eskom)
+            const utility = {
+                peak: peakKwh * rates.peak,
+                standard: standardKwh * rates.standard,
+                off_peak: offPeakKwh * rates.off_peak
+            };
+            utility.total = utility.peak + utility.standard + utility.off_peak;
+            
+            // PPA cost (what you pay for solar generation)
+            const ppa = {
+                peak: peakKwh * PPA_RATE,
+                standard: standardKwh * PPA_RATE,
+                off_peak: offPeakKwh * PPA_RATE
+            };
+            ppa.total = ppa.peak + ppa.standard + ppa.off_peak;
+            
+            // Savings (utility - ppa)
+            const savings = {
+                peak: utility.peak - ppa.peak,
+                standard: utility.standard - ppa.standard,
+                off_peak: utility.off_peak - ppa.off_peak
+            };
+            savings.total = savings.peak + savings.standard + savings.off_peak;
+            
+            console.log(`[calculateTOUFinancials] result:`, { utility, ppa, savings });
+            return { utility, ppa, savings };
+        }
+        
+        function toggleDataMode(mode) {
+            currentDataMode = mode;
+            
+            // Update toggle button states
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Reload current tab data with new mode
+            const activeTab = document.querySelector('#clientView .tab.active');
+            if (!activeTab) return;
+            
+            const tabText = activeTab.textContent.toLowerCase();
+            if (tabText.includes('daily')) {
+                loadDailyData();
+            } else if (tabText.includes('monthly')) {
+                loadMonthlyData();
+            } else if (tabText.includes('lifetime')) {
+                // Reload all lifetime charts
+                loadLifetimeMonthlyBreakdown();
+                // PHASE 4: Removed loadLifetimeActualVsExpectedChart() and loadLifetimePerformanceLineChart()
+            }
+        }
+        
+        function updateTouBreakdown(prefix, data) {
+            console.log(`[updateTouBreakdown] prefix=${prefix}, data=`, data);
+            
+            if (!data || !data.tou_breakdown) {
+                console.log(`[updateTouBreakdown] No TOU data for ${prefix}`);
+                document.getElementById(`${prefix}-tou-peak`).textContent = '-- kWh';
+                document.getElementById(`${prefix}-tou-standard`).textContent = '-- kWh';
+                document.getElementById(`${prefix}-tou-off-peak`).textContent = '-- kWh';
+                
+                // Clear total generation
+                const totalGenEl = document.getElementById(`${prefix}-tou-total`);
+                if (totalGenEl) totalGenEl.textContent = '-- kWh';
+                
+                // Clear all financial values
+                ['utility', 'ppa', 'savings'].forEach(type => {
+                    ['peak', 'standard', 'off-peak', 'total'].forEach(period => {
+                        const id = `${prefix}-${type}-${period.replace('_', '-')}`;
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = '--';
+                    });
+                });
+                return;
+            }
+            
+            const tou = data.tou_breakdown;
+            console.log(`[updateTouBreakdown] TOU breakdown:`, tou);
+            
+            // Display kWh values
+            document.getElementById(`${prefix}-tou-peak`).textContent = formatNumber(tou.peak_kwh, 1) + ' kWh';
+            document.getElementById(`${prefix}-tou-standard`).textContent = formatNumber(tou.standard_kwh, 1) + ' kWh';
+            document.getElementById(`${prefix}-tou-off-peak`).textContent = formatNumber(tou.off_peak_kwh, 1) + ' kWh';
+            
+            // Calculate and display total generation
+            const totalGen = tou.peak_kwh + tou.standard_kwh + tou.off_peak_kwh;
+            const totalGenEl = document.getElementById(`${prefix}-tou-total`);
+            if (totalGenEl) {
+                totalGenEl.textContent = formatNumber(totalGen, 1) + ' kWh';
+            }
+            
+            // Validation: Check if TOU total matches lifetime generation for lifetime prefix
+            if (prefix === 'lifetime' && data.total_generation_kwh) {
+                const diff = Math.abs(totalGen - data.total_generation_kwh);
+                if (diff > 1) {  // Allow 1 kWh tolerance for rounding
+                    console.warn(`⚠️ TOU total (${totalGen.toFixed(1)} kWh) doesn't match lifetime generation (${data.total_generation_kwh.toFixed(1)} kWh). Difference: ${diff.toFixed(1)} kWh`);
+                }
+            }
+            
+            // Get date for seasonal rate determination
+            // For daily: use data.date
+            // For monthly: use first day of month (YYYY-MM-01)
+            // For lifetime: use today's date (current season rates)
+            let dateStr = null;
+            if (data.date) {
+                dateStr = data.date; // Daily data
+            } else if (data.month) {
+                dateStr = data.month + '-01'; // Monthly data
+            } else if (prefix === 'monthly') {
+                // Try to get from selectors
+                const selectedYear = document.getElementById('yearSelector')?.value;
+                const selectedMonth = document.getElementById('monthSelector')?.value;
+                if (selectedYear && selectedMonth) {
+                    dateStr = `${selectedYear}-${selectedMonth}-01`;
+                }
+            } else if (prefix === 'lifetime') {
+                // For lifetime: use today's date to get current season rates
+                dateStr = new Date().toISOString().split('T')[0];
+            }
+            // If still null, weighted average will be used (shouldn't happen anymore)
+            
+            console.log(`[updateTouBreakdown] dateStr for ${prefix}:`, dateStr);
+            
+            // Calculate 3-part financial breakdown with seasonal rates
+            const financials = calculateTOUFinancials(tou, dateStr);
+            console.log(`[updateTouBreakdown] financials:`, financials);
+            
+            // Update Utility Cost section
+            document.getElementById(`${prefix}-utility-peak`).textContent = formatNumber(financials.utility.peak, 2);
+            document.getElementById(`${prefix}-utility-standard`).textContent = formatNumber(financials.utility.standard, 2);
+            document.getElementById(`${prefix}-utility-off-peak`).textContent = formatNumber(financials.utility.off_peak, 2);
+            document.getElementById(`${prefix}-utility-total`).textContent = formatNumber(financials.utility.total, 2);
+            
+            // Update PPA Cost section
+            document.getElementById(`${prefix}-ppa-peak`).textContent = formatNumber(financials.ppa.peak, 2);
+            document.getElementById(`${prefix}-ppa-standard`).textContent = formatNumber(financials.ppa.standard, 2);
+            document.getElementById(`${prefix}-ppa-off-peak`).textContent = formatNumber(financials.ppa.off_peak, 2);
+            document.getElementById(`${prefix}-ppa-total`).textContent = formatNumber(financials.ppa.total, 2);
+            
+            // Update Savings section
+            document.getElementById(`${prefix}-savings-peak`).textContent = formatNumber(financials.savings.peak, 2);
+            document.getElementById(`${prefix}-savings-standard`).textContent = formatNumber(financials.savings.standard, 2);
+            document.getElementById(`${prefix}-savings-off-peak`).textContent = formatNumber(financials.savings.off_peak, 2);
+            document.getElementById(`${prefix}-total-savings`).textContent = formatNumber(financials.savings.total, 2);
+        }
+        
+        // Financial savings now calculated in updateTouBreakdown
+        
+        function loadFinancialOverview() {
+            if (!dashboardData || !dashboardData.daily_records) {
+                console.log('No daily records available for financial overview');
+                return;
+            }
+            
+            // Calculate lifetime TOU from daily_records (same as updateTouBreakdown does)
+            const lifetimeTOU = { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
+            
+            dashboardData.daily_records.forEach(record => {
+                if (record.tou_breakdown) {
+                    lifetimeTOU.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                    lifetimeTOU.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                    lifetimeTOU.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+                }
+            });
+            
+            // Calculate financial from TOU (using current date for season)
+            const dateStr = new Date().toISOString().split('T')[0];
+            const financials = calculateTOUFinancials(lifetimeTOU, dateStr);
+            
+            console.log('📊 Financial Overview - Calculated from daily_records:', {
+                tou: lifetimeTOU,
+                utility: financials.utility.total,
+                ppa: financials.ppa.total,
+                savings: financials.savings.total
+            });
+            
+            // Update hero card
+            document.getElementById('financial-lifetime-savings').textContent = formatNumber(financials.savings.total, 2);
+            
+            // Update TOU breakdown stats (SAVINGS in ZAR only)
+            const total = financials.savings.total;
+            
+            document.getElementById('financial-peak-savings').textContent = formatNumber(financials.savings.peak, 2);
+            document.getElementById('financial-peak-pct').textContent = formatNumber((financials.savings.peak / total) * 100, 1);
+            
+            document.getElementById('financial-standard-savings').textContent = formatNumber(financials.savings.standard, 2);
+            document.getElementById('financial-standard-pct').textContent = formatNumber((financials.savings.standard / total) * 100, 1);
+            
+            document.getElementById('financial-off-peak-savings').textContent = formatNumber(financials.savings.off_peak, 2);
+            document.getElementById('financial-off-peak-pct').textContent = formatNumber((financials.savings.off_peak / total) * 100, 1);
+            
+            // Load charts
+            loadFinancialMonthlyTouChart();
+            loadFinancialCumulativeChart();
+            loadFinancialTouPieChart();
+        }
+        
+        function loadFinancialMonthlyTouChart() {
+            if (!dashboardData || !dashboardData.daily_records) return;
+            
+            const ctx = document.getElementById('financialMonthlyTouChart').getContext('2d');
+            
+            // Calculate monthly TOU from daily_records (same as cumulative/lifetime charts)
+            const monthlyData = {};
+            
+            dashboardData.daily_records.forEach(record => {
+                const yearMonth = record.date.substring(0, 7); // "YYYY-MM"
+                if (!monthlyData[yearMonth]) {
+                    monthlyData[yearMonth] = {
+                        generation: 0,
+                        tou: { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 }
+                    };
+                }
+                
+                monthlyData[yearMonth].generation += record.generation_kwh || 0;
+                
+                // Sum TOU breakdown (using recalculated values from V11+)
+                if (record.tou_breakdown) {
+                    monthlyData[yearMonth].tou.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                    monthlyData[yearMonth].tou.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                    monthlyData[yearMonth].tou.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+                }
+            });
+            
+            // Sort months
+            const sortedMonths = Object.keys(monthlyData).sort();
+            
+            const labels = sortedMonths.map(month => {
+                const [year, mon] = month.split('-');
+                const date = new Date(year, parseInt(mon) - 1);
+                return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            });
+            
+            // Calculate savings from corrected TOU
+            const peakData = sortedMonths.map(m => {
+                const touKwh = monthlyData[m].tou;
+                const monthDate = m + '-01';
+                const financial = calculateTOUFinancials(touKwh, monthDate);
+                return financial.savings.peak || 0;
+            });
+            
+            const standardData = sortedMonths.map(m => {
+                const touKwh = monthlyData[m].tou;
+                const monthDate = m + '-01';
+                const financial = calculateTOUFinancials(touKwh, monthDate);
+                return financial.savings.standard || 0;
+            });
+            
+            const offPeakData = sortedMonths.map(m => {
+                const touKwh = monthlyData[m].tou;
+                const monthDate = m + '-01';
+                const financial = calculateTOUFinancials(touKwh, monthDate);
+                return financial.savings.off_peak || 0;
+            });
+            
+            if (financialMonthlyTouChart) {
+                financialMonthlyTouChart.destroy();
+            }
+            
+            financialMonthlyTouChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Peak Savings',
+                            data: peakData,
+                            backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Standard Savings',
+                            data: standardData,
+                            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Off-Peak Savings',
+                            data: offPeakData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#ffffff', font: { size: 18 } }
+                        },
+                        y: {
+                            stacked: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: {
+                                color: '#ffffff',
+                                font: { size: 18 },
+                                callback: function(value) {
+                                    return 'R ' + formatNumber(value);
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Savings (ZAR)',
+                                color: '#ffffff',
+                                font: { size: 18, weight: 'bold' }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { color: '#ffffff', font: { size: 16 } }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            titleFont: { size: 18, weight: 'bold' },
+                            bodyFont: { size: 20 },
+                            padding: 15,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': R ' + formatNumber(context.parsed.y, 2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function loadFinancialCumulativeChart() {
+            if (!dashboardData || !dashboardData.daily_records) return;
+            
+            const ctx = document.getElementById('financialCumulativeChart').getContext('2d');
+            
+            // Group daily_records by month and calculate TOU/financial for each month
+            const monthlyData = {};
+            
+            dashboardData.daily_records.forEach(record => {
+                const yearMonth = record.date.substring(0, 7); // "2025-11"
+                
+                if (!monthlyData[yearMonth]) {
+                    monthlyData[yearMonth] = {
+                        tou: { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 }
+                    };
+                }
+                
+                // Sum TOU breakdown (using recalculated values if available)
+                if (record.tou_breakdown) {
+                    monthlyData[yearMonth].tou.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                    monthlyData[yearMonth].tou.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                    monthlyData[yearMonth].tou.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+                }
+            });
+            
+            // Sort months
+            const sortedMonths = Object.keys(monthlyData).sort();
+            
+            const labels = sortedMonths.map(month => {
+                const [year, mon] = month.split('-');
+                const date = new Date(year, parseInt(mon) - 1);
+                return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            });
+            
+            // Calculate cumulative savings using corrected TOU data
+            let cumulative = 0;
+            const cumulativeData = sortedMonths.map(m => {
+                const touKwh = monthlyData[m].tou;
+                const monthDate = m + '-01'; // First day of month for season detection
+                
+                console.log(`📊 Month ${m} TOU:`, touKwh);
+                
+                // Calculate financial savings for this month
+                const financial = calculateTOUFinancials(touKwh, monthDate);
+                
+                console.log(`📊 Month ${m} Financial:`, {
+                    utility: financial.utility?.total,
+                    ppa: financial.ppa?.total,
+                    savings: financial.savings?.total
+                });
+                
+                const monthlySavings = financial.savings?.total || 0;  // ✅ Use .total not .total_savings_zar
+                
+                cumulative += monthlySavings;
+                console.log(`📊 Month ${m} Cumulative so far: R${cumulative.toFixed(2)}`);
+                return cumulative;
+            });
+            
+            console.log(`📊 Cumulative Savings Chart - Calculated from daily_records:`, {
+                months: sortedMonths.length,
+                finalCumulative: cumulative.toFixed(2)
+            });
+            
+            if (financialCumulativeChart) {
+                financialCumulativeChart.destroy();
+            }
+            
+            financialCumulativeChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cumulative Savings',
+                        data: cumulativeData,
+                        borderColor: 'rgba(255, 215, 0, 1)',
+                        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: 'rgba(255, 215, 0, 1)',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#ffffff', font: { size: 18 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: {
+                                color: '#ffffff',
+                                font: { size: 18 },
+                                callback: function(value) {
+                                    return 'R ' + formatNumber(value);
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Cumulative Savings (ZAR)',
+                                color: '#ffffff',
+                                font: { size: 18, weight: 'bold' }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            titleFont: { size: 20, weight: 'bold' },
+                            bodyFont: { size: 24 },
+                            padding: 20,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Total: R ' + formatNumber(context.parsed.y, 0);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function loadFinancialTouPieChart() {
+            if (!dashboardData || !dashboardData.lifetime) {
+                console.warn('No dashboard data or lifetime data for TOU pie chart');
+                return;
+            }
+            
+            const canvasElement = document.getElementById('financialTouPieChart');
+            if (!canvasElement) {
+                console.error('Canvas element financialTouPieChart not found!');
+                return;
+            }
+            
+            const ctx = canvasElement.getContext('2d');
+            const lifetime = dashboardData.lifetime;
+            const tou = lifetime.tou_breakdown;
+            
+            console.log('TOU Pie Chart - tou_breakdown:', tou);
+            
+            if (!tou) {
+                console.warn('No TOU breakdown data available');
+                return;
+            }
+            
+            if (financialTouPieChart) {
+                financialTouPieChart.destroy();
+            }
+            
+            const peakValue = tou.peak_kwh || 0;
+            const standardValue = tou.standard_kwh || 0;
+            const offPeakValue = tou.off_peak_kwh || 0;
+            
+            console.log(`TOU values - Peak: ${peakValue}, Standard: ${standardValue}, Off-Peak: ${offPeakValue}`);
+            
+            financialTouPieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Peak', 'Standard', 'Off-Peak'],
+                    datasets: [{
+                        data: [
+                            tou.peak_kwh || 0,
+                            tou.standard_kwh || 0,
+                            tou.off_peak_kwh || 0
+                        ],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(16, 185, 129, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(16, 185, 129, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: '#ffffff',
+                            titleFont: { size: 18, weight: 'bold' },
+                            bodyColor: '#ffffff',
+                            bodyFont: { size: 16 },
+                            borderColor: '#4ade80',
+                            borderWidth: 2,
+                            padding: 15,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return label + ': ' + formatNumber(value, 1) + ' kWh (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            console.log('✓ TOU Pie Chart created successfully with data:', [peakValue, standardValue, offPeakValue]);
+            
+            // Populate the data table
+            const total = peakValue + standardValue + offPeakValue;
+            const tableBody = document.getElementById('tou-distribution-table');
+            
+            if (tableBody && total > 0) {
+                const peakPct = ((peakValue / total) * 100).toFixed(1);
+                const standardPct = ((standardValue / total) * 100).toFixed(1);
+                const offPeakPct = ((offPeakValue / total) * 100).toFixed(1);
+                
+                tableBody.innerHTML = `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <td style="padding: 15px;">
+                            <span style="color: #ffffff; font-weight: 600;">Peak</span>
+                        </td>
+                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: var(--font-base);">${formatNumber(peakValue, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffffff; font-weight: 600;">${peakPct}%</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <td style="padding: 15px;">
+                            <span style="color: #ffffff; font-weight: 600;">Standard</span>
+                        </td>
+                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: var(--font-base);">${formatNumber(standardValue, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffffff; font-weight: 600;">${standardPct}%</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px;">
+                            <span style="color: #ffffff; font-weight: 600;">Off-Peak</span>
+                        </td>
+                        <td style="padding: 15px; text-align: right; color: #ffd700; font-weight: 700; font-size: var(--font-base);">${formatNumber(offPeakValue, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffffff; font-weight: 600;">${offPeakPct}%</td>
+                    </tr>
+                    <tr style="border-top: 2px solid rgba(255,255,255,0.3); font-weight: bold;">
+                        <td style="padding: 15px; color: #ffffff; font-size: var(--font-base);">Total</td>
+                        <td style="padding: 15px; text-align: right; color: #4ade80; font-weight: 700; font-size: var(--font-base);">${formatNumber(total, 0)} kWh</td>
+                        <td style="padding: 15px; text-align: right; color: #ffffff;">100%</td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // End Phase 2 Functions
+        
+        
+        // ============================================
+        // DOWNTIME ANALYSIS FUNCTIONS
+        // ============================================
+        
+        function setDowntimeRange(range) {
+            const startInput = document.getElementById('downtime-start-date');
+            const endInput = document.getElementById('downtime-end-date');
+            const today = new Date();
+            
+            let startDate, endDate;
+            
+            switch(range) {
+                case 'today':
+                    startDate = endDate = new Date(today);
+                    break;
+                case 'yesterday':
+                    startDate = endDate = new Date(today.setDate(today.getDate() - 1));
+                    break;
+                case 'thisWeek':
+                    startDate = new Date(today.setDate(today.getDate() - today.getDay()));
+                    endDate = new Date();
+                    break;
+                case 'lastWeek':
+                    endDate = new Date(today.setDate(today.getDate() - today.getDay() - 1));
+                    startDate = new Date(endDate);
+                    startDate.setDate(endDate.getDate() - 6);
+                    break;
+                case 'thisMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = new Date();
+                    break;
+                case 'lastMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                    break;
+            }
+            
+            startInput.value = startDate.toISOString().split('T')[0];
+            endInput.value = endDate.toISOString().split('T')[0];
+            
+            // Auto-trigger analysis
+            loadDowntimeAnalysis();
+        }
+        
+        async function loadDowntimeAnalysis() {
+            const startDate = document.getElementById('downtime-start-date').value;
+            const endDate = document.getElementById('downtime-end-date').value;
+            
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            if (!dashboardData || !dashboardData.daily_records) {
+                console.error('Dashboard data not loaded');
+                return;
+            }
+            
+            console.log(`📊 Analyzing downtime from ${startDate} to ${endDate}`);
+            
+            // Filter records within date range
+            const records = dashboardData.daily_records.filter(r => 
+                r.date >= startDate && r.date <= endDate
+            );
+            
+            if (records.length === 0) {
+                updateDowntimeUI([], 0, 0, 0);
+                return;
+            }
+            
+            // Analyze each day for downtime events
+            const downtimeEvents = [];
+            let totalDowntimeMinutes = 0;
+            let totalLostGeneration = 0;
+            let totalFinancialLoss = 0;
+            
+            for (const record of records) {
+                if (!record.hourly_data || record.hourly_data.length === 0) continue;
+                
+                const dayDowntime = analyzeDayDowntime(record, records);  // Pass all records
+                downtimeEvents.push(...dayDowntime);
+                
+                dayDowntime.forEach(event => {
+                    totalDowntimeMinutes += event.durationMinutes;
+                    totalLostGeneration += event.lostGeneration;
+                    totalFinancialLoss += event.financialLoss;
+                });
+            }
+            
+            console.log(`Found ${downtimeEvents.length} downtime events`);
+            console.log(`Total downtime: ${(totalDowntimeMinutes / 60).toFixed(2)} hours`);
+            console.log(`Lost generation: ${totalLostGeneration.toFixed(2)} kWh`);
+            console.log(`Financial loss: R ${totalFinancialLoss.toFixed(2)}`);
+            
+            updateDowntimeUI(downtimeEvents, totalDowntimeMinutes, totalLostGeneration, totalFinancialLoss);
+        }
+        
+        
+        function calculateActualDuration(startHour, startMinute, endHour, endMinute) {
+            // Calculate duration in minutes from start to end time
+            const startTotalMinutes = (startHour * 60) + startMinute;
+            const endTotalMinutes = (endHour * 60) + endMinute;
+            return endTotalMinutes - startTotalMinutes;
+        }
+        
+        function analyzeDayDowntime(record, allRecords) {
+            const downtimeEvents = [];
+            const hourlyData = record.hourly_data;
+            
+            if (!hourlyData || hourlyData.length === 0) return downtimeEvents;
+            
+            // Analyze 5-minute intervals
+            let currentDowntime = null;
+            
+            for (let i = 0; i < hourlyData.length; i++) {
+                const hour = hourlyData[i];
+                const hourNum = parseInt(hour.time.split(':')[0]);
+                const minuteNum = parseInt(hour.time.split(':')[1]);
+                
+                // Only check daylight hours (6 AM to 7 PM)
+                if (hourNum < 6 || hourNum >= 19) continue;
+                
+                const generation = hour.generation_kw || 0;
+                
+                // Calculate expected generation from same-time averages across the month
+                const expectedGen = getExpectedFromMonthAverage(allRecords, record.date, hourNum, minuteNum);
+                
+                // Consider it downtime if generation is 0 or <5% of expected during daylight
+                const isDowntime = generation < (expectedGen * 0.05) && expectedGen > 1;
+                
+                if (isDowntime) {
+                    if (!currentDowntime) {
+                        // Start new downtime event
+                        currentDowntime = {
+                            date: record.date,
+                            startTime: hour.time,
+                            startHour: hourNum,
+                            startMinute: minuteNum,
+                            lostGeneration: 0,
+                            lostGenerationByTOU: { peak: 0, standard: 0, off_peak: 0 },
+                            durationMinutes: 0
+                        };
+                    }
+                    
+                    // Calculate lost generation for this interval
+                    // Data is HOURLY (not 5-minute), so kW × 1 hour = kWh
+                    const lostKWh = expectedGen * 1; // 1 hour interval
+                    currentDowntime.lostGeneration += lostKWh;
+                    
+                    // Determine TOU period for this time
+                    const touPeriod = getTOUPeriod(record.date, hourNum, minuteNum);
+                    currentDowntime.lostGenerationByTOU[touPeriod] += lostKWh;
+                    
+                    currentDowntime.durationMinutes += 5;
+                    
+                } else if (currentDowntime) {
+                    // End current downtime event
+                    currentDowntime.endTime = hour.time;
+                    currentDowntime.endHour = hourNum;
+                    currentDowntime.endMinute = minuteNum;
+                    
+                    // Calculate actual duration from start and end times
+                    currentDowntime.durationMinutes = calculateActualDuration(
+                        currentDowntime.startHour, currentDowntime.startMinute,
+                        currentDowntime.endHour, currentDowntime.endMinute
+                    );
+                    
+                    // Calculate financial loss using TOU rates
+                    currentDowntime.financialLoss = calculateTOUFinancialLoss(currentDowntime.lostGenerationByTOU);
+                    
+                    // Only record downtime events >= 10 minutes
+                    if (currentDowntime.durationMinutes >= 10) {
+                        downtimeEvents.push(currentDowntime);
+                    }
+                    
+                    currentDowntime = null;
+                }
+            }
+            
+            // Close any ongoing downtime at end of day
+            if (currentDowntime) {
+                currentDowntime.endTime = hourlyData[hourlyData.length - 1].time;
+                currentDowntime.endHour = parseInt(currentDowntime.endTime.split(':')[0]);
+                currentDowntime.endMinute = parseInt(currentDowntime.endTime.split(':')[1]);
+                
+                // Calculate actual duration from start and end times
+                currentDowntime.durationMinutes = calculateActualDuration(
+                    currentDowntime.startHour, currentDowntime.startMinute,
+                    currentDowntime.endHour, currentDowntime.endMinute
+                );
+                
+                currentDowntime.financialLoss = calculateTOUFinancialLoss(currentDowntime.lostGenerationByTOU);
+                
+                if (currentDowntime.durationMinutes >= 10) {
+                    downtimeEvents.push(currentDowntime);
+                }
+            }
+            
+            return downtimeEvents;
+        }
+        
+        function getExpectedFromMonthAverage(allRecords, currentDate, hourNum, minuteNum) {
+            // Calculate expected generation by averaging same-time-of-day from ALL available days
+            
+            let sum = 0;
+            let count = 0;
+            
+            // Strategy 1: Look for same time across ALL days
+            for (const record of allRecords) {
+                if (record.date === currentDate) continue;
+                if (!record.hourly_data) continue;
+                
+                for (const interval of record.hourly_data) {
+                    // More lenient time matching - just check hour and minute
+                    const intervalHour = parseInt(interval.time.split(':')[0]);
+                    const intervalMinute = parseInt(interval.time.split(':')[1]);
+                    
+                    if (intervalHour === hourNum && intervalMinute === minuteNum) {
+                        const gen = interval.generation_kw || 0;
+                        if (gen > 0.5) {
+                            sum += gen;
+                            count++;
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // Accept ANY positive data points
+            if (count > 0) {
+                const avg = sum / count;
+                console.log(`✓ ${hourNum}:${String(minuteNum).padStart(2,'0')} - Found ${count} points, avg: ${avg.toFixed(1)} kW`);
+                return avg;
+            }
+            
+            // Strategy 2: Use same hour from ALL days
+            sum = 0;
+            count = 0;
+            
+            for (const record of allRecords) {
+                if (record.date === currentDate) continue;
+                if (!record.hourly_data) continue;
+                
+                for (const interval of record.hourly_data) {
+                    const intervalHour = parseInt(interval.time.split(':')[0]);
+                    if (intervalHour === hourNum) {
+                        const gen = interval.generation_kw || 0;
+                        if (gen > 0.5) {
+                            sum += gen;
+                            count++;
+                        }
+                    }
+                }
+            }
+            
+            if (count > 0) {
+                const avg = sum / count;
+                console.log(`✓ Hour ${hourNum} - Found ${count} hourly points, avg: ${avg.toFixed(1)} kW`);
+                return avg;
+            }
+            
+            // Strategy 3: Use REALISTIC pattern for 71.59 kWp system
+            console.log(`⚠ Using fallback pattern for hour ${hourNum}`);
+            const typicalPattern = {
+                6: 10,   7: 22,   8: 35,   9: 48,
+                10: 58,  11: 65,  12: 68,  13: 65,
+                14: 58,  15: 48,  16: 35,  17: 22,  18: 10
+            };
+            
+            return typicalPattern[hourNum] || 5;
+        }
+        
+        function getTOUPeriod(date, hour, minute) {
+            // Eskom TOU Schedule for Cape Town
+            const dayOfWeek = new Date(date).getDay(); // 0 = Sunday, 6 = Saturday
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            
+            // Parse date to get month
+            const month = parseInt(date.split('-')[1]);
+            const isSummer = month >= 9 || month <= 4; // Sept-April (low demand)
+            
+            // Convert to decimal hours for easier comparison
+            const decimalHour = hour + (minute / 60);
+            
+            if (isWeekend) {
+                // Weekends: Only Off-Peak
+                return 'off_peak';
+            }
+            
+            // Weekdays
+            if (isSummer) {
+                // Summer (Sept-April, low demand) - Weekdays
+                // Peak is 7-9am and 6-8pm
+                if ((decimalHour >= 7 && decimalHour < 9) || (decimalHour >= 18 && decimalHour < 20)) {
+                    return 'peak';
+                } else if ((decimalHour >= 6 && decimalHour < 7) || 
+                          (decimalHour >= 9 && decimalHour < 18) || 
+                          (decimalHour >= 20 && decimalHour < 22)) {
+                    return 'standard';
+                } else {
+                    return 'off_peak';
+                }
+            } else {
+                // Winter (May-Aug, high demand) - Weekdays
+                if ((decimalHour >= 6 && decimalHour < 9) || (decimalHour >= 17 && decimalHour < 19)) {
+                    return 'peak';
+                } else if ((decimalHour >= 9 && decimalHour < 17) || 
+                          (decimalHour >= 19 && decimalHour < 22)) {
+                    return 'standard';
+                } else {
+                    return 'off_peak';
+                }
+            }
+        }
+        
+        function calculateTOUFinancialLoss(lostGenerationByTOU) {
+            // Downtime loss calculation
+            // When solar is down, you lose the PPA generation cost (R1.50/kWh)
+            const PPA_RATE = 1.50;  // Cost of solar generation
+            
+            const totalLostGeneration = 
+                lostGenerationByTOU.peak + 
+                lostGenerationByTOU.standard + 
+                lostGenerationByTOU.off_peak;
+            
+            const loss = totalLostGeneration * PPA_RATE;
+            
+            return loss;
+        }
+        
+        function updateDowntimeUI(events, totalMinutes, lostGen, financialLoss) {
+            // Update summary stats
+            document.getElementById('downtime-events-count').textContent = events.length;
+            document.getElementById('downtime-total-duration').textContent = 
+                `${(totalMinutes / 60).toFixed(1)} hrs`;
+            document.getElementById('downtime-lost-generation').textContent = 
+                `${lostGen.toFixed(1)} kWh`;
+            document.getElementById('downtime-financial-loss').textContent = 
+                `R ${formatNumber(financialLoss, 2)}`;
+            
+            // Update table
+            const tbody = document.getElementById('downtime-table-body');
+            
+            if (events.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="padding: 40px; text-align: center; color: #4ade80; font-size: var(--font-base);">
+                            ✅ No significant downtime detected in selected period
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Sort events by date and time (newest first)
+            events.sort((a, b) => {
+                const dateCompare = b.date.localeCompare(a.date);
+                if (dateCompare !== 0) return dateCompare;
+                return b.startTime.localeCompare(a.startTime);
+            });
+            
+            tbody.innerHTML = events.map(event => {
+                const duration = event.durationMinutes >= 60 ? 
+                    `${Math.floor(event.durationMinutes / 60)}h ${event.durationMinutes % 60}m` :
+                    `${event.durationMinutes}m`;
+                
+                // Color code by severity
+                let severityColor = '#4ade80'; // green for minor
+                if (event.durationMinutes >= 60) severityColor = '#ef4444'; // red for >1hr
+                else if (event.durationMinutes >= 30) severityColor = '#ff9800'; // orange for 30-60min
+                
+                // Create TOU breakdown tooltip
+                const touBreakdown = `Peak: ${event.lostGenerationByTOU.peak.toFixed(1)} kWh @ R4.68
+Standard: ${event.lostGenerationByTOU.standard.toFixed(1)} kWh @ R3.38
+Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
+                
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                        <td style="padding: 20px; color: #ffffff; font-size: var(--font-base);">${event.date}</td>
+                        <td style="padding: 20px; color: #ffffff; font-size: var(--font-base);">${event.startTime}</td>
+                        <td style="padding: 20px; color: #ffffff; font-size: var(--font-base);">${event.endTime}</td>
+                        <td style="padding: 20px; text-align: center; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);">${duration}</td>
+                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);" title="${touBreakdown}">${event.lostGeneration.toFixed(1)}</td>
+                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);" title="${touBreakdown}">R ${event.financialLoss.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Report Tab Functions
+        function setReportDateRange(range) {
+            const startInput = document.getElementById('report-start-date');
+            const endInput = document.getElementById('report-end-date');
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            
+            switch(range) {
+                case 'today':
+                    startInput.value = todayStr;
+                    endInput.value = todayStr;
+                    break;
+                case 'thisWeek':
+                    const weekStart = new Date(today);
+                    weekStart.setDate(today.getDate() - today.getDay());
+                    startInput.value = weekStart.toISOString().split('T')[0];
+                    endInput.value = todayStr;
+                    break;
+                case 'thisMonth':
+                    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                    startInput.value = monthStart.toISOString().split('T')[0];
+                    endInput.value = todayStr;
+                    break;
+                case 'lastMonth':
+                    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                    startInput.value = lastMonthStart.toISOString().split('T')[0];
+                    endInput.value = lastMonthEnd.toISOString().split('T')[0];
+                    break;
+                case 'lifetime':
+                    if (dashboardData && dashboardData.system && dashboardData.system.commissioning_date) {
+                        startInput.value = dashboardData.system.commissioning_date;
+                    } else {
+                        // Fallback to first available date
+                        startInput.value = '2025-11-25';
+                    }
+                    endInput.value = todayStr;
+                    break;
+            }
+        }
+        
+        async function generateReport() {
+            const statusEl = document.getElementById('report-status');
+            const infoEl = document.getElementById('report-info');
+            
+            // Get selections
+            const startDate = document.getElementById('report-start-date').value;
+            const endDate = document.getElementById('report-end-date').value;
+            const interval = document.querySelector('input[name="interval"]:checked').value;
+            const selectedFields = Array.from(document.querySelectorAll('input[name="fields"]:checked')).map(cb => cb.value);
+            
+            // Validation
+            if (!startDate || !endDate) {
+                statusEl.textContent = '⚠️ Please select start and end dates';
+                statusEl.style.color = '#ff4444';
+                return;
+            }
+            
+            if (new Date(startDate) > new Date(endDate)) {
+                statusEl.textContent = '⚠️ Start date must be before end date';
+                statusEl.style.color = '#ff4444';
+                return;
+            }
+            
+            if (selectedFields.length === 0) {
+                statusEl.textContent = '⚠️ Please select at least one data field';
+                statusEl.style.color = '#ff4444';
+                return;
+            }
+            
+            statusEl.textContent = '⏳ Generating report...';
+            statusEl.style.color = '#FFD700';
+            infoEl.textContent = '';
+            
+            try {
+                // Use already-loaded dashboard data
+                if (!dashboardData || !dashboardData.daily_records) {
+                    throw new Error('Dashboard data not loaded. Please refresh the page.');
+                }
+                
+                const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+                const predPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+                
+                // Load predictions data
+                let predData = null;
+                try {
+                    const predResp = await fetch(predPath);
+                    if (predResp.ok) {
+                        predData = await predResp.json();
+                    }
+                } catch (err) {
+                    console.warn('Could not load predictions:', err);
+                }
+                
+                // Generate CSV based on interval
+                console.log('📊 Report Generation:');
+                console.log('  Interval:', interval);
+                console.log('  Date range:', startDate, 'to', endDate);
+                console.log('  Fields:', selectedFields);
+                console.log('  Dashboard data available:', !!dashboardData);
+                console.log('  Predictions data available:', !!predData);
+                
+                let csvData;
+                switch(interval) {
+                    case '5min':
+                        csvData = await generate5MinReport(dashboardData, predData, startDate, endDate, selectedFields);
+                        break;
+                    case '15min':
+                        csvData = await generate15MinReport(dashboardData, predData, startDate, endDate, selectedFields);
+                        break;
+                    case 'hourly':
+                        csvData = await generateHourlyReport(dashboardData, predData, startDate, endDate, selectedFields);
+                        break;
+                    case 'daily':
+                        csvData = await generateDailyReport(dashboardData, predData, startDate, endDate, selectedFields);
+                        break;
+                    case 'monthly':
+                        csvData = await generateMonthlyReport(dashboardData, predData, startDate, endDate, selectedFields);
+                        break;
+                }
+                
+                console.log('  CSV generated, length:', csvData?.length || 0);
+                
+                if (!csvData || csvData.length < 100) {
+                    throw new Error('Generated CSV is empty or too small. Check date range and data availability.');
+                }
+                
+                // Download CSV
+                const blob = new Blob([csvData], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `1stAveSpar_Report_${interval}_${startDate}_to_${endDate}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                statusEl.textContent = '✅ Report downloaded successfully!';
+                statusEl.style.color = '#4ade80';
+                infoEl.textContent = `File: ${a.download}`;
+                
+            } catch (error) {
+                console.error('Report generation error:', error);
+                statusEl.textContent = '❌ Error generating report';
+                statusEl.style.color = '#ff4444';
+                infoEl.textContent = error.message;
+            }
+        }
+        
+        // Word Document Report Generation
+        async function generateWordReport() {
+            const statusEl = document.getElementById('word-report-status');
+            const monthInput = document.getElementById('word-report-month');
+            
+            if (!monthInput.value) {
+                statusEl.textContent = '⚠️ Please select a report month';
+                statusEl.style.color = '#ff9800';
+                return;
+            }
+            
+            // Check if docx library is loaded
+            if (typeof window.docx === 'undefined') {
+                statusEl.textContent = '❌ Word document library not loaded. Please refresh the page.';
+                statusEl.style.color = '#ff4444';
+                console.error('docx library not available. window.docx:', typeof window.docx);
+                return;
+            }
+            
+            try {
+                statusEl.textContent = '⏳ Generating Word document...';
+                statusEl.style.color = '#4ade80';
+                
+                const [year, month] = monthInput.value.split('-');
+                const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+                const reportTitle = `${monthName} ${year} Performance Report`;
+                
+                // Get data for the selected month
+                const monthData = await getMonthData(year, month);
+                
+                // Generate Word document
+                await createWordDocument(monthData, reportTitle, year, month);
+                
+                statusEl.textContent = '✅ Word document generated successfully!';
+                statusEl.style.color = '#4ade80';
+                
+            } catch (error) {
+                console.error('Word report generation error:', error);
+                statusEl.textContent = `❌ Error generating Word report: ${error.message}`;
+                statusEl.style.color = '#ff4444';
+            }
+        }
+        
+        async function getMonthData(year, month) {
+            const monthKey = `${year}-${month}`;
+            
+            // Get all records for the selected month
+            const monthRecords = dashboardData.daily_records.filter(r => r.date.startsWith(monthKey));
+            
+            // Calculate totals
+            let totalGeneration = 0;
+            let totalPredicted = 0;
+            let totalLoad = 0;
+            let totalGrid = 0;
+            let totalSavings = 0;
+            
+            monthRecords.forEach(record => {
+                totalGeneration += record.generation_kwh || 0;
+                totalLoad += record.load_kwh || 0;
+                totalGrid += Math.abs(record.grid_kwh || 0);
+                totalSavings += record.savings_zar || 0;
+            });
+            
+            // Get predictions
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            const predResponse = await fetch(predictionsPath);
+            const predictions = await predResponse.json();
+            
+            // Calculate expected for month
+            Object.keys(predictions.daily_predictions)
+                .filter(date => date.startsWith(monthKey))
+                .forEach(date => {
+                    const dayPred = predictions.daily_predictions[date];
+                    if (dayPred.pv_kw) {
+                        totalPredicted += dayPred.pv_kw.reduce((sum, val) => sum + val, 0);
+                    }
+                });
+            
+            const performance = totalPredicted > 0 ? ((totalGeneration / totalPredicted) * 100) : 0;
+            
+            return {
+                monthRecords,
+                totalGeneration,
+                totalPredicted,
+                totalLoad,
+                totalGrid,
+                totalSavings,
+                performance,
+                year,
+                month
+            };
+        }
+        
+        async function createWordDocument(data, title, year, month) {
+            // Access docx from window since it's loaded via CDN
+            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
+                    AlignmentType, WidthType, BorderStyle, ShadingType, HeadingLevel } = window.docx;
+            
+            const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+            
+            // Create document sections
+            const sections = [];
+            
+            // Title page - LARGER FONTS
+            sections.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "1st Avenue Spar", size: 48, bold: true })],  // 24pt
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 1440, after: 240 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: title, size: 40, bold: true })],  // 20pt
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 2880 }
+                })
+            );
+            
+            // 1. INTRODUCTION - LARGER FONTS
+            sections.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "INTRODUCTION", size: 32, bold: true })],  // 16pt
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    children: [
+                        new TextRun({
+                            text: `The following report contains a summary of the solar plant's performance for ${monthName} ${year}. The plant is monitored through the Genergy online portal, which provides real-time data on generation, load consumption, and grid usage.`,
+                            size: 24  // 12pt body text
+                        })
+                    ],
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // 2. OVERVIEW - LARGER FONTS
+            sections.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "OVERVIEW", size: 32, bold: true })],  // 16pt
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({ 
+                        text: `The table below provides a summary of ${monthName} ${year}'s generation values compared to expected performance:`,
+                        size: 24  // 12pt
+                    })],
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // Overview table - LARGER FONTS
+            const overviewTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({ 
+                                children: [new Paragraph({ children: [new TextRun({ text: "Metric", bold: true, size: 26 })] })],  // 13pt
+                                shading: { fill: "FFD700" } 
+                            }),
+                            new TableCell({ 
+                                children: [new Paragraph({ children: [new TextRun({ text: "Value", bold: true, size: 26 })] })],  // 13pt
+                                shading: { fill: "FFD700" } 
+                            })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Total Generation", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalGeneration.toFixed(2)} kWh`, size: 24 })] })] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Expected Generation", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalPredicted.toFixed(2)} kWh`, size: 24 })] })] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Performance", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.performance.toFixed(1)}%`, size: 24 })] })] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Total Load", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalLoad.toFixed(2)} kWh`, size: 24 })] })] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Grid Usage", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalGrid.toFixed(2)} kWh`, size: 24 })] })] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Total Savings", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `R ${formatNumber(data.totalSavings, 2)}`, size: 24 })] })] })
+                        ]
+                    })
+                ]
+            });
+            sections.push(overviewTable);
+            
+            // 3. PERFORMANCE FIGURES
+            sections.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "PERFORMANCE FIGURES", size: 32, bold: true })],
+                    spacing: { before: 480, after: 240 }
+                })
+            );
+            
+            // 3.1 Daily Performance
+            sections.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "3.1 Daily Performance", size: 28, bold: true })],  // 14pt
+                    spacing: { before: 360, after: 240 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: `Daily generation values for ${monthName} ${year}:`, size: 24 })],
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // Daily performance table (first 10 days as sample) - LARGER FONTS
+            const dailyRows = [
+                new TableRow({
+                    children: [
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Date", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Generation (kWh)", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Performance (%)", bold: true, size: 26 })] })], shading: { fill: "FFD700" } })
+                    ]
+                })
+            ];
+            
+            data.monthRecords.slice(0, 10).forEach(record => {
+                dailyRows.push(
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: record.date, size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: record.generation_kwh.toFixed(2), size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (record.performance_ratio * 100).toFixed(1) + "%", size: 24 })] })] })
+                        ]
+                    })
+                );
+            });
+            
+            const dailyTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: dailyRows });
+            sections.push(dailyTable);
+            
+            // Comments - LARGER FONTS
+            sections.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "Comment on Daily Performance", bold: true, size: 26 })],
+                    spacing: { before: 240, after: 120 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({
+                        text: `The system performed consistently throughout ${monthName} ${year}, with daily yields generally aligning with expectations. The overall performance ratio of ${data.performance.toFixed(1)}% indicates ${data.performance >= 100 ? 'excellent' : 'good'} system operation.`,
+                        size: 24
+                    })],
+                    spacing: { after: 360 }
+                })
+            );
+            
+            // 4. FINANCIAL SUMMARY
+            sections.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "FINANCIAL SUMMARY", size: 32, bold: true })],
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: `Total electricity cost savings for ${monthName} ${year}:`, size: 24 })],
+                    spacing: { after: 240 }
+                })
+            );
+            
+            const financialTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Category", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Amount (ZAR)", bold: true, size: 26 })] })], shading: { fill: "FFD700" } })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Total Monthly Savings", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `R ${formatNumber(data.totalSavings, 2)}`, size: 24 })] })] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Energy Generated", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalGeneration.toFixed(2)} kWh`, size: 24 })] })] })
+                        ]
+                    }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Grid Consumption", size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${data.totalGrid.toFixed(2)} kWh`, size: 24 })] })] })
+                        ]
+                    })
+                ]
+            });
+            sections.push(financialTable);
+            
+            // 5. WARRANTY STATUS
+            sections.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "MAJOR COMPONENT WARRANTIES", size: 32, bold: true })],
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: "The remaining warranty periods for the system's major components are given below:", size: 24 })],
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // Warranty table - LARGER FONTS
+            const warrantyRows = [
+                new TableRow({
+                    children: [
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Component", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Days Remaining", bold: true, size: 26 })] })], shading: { fill: "FFD700" } }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Status", bold: true, size: 26 })] })], shading: { fill: "FFD700" } })
+                    ]
+                })
+            ];
+            
+            warrantyData.forEach(item => {
+                const { diffDays } = calculateDaysRemaining(item.startDate, item.durationMonths);
+                const status = diffDays > 0 ? "Active" : "Expired";
+                warrantyRows.push(
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.item, size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: Math.max(0, diffDays).toString(), size: 24 })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: status, size: 24 })] })] })
+                        ]
+                    })
+                );
+            });
+            
+            const warrantyTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: warrantyRows });
+            sections.push(warrantyTable);
+            
+            // 6. CONCLUSION
+            sections.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "CONCLUSION", size: 32, bold: true })],
+                    spacing: { before: 480, after: 240 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({
+                        text: `The report indicates that the system is performing ${data.performance >= 100 ? 'excellently' : 'as designed'} and is continuing to operate as expected. The ${monthName} ${year} performance of ${data.performance.toFixed(1)}% demonstrates reliable energy production.`,
+                        size: 24
+                    })],
+                    spacing: { after: 240 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({
+                        text: "The system is monitored continuously, and all data is logged onto the online portal. Any significant deviations from expected performance are investigated promptly.",
+                        size: 24
+                    })],
+                    spacing: { after: 240 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({
+                        text: "Please do not hesitate to contact us if you have any queries related to this report.",
+                        size: 24
+                    })],
+                    spacing: { after: 240 }
+                })
+            );
+            
+            // Create document
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            size: { width: 12240, height: 15840 },  // US Letter
+                            margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+                        }
+                    },
+                    children: sections
+                }]
+            });
+            
+            // Generate and download
+            const blob = await Packer.toBlob(doc);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `1stAveSpar_${monthName}_${year}_Report.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // Report Generation Helper Functions
+        async function generate5MinReport(dashData, predData, startDate, endDate, fields) {
+            let csv = 'Timestamp';
+            if (fields.includes('generation')) csv += ',Actual Generation (kW)';
+            if (fields.includes('predicted_generation')) csv += ',Predicted Generation (kW)';
+            if (fields.includes('load')) csv += ',Actual Load (kW)';
+            if (fields.includes('predicted_load')) csv += ',Predicted Load (kW)';
+            if (fields.includes('grid')) csv += ',Actual Grid (kW)';
+            if (fields.includes('predicted_grid')) csv += ',Predicted Grid (kW)';
+            if (fields.includes('irradiation')) csv += ',Irradiation (W/m²)';
+            if (fields.includes('performance')) csv += ',Performance (%)';
+            csv += '\n';
+            
+            console.log('📊 Generating 5-minute report:');
+            console.log('  Using SheetJS to parse Excel files...');
+            
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            
+            // Get list of dates
+            const dateList = [];
+            let currentDate = new Date(startDate);
+            const endDateObj = new Date(endDate);
+            
+            while (currentDate <= endDateObj) {
+                dateList.push(currentDate.toISOString().split('T')[0]);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            console.log('  Dates to load:', dateList);
+            
+            let rowCount = 0;
+            let filesLoaded = 0;
+            
+            for (const date of dateList) {
+                const dailyFilePath = `${basePath}data/daily/${date}.xls`.replace('//', '/');
+                
+                try {
+                    const response = await fetch(dailyFilePath);
+                    if (!response.ok) {
+                        console.log(`  ⚠️ No file for ${date}`);
+                        continue;
+                    }
+                    
+                    // Get as array buffer for SheetJS
+                    const arrayBuffer = await response.arrayBuffer();
+                    
+                    // Parse Excel file
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    
+                    // Get first sheet
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    
+                    // Convert to JSON (array of arrays)
+                    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    if (data.length < 2) {
+                        console.log(`  ⚠️ Empty sheet for ${date}`);
+                        continue;
+                    }
+                    
+                    filesLoaded++;
+                    console.log(`  ✓ Loaded ${date} - ${data.length} rows`);
+                    
+                    // Find the actual data table header (looks for "Number", "Time", "PV", etc.)
+                    let headerIdx = -1;
+                    for (let i = 0; i < data.length; i++) {
+                        const row = data[i];
+                        if (row && row.length >= 5) {
+                            // Check if this looks like the data table header
+                            const rowStr = JSON.stringify(row).toLowerCase();
+                            if (rowStr.includes('time') && (rowStr.includes('pv') || rowStr.includes('load'))) {
+                                headerIdx = i;
+                                console.log(`  ✓ Found data table header at row ${i}`);
+                                console.log(`    Headers:`, JSON.stringify(row));
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (headerIdx === -1) {
+                        console.log(`  ⚠️ Could not find data table header for ${date}`);
+                        continue;
+                    }
+                    
+                    // Identify column indices
+                    const headers = data[headerIdx];
+                    let timeCol = -1, pvCol = -1, loadCol = -1, gridCol = -1, irrCol = -1;
+                    
+                    for (let c = 0; c < headers.length; c++) {
+                        const h = String(headers[c]).toLowerCase();
+                        if (h.includes('time')) timeCol = c;
+                        if (h.includes('pv')) pvCol = c;
+                        if (h.includes('load')) loadCol = c;
+                        if (h.includes('grid')) gridCol = c;
+                        // Note: Irradiation might not be in this format
+                    }
+                    
+                    console.log(`  Column mapping: Time=${timeCol}, PV=${pvCol}, Load=${loadCol}, Grid=${gridCol}`);
+                    
+                    // Process data rows
+                    for (let i = headerIdx + 1; i < data.length; i++) {
+                        const row = data[i];
+                        if (!row || row.length < 5) continue;
+                        
+                        // Get time from timeCol (column with "Time" header)
+                        let time = timeCol >= 0 ? row[timeCol] : null;
+                        
+                        // Skip if no valid time
+                        if (!time) continue;
+                        
+                        // Build full timestamp
+                        let timestamp;
+                        if (typeof time === 'string') {
+                            // Format: "04:35:00" or similar
+                            timestamp = `${date} ${time}`;
+                        } else if (typeof time === 'number') {
+                            // Excel time serial (fraction of day)
+                            const hours = Math.floor(time * 24);
+                            const minutes = Math.floor((time * 24 * 60) % 60);
+                            const seconds = Math.floor((time * 24 * 60 * 60) % 60);
+                            timestamp = `${date} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        } else {
+                            continue;
+                        }
+                        
+                        // Get values from correct columns (convert W to kW)
+                        const pvW = pvCol >= 0 ? (parseFloat(row[pvCol]) || 0) : 0;
+                        const loadW = loadCol >= 0 ? (parseFloat(row[loadCol]) || 0) : 0;
+                        const gridW = gridCol >= 0 ? (parseFloat(row[gridCol]) || 0) : 0;
+                        
+                        // Convert W to kW
+                        const pvKw = pvW / 1000;
+                        const loadKw = loadW / 1000;
+                        const gridKw = gridW / 1000;
+                        const irradiation = 0; // Not available in this format
+                        
+                        // Get hour for predictions
+                        const timeStr = String(timestamp).split(' ')[1] || '00:00:00';
+                        const hour = parseInt(timeStr.split(':')[0]) || 0;
+                        
+                        let csvRow = timestamp;
+                        if (fields.includes('generation')) csvRow += `,${pvKw.toFixed(3)}`;
+                        if (fields.includes('predicted_generation')) {
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
+                            csvRow += `,${pred.toFixed(3)}`;
+                        }
+                        if (fields.includes('load')) csvRow += `,${loadKw.toFixed(3)}`;
+                        if (fields.includes('predicted_load')) {
+                            const pred = predData?.daily_predictions?.[date]?.load_kw?.[hour] || 0;
+                            csvRow += `,${pred.toFixed(3)}`;
+                        }
+                        if (fields.includes('grid')) csvRow += `,${Math.abs(gridKw).toFixed(3)}`;
+                        if (fields.includes('predicted_grid')) {
+                            const pred = predData?.daily_predictions?.[date]?.grid_kw?.[hour] || 0;
+                            csvRow += `,${Math.abs(pred).toFixed(3)}`;
+                        }
+                        if (fields.includes('irradiation')) csvRow += `,${irradiation.toFixed(1)}`;
+                        if (fields.includes('performance')) {
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[hour] || 0;
+                            const perf = pred > 0 ? (pvKw / pred * 100) : 0;
+                            csvRow += `,${perf.toFixed(1)}`;
+                        }
+                        csv += csvRow + '\n';
+                        rowCount++;
+                    }
+                    
+                } catch (err) {
+                    console.error(`  ✗ Error loading ${date}:`, err.message);
+                }
+            }
+            
+            console.log(`  Summary: ${filesLoaded} files loaded, ${rowCount} total rows`);
+            
+            if (rowCount === 0) {
+                let errorCsv = '5-Minute Interval Data Not Available\n';
+                errorCsv += 'No data could be extracted from Excel files.\n';
+                errorCsv += 'Check console for errors.\n';
+                return errorCsv;
+            }
+            
+            return csv;
+        }
+        
+        async function generate15MinReport(dashData, predData, startDate, endDate, fields) {
+            let csv = 'Timestamp';
+            if (fields.includes('generation')) csv += ',Actual Generation (kWh)';
+            if (fields.includes('predicted_generation')) csv += ',Predicted Generation (kWh)';
+            if (fields.includes('load')) csv += ',Actual Load (kWh)';
+            if (fields.includes('predicted_load')) csv += ',Predicted Load (kWh)';
+            if (fields.includes('grid')) csv += ',Actual Grid (kWh)';
+            if (fields.includes('predicted_grid')) csv += ',Predicted Grid (kWh)';
+            if (fields.includes('irradiation')) csv += ',Avg Irradiation (W/m²)';
+            if (fields.includes('performance')) csv += ',Performance (%)';
+            csv += '\n';
+            
+            console.log('📊 Generating 15-minute report:');
+            console.log('  Loading Excel files and aggregating to 15-min intervals...');
+            
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            
+            // Get list of dates
+            const dateList = [];
+            let currentDate = new Date(startDate);
+            const endDateObj = new Date(endDate);
+            
+            while (currentDate <= endDateObj) {
+                dateList.push(currentDate.toISOString().split('T')[0]);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            let rowCount = 0;
+            
+            for (const date of dateList) {
+                const dailyFilePath = `${basePath}data/daily/${date}.xls`.replace('//', '/');
+                
+                try {
+                    const response = await fetch(dailyFilePath);
+                    if (!response.ok) continue;
+                    
+                    const arrayBuffer = await response.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    if (data.length < 2) continue;
+                    
+                    // Find the actual data table header (same as 5-min report)
+                    let headerIdx = -1;
+                    for (let i = 0; i < data.length; i++) {
+                        const row = data[i];
+                        if (row && row.length >= 5) {
+                            const rowStr = JSON.stringify(row).toLowerCase();
+                            if (rowStr.includes('time') && (rowStr.includes('pv') || rowStr.includes('load'))) {
+                                headerIdx = i;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (headerIdx === -1) continue;
+                    
+                    // Identify column indices
+                    const headers = data[headerIdx];
+                    let timeCol = -1, pvCol = -1, loadCol = -1, gridCol = -1;
+                    
+                    for (let c = 0; c < headers.length; c++) {
+                        const h = String(headers[c]).toLowerCase();
+                        if (h.includes('time')) timeCol = c;
+                        if (h.includes('pv')) pvCol = c;
+                        if (h.includes('load')) loadCol = c;
+                        if (h.includes('grid')) gridCol = c;
+                    }
+                    
+                    // Aggregate into 15-minute buckets
+                    const buckets = {}; // Key: "YYYY-MM-DD HH:MM:00"
+                    
+                    for (let i = headerIdx + 1; i < data.length; i++) {
+                        const row = data[i];
+                        if (!row || row.length < 5) continue;
+                        
+                        let time = timeCol >= 0 ? row[timeCol] : null;
+                        if (!time) continue;
+                        
+                        // Build timestamp
+                        let timestamp;
+                        if (typeof time === 'string') {
+                            timestamp = `${date} ${time}`;
+                        } else if (typeof time === 'number') {
+                            const hours = Math.floor(time * 24);
+                            const minutes = Math.floor((time * 24 * 60) % 60);
+                            const seconds = Math.floor((time * 24 * 60 * 60) % 60);
+                            timestamp = `${date} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        } else {
+                            continue;
+                        }
+                        
+                        // Parse timestamp to get 15-min bucket
+                        const timeStr = timestamp.split(' ')[1] || '00:00:00';
+                        const [hourStr, minStr] = timeStr.split(':');
+                        const hour = parseInt(hourStr) || 0;
+                        const minute = parseInt(minStr) || 0;
+                        const bucket15 = Math.floor(minute / 15) * 15;
+                        
+                        const bucketKey = `${date} ${hour.toString().padStart(2, '0')}:${bucket15.toString().padStart(2, '0')}:00`;
+                        
+                        if (!buckets[bucketKey]) {
+                            buckets[bucketKey] = { pv: [], load: [], grid: [], hour: hour };
+                        }
+                        
+                        // Get values and convert W to kW
+                        const pvW = pvCol >= 0 ? (parseFloat(row[pvCol]) || 0) : 0;
+                        const loadW = loadCol >= 0 ? (parseFloat(row[loadCol]) || 0) : 0;
+                        const gridW = gridCol >= 0 ? (parseFloat(row[gridCol]) || 0) : 0;
+                        
+                        buckets[bucketKey].pv.push(pvW / 1000);
+                        buckets[bucketKey].load.push(loadW / 1000);
+                        buckets[bucketKey].grid.push(Math.abs(gridW) / 1000);
+                    }
+                    
+                    // Output aggregated 15-min intervals
+                    const sortedKeys = Object.keys(buckets).sort();
+                    for (const key of sortedKeys) {
+                        const bucket = buckets[key];
+                        
+                        // Average kW * 0.25 hours = kWh
+                        const avgPv = bucket.pv.reduce((a,b) => a+b, 0) / bucket.pv.length;
+                        const avgLoad = bucket.load.reduce((a,b) => a+b, 0) / bucket.load.length;
+                        const avgGrid = bucket.grid.reduce((a,b) => a+b, 0) / bucket.grid.length;
+                        
+                        const pvKwh = avgPv * 0.25;
+                        const loadKwh = avgLoad * 0.25;
+                        const gridKwh = avgGrid * 0.25;
+                        
+                        let csvRow = key;
+                        if (fields.includes('generation')) csvRow += `,${pvKwh.toFixed(3)}`;
+                        if (fields.includes('predicted_generation')) {
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[bucket.hour] || 0;
+                            csvRow += `,${(pred * 0.25).toFixed(3)}`;
+                        }
+                        if (fields.includes('load')) csvRow += `,${loadKwh.toFixed(3)}`;
+                        if (fields.includes('predicted_load')) {
+                            const pred = predData?.daily_predictions?.[date]?.load_kw?.[bucket.hour] || 0;
+                            csvRow += `,${(pred * 0.25).toFixed(3)}`;
+                        }
+                        if (fields.includes('grid')) csvRow += `,${gridKwh.toFixed(3)}`;
+                        if (fields.includes('predicted_grid')) {
+                            const pred = predData?.daily_predictions?.[date]?.grid_kw?.[bucket.hour] || 0;
+                            csvRow += `,${(Math.abs(pred) * 0.25).toFixed(3)}`;
+                        }
+                        if (fields.includes('irradiation')) csvRow += `,0`;
+                        if (fields.includes('performance')) {
+                            const pred = predData?.daily_predictions?.[date]?.pv_kw?.[bucket.hour] || 0;
+                            const predKwh = pred * 0.25;
+                            const perf = predKwh > 0 ? (pvKwh / predKwh * 100) : 0;
+                            csvRow += `,${perf.toFixed(1)}`;
+                        }
+                        csv += csvRow + '\n';
+                        rowCount++;
+                    }
+                    
+                } catch (err) {
+                    console.error(`  Error loading ${date}:`, err.message);
+                }
+            }
+            
+            console.log(`  Total 15-min intervals: ${rowCount}`);
+            
+            if (rowCount === 0) {
+                return '15-Minute Data: No data found\n';
+            }
+            
+            return csv;
+        }
+        
+        async function generateHourlyReport(dashData, predData, startDate, endDate, fields) {
+            let csv = 'Timestamp';
+            if (fields.includes('generation')) csv += ',Actual Generation (kWh)';
+            if (fields.includes('predicted_generation')) csv += ',Predicted Generation (kWh)';
+            if (fields.includes('load')) csv += ',Actual Load (kWh)';
+            if (fields.includes('predicted_load')) csv += ',Predicted Load (kWh)';
+            if (fields.includes('grid')) csv += ',Actual Grid (kWh)';
+            if (fields.includes('predicted_grid')) csv += ',Predicted Grid (kWh)';
+            if (fields.includes('irradiation')) csv += ',Avg Irradiation (W/m²)';
+            if (fields.includes('performance')) csv += ',Performance (%)';
+            csv += '\n';
+            
+            console.log('📊 Generating hourly report:');
+            console.log('  Date range:', startDate, 'to', endDate);
+            console.log('  Total records:', dashData.daily_records?.length);
+            
+            const records = dashData.daily_records.filter(r => r.date >= startDate && r.date <= endDate);
+            console.log('  Records in range:', records.length);
+            
+            let rowCount = 0;
+            for (const record of records) {
+                const date = record.date;
+                if (!record.hourly_data || !Array.isArray(record.hourly_data)) {
+                    console.warn('  ⚠️ No hourly_data array for', date);
+                    continue;
+                }
+                
+                console.log('  Processing', date, '- hourly_data has', record.hourly_data.length, 'hours');
+                
+                // hourly_data is an array of hour objects
+                record.hourly_data.forEach((hourData, hourIndex) => {
+                    // Use actual time if available, otherwise construct it from index
+                    let timeStr = hourData.timestamp || hourData.time;
+                    
+                    // Extract the actual hour from the time field
+                    let actualHour = hourIndex; // fallback to index
+                    if (timeStr && timeStr.includes(':')) {
+                        actualHour = parseInt(timeStr.split(':')[0]);
+                    }
+                    
+                    // If we have a time string, append it to the date
+                    // Otherwise construct time from actualHour
+                    let timestamp;
+                    if (timeStr && timeStr.includes(':')) {
+                        // timeStr is just the time part (e.g., "05:00" or "05:00:00")
+                        timestamp = `${date} ${timeStr}`;
+                        // Ensure it has seconds
+                        if (timeStr.split(':').length === 2) {
+                            timestamp += ':00';
+                        }
+                    } else {
+                        // Fallback: construct from date and actualHour
+                        timestamp = `${date} ${actualHour.toString().padStart(2, '0')}:00:00`;
+                    }
+                    
+                    // Get kW values (already hourly averages)
+                    const gen = hourData.pv_kw || hourData.generation_kw || 0;
+                    const load = hourData.load_kw || 0;
+                    const grid = Math.abs(hourData.grid_kw || 0);
+                    
+                    // Get irradiation from predictions (it's stored hourly in predictions file)
+                    const irr = predData?.daily_predictions?.[date]?.irradiation_wm2?.[actualHour] || 0;
+                    
+                    let row = timestamp;
+                    // Values are already in kW, convert to kWh (kW * 1 hour)
+                    if (fields.includes('generation')) row += `,${gen.toFixed(3)}`;
+                    if (fields.includes('predicted_generation')) {
+                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[actualHour] || 0;
+                        row += `,${pred.toFixed(3)}`;
+                    }
+                    if (fields.includes('load')) row += `,${load.toFixed(3)}`;
+                    if (fields.includes('predicted_load')) {
+                        const pred = predData?.daily_predictions?.[date]?.load_kw?.[actualHour] || 0;
+                        row += `,${pred.toFixed(3)}`;
+                    }
+                    if (fields.includes('grid')) row += `,${grid.toFixed(3)}`;
+                    if (fields.includes('predicted_grid')) {
+                        const pred = predData?.daily_predictions?.[date]?.grid_kw?.[actualHour] || 0;
+                        row += `,${Math.abs(pred).toFixed(3)}`;
+                    }
+                    if (fields.includes('irradiation')) row += `,${irr.toFixed(1)}`;
+                    if (fields.includes('performance')) {
+                        const pred = predData?.daily_predictions?.[date]?.pv_kw?.[actualHour] || 0;
+                        const perf = pred > 0 ? (gen / pred * 100) : 0;
+                        row += `,${perf.toFixed(1)}`;
+                    }
+                    csv += row + '\n';
+                    rowCount++;
+                });
+            }
+            
+            console.log('  Total rows generated:', rowCount);
+            console.log('  CSV length:', csv.length);
+            return csv;
+        }
+        
+        async function generateDailyReport(dashData, predData, startDate, endDate, fields) {
+            let csv = 'Date';
+            if (fields.includes('generation')) csv += ',Actual Generation (kWh)';
+            if (fields.includes('predicted_generation')) csv += ',Predicted Generation (kWh)';
+            if (fields.includes('load')) csv += ',Actual Load (kWh)';
+            if (fields.includes('predicted_load')) csv += ',Predicted Load (kWh)';
+            if (fields.includes('grid')) csv += ',Actual Grid (kWh)';
+            if (fields.includes('predicted_grid')) csv += ',Predicted Grid (kWh)';
+            if (fields.includes('irradiation')) csv += ',Total Irradiation (Wh/m²)';
+            if (fields.includes('performance')) csv += ',Performance (%)';
+            csv += '\n';
+            
+            console.log('📊 Generating daily report:');
+            console.log('  Date range:', startDate, 'to', endDate);
+            console.log('  Total records available:', dashData.daily_records?.length || 0);
+            
+            const records = dashData.daily_records.filter(r => r.date >= startDate && r.date <= endDate);
+            console.log('  Records in range:', records.length);
+            
+            if (records.length === 0) {
+                console.warn('⚠️ No records found in date range!');
+            }
+            
+            for (const record of records) {
+                let row = record.date;
+                if (fields.includes('generation')) row += `,${(record.generation_kwh || 0).toFixed(2)}`;
+                if (fields.includes('predicted_generation')) {
+                    const pred = predData?.daily_predictions?.[record.date];
+                    const predTotal = pred ? pred.pv_kw.reduce((a,b) => a+b, 0) : 0;
+                    row += `,${predTotal.toFixed(2)}`;
+                }
+                if (fields.includes('load')) row += `,${(record.actual_load_kwh || 0).toFixed(2)}`;
+                if (fields.includes('predicted_load')) {
+                    const pred = predData?.daily_predictions?.[record.date];
+                    const predTotal = pred ? pred.load_kw.reduce((a,b) => a+b, 0) : 0;
+                    row += `,${predTotal.toFixed(2)}`;
+                }
+                if (fields.includes('grid')) row += `,${(record.actual_grid_kwh || 0).toFixed(2)}`;
+                if (fields.includes('predicted_grid')) {
+                    const pred = predData?.daily_predictions?.[record.date];
+                    const predTotal = pred ? pred.grid_kw.reduce((a,b) => a+b, 0) : 0;
+                    row += `,${predTotal.toFixed(2)}`;
+                }
+                if (fields.includes('irradiation')) {
+                    // Get total daily irradiation from predictions
+                    const pred = predData?.daily_predictions?.[record.date];
+                    const irrTotal = pred?.irradiation_wm2 ? pred.irradiation_wm2.reduce((a,b) => a+b, 0) : 0;
+                    row += `,${irrTotal.toFixed(0)}`;
+                }
+                if (fields.includes('performance')) {
+                    const pred = predData?.daily_predictions?.[record.date];
+                    const predTotal = pred ? pred.pv_kw.reduce((a,b) => a+b, 0) : 0;
+                    const perf = predTotal > 0 ? ((record.generation_kwh || 0) / predTotal * 100) : 0;
+                    row += `,${perf.toFixed(1)}`;
+                }
+                csv += row + '\n';
+            }
+            
+            console.log('  CSV length:', csv.length, 'characters');
+            console.log('  CSV preview:', csv.substring(0, 200));
+            return csv;
+        }
+        
+        async function generateMonthlyReport(dashData, predData, startDate, endDate, fields) {
+            let csv = 'Month';
+            if (fields.includes('generation')) csv += ',Actual Generation (kWh)';
+            if (fields.includes('predicted_generation')) csv += ',Predicted Generation (kWh)';
+            if (fields.includes('load')) csv += ',Actual Load (kWh)';
+            if (fields.includes('predicted_load')) csv += ',Predicted Load (kWh)';
+            if (fields.includes('grid')) csv += ',Actual Grid (kWh)';
+            if (fields.includes('predicted_grid')) csv += ',Predicted Grid (kWh)';
+            if (fields.includes('irradiation')) csv += ',Total Irradiation (Wh/m²)';
+            if (fields.includes('performance')) csv += ',Performance (%)';
+            csv += '\n';
+            
+            const records = dashData.daily_records.filter(r => r.date >= startDate && r.date <= endDate);
+            
+            // Group by month
+            const monthlyData = {};
+            for (const record of records) {
+                const monthKey = record.date.substring(0, 7);
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = {
+                        generation: 0,
+                        load: 0,
+                        grid: 0,
+                        irradiation: 0,
+                        predictedGen: 0,
+                        predictedLoad: 0,
+                        predictedGrid: 0,
+                        days: 0
+                    };
+                }
+                monthlyData[monthKey].generation += record.generation_kwh || 0;
+                monthlyData[monthKey].load += record.actual_load_kwh || 0;
+                monthlyData[monthKey].grid += record.actual_grid_kwh || 0;
+                monthlyData[monthKey].irradiation += record.irradiation_wh_m2 || 0;
+                monthlyData[monthKey].days++;
+                
+                // Add predicted
+                if (predData?.daily_predictions?.[record.date]) {
+                    const pred = predData.daily_predictions[record.date];
+                    monthlyData[monthKey].predictedGen += pred.pv_kw.reduce((a,b) => a+b, 0);
+                    monthlyData[monthKey].predictedLoad += pred.load_kw.reduce((a,b) => a+b, 0);
+                    monthlyData[monthKey].predictedGrid += pred.grid_kw.reduce((a,b) => a+b, 0);
+                }
+            }
+            
+            // Output sorted months
+            const months = Object.keys(monthlyData).sort();
+            for (const month of months) {
+                const data = monthlyData[month];
+                let row = month;
+                if (fields.includes('generation')) row += `,${data.generation.toFixed(2)}`;
+                if (fields.includes('predicted_generation')) row += `,${data.predictedGen.toFixed(2)}`;
+                if (fields.includes('load')) row += `,${data.load.toFixed(2)}`;
+                if (fields.includes('predicted_load')) row += `,${data.predictedLoad.toFixed(2)}`;
+                if (fields.includes('grid')) row += `,${data.grid.toFixed(2)}`;
+                if (fields.includes('predicted_grid')) row += `,${data.predictedGrid.toFixed(2)}`;
+                if (fields.includes('irradiation')) row += `,${data.irradiation.toFixed(0)}`;
+                if (fields.includes('performance')) {
+                    const perf = data.predictedGen > 0 ? (data.generation / data.predictedGen * 100) : 0;
+                    row += `,${perf.toFixed(1)}`;
+                }
+                csv += row + '\n';
+            }
+            return csv;
+        }
+        
+        // ============================================
+        // WARRANTY TAB FUNCTIONS
+        // ============================================
+        
+        const warrantyData = [
+            {
+                item: "Solar Panel Performance",
+                startDate: "2025-11-18",
+                durationMonths: 25 * 12, // 25 years
+                color: "#4ade80"
+            },
+            {
+                item: "Mounting Structure",
+                startDate: "2025-11-18",
+                durationMonths: 20 * 12, // 20 years
+                color: "#3b82f6"
+            },
+            {
+                item: "Solar Panel Manufacturer's Warranty",
+                startDate: "2025-11-18",
+                durationMonths: 12 * 12, // 12 years (corrected from 12 months)
+                color: "#f59e0b"
+            },
+            {
+                item: "Inverters",
+                startDate: "2025-11-18",
+                durationMonths: 10 * 12, // 10 years
+                color: "#8b5cf6"
+            },
+            {
+                item: "Monitoring Portal",
+                startDate: "2025-11-18",
+                durationMonths: 10 * 12, // 10 years
+                color: "#ec4899"
+            },
+            {
+                item: "Workmanship",
+                startDate: "2025-11-18",
+                durationMonths: 1 * 12, // 1 year
+                color: "#ef4444"
+            }
+        ];
+        
+        let warrantyCharts = [];
+        
+        function calculateDaysRemaining(startDate, durationMonths) {
+            const start = new Date(startDate);
+            const end = new Date(start);
+            end.setMonth(end.getMonth() + durationMonths);
+            const today = new Date();
+            const diffTime = end - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return { diffDays, endDate: end };
+        }
+        
+        function loadWarrantyData() {
+            console.log('📊 Loading warranty data...');
+            
+            // Destroy existing charts
+            warrantyCharts.forEach(chart => chart.destroy());
+            warrantyCharts = [];
+            
+            const today = new Date();
+            
+            // Calculate warranty data
+            const warrantyItems = warrantyData.map(item => {
+                const { diffDays, endDate } = calculateDaysRemaining(item.startDate, item.durationMonths);
+                const totalDays = item.durationMonths * 30; // Approximate days in warranty period
+                
+                // Calculate days from start
+                const start = new Date(item.startDate);
+                const msFromStart = today - start;
+                const daysFromStart = Math.max(0, Math.ceil(msFromStart / (1000 * 60 * 60 * 24)));
+                
+                // Calculate elapsed and remaining, clamped to valid ranges
+                const elapsedDays = Math.min(daysFromStart, totalDays);
+                const remainingDays = Math.max(0, totalDays - elapsedDays);
+                
+                // Calculate percentages that always add to 100%
+                const elapsedPercentage = Math.round((elapsedDays / totalDays) * 100);
+                const remainingPercentage = 100 - elapsedPercentage;
+                
+                return {
+                    ...item,
+                    endDate: endDate,
+                    daysRemaining: diffDays,
+                    isActive: diffDays > 0,
+                    totalDays: totalDays,
+                    elapsedDays: elapsedDays,
+                    remainingDays: remainingDays,
+                    elapsedPercentage: elapsedPercentage,
+                    remainingPercentage: remainingPercentage
+                };
+            });
+            
+            // Create grid of individual donut charts
+            const grid = document.getElementById('warrantyChartsGrid');
+            grid.innerHTML = '';
+            
+            warrantyItems.forEach((item, index) => {
+                const chartId = `warrantyChart${index}`;
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.padding = '25px';
+                card.innerHTML = `
+                    <h3 style="text-align: center; margin-bottom: 15px; font-size: var(--font-lg); color: #ffffff;">${item.item}</h3>
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 16px; height: 16px; background: #a3e635; border-radius: 3px;"></div>
+                            <span style="color: #ffffff; font-size: var(--font-base);">Remaining</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 16px; height: 16px; background: #3b3b4f; border-radius: 3px;"></div>
+                            <span style="color: #ffffff; font-size: var(--font-base);">Elapsed</span>
+                        </div>
+                    </div>
+                    <div style="height: 250px; display: flex; justify-content: center; align-items: center;">
+                        <canvas id="${chartId}"></canvas>
+                    </div>
+                `;
+                grid.appendChild(card);
+                
+                // Create the donut chart
+                createIndividualWarrantyDonut(chartId, item);
+            });
+            
+            // Populate table
+            populateWarrantyTable(warrantyItems);
+        }
+        
+        function createIndividualWarrantyDonut(canvasId, warrantyItem) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            
+            const remaining = warrantyItem.remainingDays;
+            const elapsed = warrantyItem.elapsedDays;
+            
+            const chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Remaining', 'Elapsed'],
+                    datasets: [{
+                        data: [remaining, elapsed],
+                        backgroundColor: ['#a3e635', '#3b3b4f'],
+                        borderColor: '#1a1a1a',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            titleFont: { size: 18, weight: 'bold' },
+                            bodyFont: { size: 20 },
+                            padding: 15,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const percentage = warrantyItem[label === 'Remaining' ? 'remainingPercentage' : 'elapsedPercentage'];
+                                    return `${label}: ${value} days (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'segmentLabels',
+                    afterDatasetDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        const meta = chart.getDatasetMeta(0);
+                        const dataset = chart.data.datasets[0];
+                        
+                        ctx.save();
+                        ctx.font = 'bold 24px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        meta.data.forEach((element, index) => {
+                            const model = element;
+                            const midAngle = (element.startAngle + element.endAngle) / 2;
+                            const midRadius = (element.innerRadius + element.outerRadius) / 2;
+                            
+                            const x = model.x + Math.cos(midAngle) * midRadius;
+                            const y = model.y + Math.sin(midAngle) * midRadius;
+                            
+                            const percentage = index === 0 ? warrantyItem.remainingPercentage : warrantyItem.elapsedPercentage;
+                            
+                            // Only draw percentage (no days)
+                            ctx.fillStyle = '#ffffff';
+                            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                            ctx.shadowBlur = 4;
+                            ctx.shadowOffsetX = 2;
+                            ctx.shadowOffsetY = 2;
+                            ctx.fillText(`${percentage}%`, x, y);
+                        });
+                        
+                        ctx.restore();
+                    }
+                }]
+            });
+            
+            warrantyCharts.push(chart);
+        }
+        
+        function populateWarrantyTable(warranties) {
+            const tbody = document.getElementById('warranty-table-body');
+            if (!tbody) return;
+            
+            // Sort by days remaining (descending)
+            warranties.sort((a, b) => b.daysRemaining - a.daysRemaining);
+            
+            tbody.innerHTML = warranties.map(w => {
+                const statusColor = w.isActive ? '#4ade80' : '#ef4444';
+                const statusText = w.isActive ? '✓ Active' : '✗ Expired';
+                const endDateStr = w.endDate.toISOString().split('T')[0];
+                const daysText = w.isActive ? 
+                    `${w.daysRemaining} days` : 
+                    `Expired ${Math.abs(w.daysRemaining)} days ago`;
+                
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                        <td style="padding: 20px; color: ${w.color}; font-weight: 500; font-size: var(--font-base);">${w.item}</td>
+                        <td style="padding: 20px; color: #cccccc; font-size: var(--font-base);">${w.startDate}</td>
+                        <td style="padding: 20px; text-align: center; color: #cccccc; font-size: var(--font-base);">${w.durationMonths}</td>
+                        <td style="padding: 20px; text-align: center; color: #cccccc; font-size: var(--font-base);">${endDateStr}</td>
+                        <td style="padding: 20px; text-align: center; color: ${statusColor}; font-weight: 600; font-size: var(--font-base);">${daysText}</td>
+                        <td style="padding: 20px; text-align: center; color: ${statusColor}; font-weight: 600; font-size: var(--font-base);">${statusText}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function populateEnvTable(yesterdayData, todayData, monthData, lifetimeData) {
+            // Trees
+            document.getElementById('pub-env-yesterday-trees').innerHTML = 
+                `${formatNumber(yesterdayData.trees_equivalent)}`;
+            document.getElementById('pub-env-today-trees').innerHTML = 
+                `${formatNumber(todayData.trees_equivalent)}`;
+            document.getElementById('pub-env-month-trees').innerHTML = 
+                `${formatNumber(monthData.trees_equivalent)}`;
+            document.getElementById('pub-env-lifetime-trees').innerHTML = 
+                `${formatNumber(lifetimeData.trees_equivalent)}`;
+            
+            // Households
+            document.getElementById('pub-env-yesterday-homes').innerHTML = 
+                `${formatNumber(yesterdayData.households_offset, 2)}`;
+            document.getElementById('pub-env-today-homes').innerHTML = 
+                `${formatNumber(todayData.households_offset, 2)}`;
+            document.getElementById('pub-env-month-homes').innerHTML = 
+                `${formatNumber(monthData.households_offset, 2)}`;
+            document.getElementById('pub-env-lifetime-homes').innerHTML = 
+                `${formatNumber(lifetimeData.households_offset, 2)}`;
+            
+            // Coal
+            document.getElementById('pub-env-yesterday-coal').innerHTML = 
+                `${formatNumber(yesterdayData.coal_saved_kg)}`;
+            document.getElementById('pub-env-today-coal').innerHTML = 
+                `${formatNumber(todayData.coal_saved_kg)}`;
+            document.getElementById('pub-env-month-coal').innerHTML = 
+                `${formatNumber(monthData.coal_saved_kg)}`;
+            document.getElementById('pub-env-lifetime-coal').innerHTML = 
+                `${formatNumber(lifetimeData.coal_saved_kg)}`;
+            
+            // Water
+            document.getElementById('pub-env-yesterday-water').innerHTML = 
+                `${formatNumber(yesterdayData.water_saved_litres)}`;
+            document.getElementById('pub-env-today-water').innerHTML = 
+                `${formatNumber(todayData.water_saved_litres)}`;
+            document.getElementById('pub-env-month-water').innerHTML = 
+                `${formatNumber(monthData.water_saved_litres)}`;
+            document.getElementById('pub-env-lifetime-water').innerHTML = 
+                `${formatNumber(lifetimeData.water_saved_litres)}`;
+        }
 
-def update_predictions_file(predictions_file, new_irradiation):
-    """
-    Update predictions file with fresh irradiation data
-    """
-    print(f"\n📂 Loading {predictions_file}...")
-    
-    with open(predictions_file, 'r') as f:
-        predictions = json.load(f)
-    
-    total_days = len(predictions.get('daily_predictions', {}))
-    updated_count = 0
-    
-    print(f"✓ Loaded predictions for {total_days} days")
-    print(f"\n🔄 Updating irradiation data...")
-    
-    for date_str, irradiation_hourly in new_irradiation.items():
-        if 'daily_predictions' in predictions and date_str in predictions['daily_predictions']:
-            predictions['daily_predictions'][date_str]['irradiation_wm2'] = irradiation_hourly
-            updated_count += 1
-    
-    # Update or create metadata
-    if 'metadata' not in predictions:
-        predictions['metadata'] = {}
-    
-    predictions['metadata']['irradiation_last_updated'] = datetime.now().isoformat()
-    predictions['metadata']['irradiation_dates_updated'] = list(new_irradiation.keys())
-    
-    # Save
-    print(f"\n💾 Saving updated predictions...")
-    with open(predictions_file, 'w') as f:
-        json.dump(predictions, f, separators=(',', ':'))
-    
-    print(f"✓ Updated {updated_count} days with fresh irradiation data")
-    
-    # Show sample
-    sample_date = list(new_irradiation.keys())[0] if new_irradiation else None
-    if sample_date and sample_date in predictions['daily_predictions']:
-        sample = predictions['daily_predictions'][sample_date]
-        peak_irr = max(sample['irradiation_wm2'])
-        print(f"\nSample ({sample_date}): Peak irradiation = {peak_irr} W/m²")
+        // Keep old function for backward compatibility (client view uses it)
+        function createEnvCards(data, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            container.innerHTML = `
+                <div class="env-card">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                        <div class="env-icon">🌳</div>
+                        <div class="env-label">TREES EQUIVALENT</div>
+                    </div>
+                    <div class="env-value">${formatNumber(data.trees_equivalent)} <span style="font-weight: 500;">trees</span></div>
+                </div>
+                <div class="env-card">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                        <div class="env-icon">🏠</div>
+                        <div class="env-label">HOUSEHOLDS POWERED</div>
+                    </div>
+                    <div class="env-value">${formatNumber(data.households_offset, 2)} <span style="font-weight: 500;">homes</span></div>
+                </div>
+                <div class="env-card">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                        <div class="env-icon">⛏️</div>
+                        <div class="env-label">COAL SAVED</div>
+                    </div>
+                    <div class="env-value">${formatNumber(data.coal_saved_kg)} <span style="font-weight: 500;">kg</span></div>
+                </div>
+                <div class="env-card">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                        <div class="env-icon">💧</div>
+                        <div class="env-label">WATER SAVED</div>
+                    </div>
+                    <div class="env-value">${formatNumber(data.water_saved_litres)} <span style="font-weight: 500;">litres</span></div>
+                </div>
+            `;
+        }
 
-def main():
-    print("="*70)
-    print("UPDATING IRRADIATION DATA FROM OPEN-METEO API")
-    print("="*70)
-    
-    try:
-        # Fetch fresh irradiation data (16 days forecast)
-        irradiation = fetch_irradiation_forecast(days=16)
+        function populateYearSelector() {
+            const yearSelector = document.getElementById('yearSelector');
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            
+            // Get commissioning year from dashboardData or default to 2024
+            const commissioningYear = dashboardData && dashboardData.system && dashboardData.system.commissioning_date
+                ? new Date(dashboardData.system.commissioning_date).getFullYear()
+                : 2024;
+            
+            yearSelector.innerHTML = '';
+            
+            // Populate years from commissioning year to current year
+            for (let year = commissioningYear; year <= currentYear; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                if (year === currentYear) {
+                    option.selected = true;
+                }
+                yearSelector.appendChild(option);
+            }
+        }
         
-        # Update predictions file
-        update_predictions_file(PREDICTIONS_FILE, irradiation)
-        
-        print("\n" + "="*70)
-        print("✅ IRRADIATION UPDATE COMPLETE")
-        print("="*70)
-        
-        return 0
-        
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-        print("\n⚠️  Using existing irradiation data from predictions file")
-        return 1
+        function loadToday() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dateSelector').value = today;
+    document.getElementById('dateSelector').max = today;
+    loadDailyData();
+}
 
-if __name__ == '__main__':
-    import sys
-    sys.exit(main())
+async function updateDatePickerRange() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const dashboardPath = `${basePath}dashboard_data.json`.replace('//', '/');
+        const response = await fetch(dashboardPath);
+        
+        if (response.ok) {
+            const dashboardData = await response.json();
+            
+            if (dashboardData.daily_records && dashboardData.daily_records.length > 0) {
+                const availableDates = dashboardData.daily_records.map(r => r.date).sort();
+                const minDate = availableDates[0];
+                const today = new Date().toISOString().split('T')[0];
+                
+                const dateInput = document.getElementById('dateSelector');
+                dateInput.min = minDate;
+                dateInput.max = today;  // Always allow up to today
+                
+                console.log(`✓ Date picker range: ${minDate} to ${today} (${availableDates.length} days with data)`);
+            }
+        }
+    } catch (error) {
+        console.error('Could not update date picker range:', error);
+    }
+}
+        
+        // Global TOU calculation function (used by multiple functions)
+        function calculateTouFromHourlyData(date, hourlyData) {
+            const tou = { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
+            const dateObj = new Date(date);
+            const dayOfWeek = dateObj.getDay(); // 0=Sunday, 6=Saturday
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+            const month = parseInt(date.split('-')[1]);
+            const isSummer = month >= 9 || month <= 4; // Sept-April (low demand)
+            
+            hourlyData.forEach((hourData, hour) => {
+                // The field is generation_kw (in kW) - need to convert to kWh
+                // intervals = number of 5-min intervals in this hour (12 = full hour)
+                const generation_kw = hourData.generation_kw || 0;
+                const intervals = hourData.intervals || 12;
+                const generation_kwh = generation_kw * (intervals * 5 / 60); // Convert to kWh
+                
+                if (isWeekend) {
+                    // Weekends: All off-peak
+                    tou.off_peak_kwh += generation_kwh;
+                } else if (isSummer) {
+                    // Summer weekdays (Sept-April, low demand): 7-9am and 6-8pm is peak
+                    if ((hour >= 7 && hour < 9) || (hour >= 18 && hour < 20)) {
+                        tou.peak_kwh += generation_kwh;
+                    } else if ((hour >= 6 && hour < 7) || (hour >= 9 && hour < 18) || (hour >= 20 && hour < 22)) {
+                        tou.standard_kwh += generation_kwh;
+                    } else {
+                        tou.off_peak_kwh += generation_kwh;
+                    }
+                } else {
+                    // Winter weekdays (May-Aug, high demand): 6-9am and 5-7pm is peak
+                    if ((hour >= 6 && hour < 9) || (hour >= 17 && hour < 19)) {
+                        tou.peak_kwh += generation_kwh;
+                    } else if ((hour >= 9 && hour < 17) || (hour >= 19 && hour < 22)) {
+                        tou.standard_kwh += generation_kwh;
+                    } else {
+                        tou.off_peak_kwh += generation_kwh;
+                    }
+                }
+            });
+            
+            return tou;
+        }
+        
+        async function loadDailyData() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const selectedDate = document.getElementById('dateSelector').value;
+        
+        // Load from dashboard_data.json (Phase 2)
+        const dashboardPath = `${basePath}data/dashboard_data.json`.replace('//', '/');
+        const response = await fetch(dashboardPath);
+        
+        if (!response.ok) {
+            console.error('Could not load dashboard_data.json');
+            return;
+        }
+        
+        const dashboardData = await response.json();
+        
+        // Find the daily record for selected date
+        const dailyRecords = dashboardData.daily_records || [];
+        const dailyRecord = dailyRecords.find(r => r.date === selectedDate);
+        
+        if (!dailyRecord) {
+            alert(`No data available for ${selectedDate}`);
+            console.warn(`No data for ${selectedDate}`);
+            return;
+        }
+        
+        // Validate and recalculate TOU if necessary (V13 fix for daily view)
+        if (dailyRecord.tou_breakdown && dailyRecord.hourly_data) {
+            const touTotal = (dailyRecord.tou_breakdown.peak_kwh || 0) + 
+                           (dailyRecord.tou_breakdown.standard_kwh || 0) + 
+                           (dailyRecord.tou_breakdown.off_peak_kwh || 0);
+            const genTotal = dailyRecord.generation_kwh || 0;
+            const diff = Math.abs(touTotal - genTotal);
+            
+            if (diff > 0.1) {
+                // TOU doesn't match - recalculate from hourly data
+                console.log(`⚠️ Daily view TOU mismatch for ${selectedDate}: TOU=${touTotal.toFixed(2)}, Gen=${genTotal.toFixed(2)}, Diff=${diff.toFixed(2)}`);
+                const recalculatedTou = calculateTouFromHourlyData(selectedDate, dailyRecord.hourly_data);
+                const recalcTotal = recalculatedTou.peak_kwh + recalculatedTou.standard_kwh + recalculatedTou.off_peak_kwh;
+                console.log(`✅ Recalculated TOU: ${recalcTotal.toFixed(2)} kWh (diff from gen: ${Math.abs(recalcTotal - genTotal).toFixed(2)})`);
+                dailyRecord.tou_breakdown = recalculatedTou;
+            }
+        } else if (!dailyRecord.tou_breakdown && dailyRecord.hourly_data) {
+            // No TOU breakdown - calculate from hourly data
+            console.log(`📊 Calculating TOU for ${selectedDate} from hourly_data`);
+            dailyRecord.tou_breakdown = calculateTouFromHourlyData(selectedDate, dailyRecord.hourly_data);
+        }
+        
+        // Convert to expected format (hourly_data array)
+        const data = dailyRecord.hourly_data || [];
+        console.log(`✓ Data loaded for ${selectedDate} from dashboard_data.json`);
+        
+        // Pass the daily record for TOU/Financial updates
+        updateDailyView(data, selectedDate, dailyRecord);
+    } catch (error) {
+        console.error('Error loading daily data:', error);
+        alert('Error loading data. Please try again.');
+    }
+}
+        
+function updateDailyView(data, selectedDate, dailyRecord = null) {
+    if (!data || !Array.isArray(data) || data.length === 0) return;
+    
+    console.log(`📊 updateDailyView called for ${selectedDate}`);
+    
+    // Calculate stats from the hourly data provided
+    const pvData = data.map(d => d.pv_kw || d.generation_kw || 0);
+    console.log(`  PV Data: ${pvData.length} hours, max: ${Math.max(...pvData).toFixed(2)} kW`);
+    
+    // Load predicted data and irradiation from predictions JSON
+    const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+    const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+    
+    console.log(`  Loading predictions from: ${predictionsPath}`);
+    
+    fetch(predictionsPath)
+        .then(response => {
+            console.log(`  Predictions response status: ${response.status}`);
+            return response.ok ? response.json() : null;
+        })
+        .then(predictionsData => {
+            let predictedData = [];
+            let irradiationData = [];
+            
+            if (predictionsData && predictionsData.daily_predictions && predictionsData.daily_predictions[selectedDate]) {
+                const dayPredictions = predictionsData.daily_predictions[selectedDate];
+                console.log(`  ✅ Found predictions for ${selectedDate}`);
+                console.log(`     Prediction keys: ${Object.keys(dayPredictions).join(', ')}`);
+                
+                // Support both field name formats
+                predictedData = dayPredictions.predicted_pv_kw || dayPredictions.generation_kw || dayPredictions.pv_kw || [];
+                irradiationData = dayPredictions.irradiation_wm2 || dayPredictions.irradiation || [];
+                
+                if (predictedData.length > 0) {
+                    const maxPred = Math.max(...predictedData);
+                    const nonZero = predictedData.filter(v => v > 0).length;
+                    console.log(`     Predicted: ${predictedData.length} values, max: ${maxPred.toFixed(2)} kW, ${nonZero} non-zero values`);
+                } else {
+                    console.warn(`     ⚠️ Predicted data is empty!`);
+                }
+                
+                if (irradiationData.length > 0) {
+                    const maxIrr = Math.max(...irradiationData);
+                    const nonZero = irradiationData.filter(v => v > 0).length;
+                    console.log(`     Irradiation: ${irradiationData.length} values, max: ${maxIrr.toFixed(0)} W/m², ${nonZero} non-zero values`);
+                } else {
+                    console.warn(`     ⚠️ Irradiation data is empty!`);
+                }
+            } else {
+                console.warn(`  ⚠️ No predictions found for ${selectedDate}`);
+                if (!predictionsData) {
+                    console.warn(`     predictions_2025_2044.min.json returned null/undefined`);
+                } else if (!predictionsData.daily_predictions) {
+                    console.warn(`     Missing 'daily_predictions' key. Keys: ${Object.keys(predictionsData).join(', ')}`);
+                } else {
+                    const availableDates = Object.keys(predictionsData.daily_predictions);
+                    console.warn(`     Date ${selectedDate} not in predictions. Available: ${availableDates.slice(0, 5).join(', ')}${availableDates.length > 5 ? '...' : ''}`);
+                }
+            }
+            
+            // If predictions not available, use fallback
+            if (predictedData.length === 0) {
+                console.log(`  Using fallback for predicted data`);
+                predictedData = data.map(d => d.predicted_kw || d.pv_kw || 0);
+            }
+            if (irradiationData.length === 0) {
+                console.log(`  Using actual irradiation from hourly_data`);
+                irradiationData = data.map(d => d.irradiation_wm2 || 0);
+            }
+            
+            console.log(`  ✅ Calling continueUpdateDailyView with predicted and irradiation data`);
+            
+            // Continue with the view update
+            continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predictedData, irradiationData);
+        })
+        .catch(error => {
+            console.error(`  ❌ Error loading predictions:`, error);
+            // Fallback to data fields
+            const predictedData = data.map(d => d.predicted_kw || d.pv_kw || 0);
+            const irradiationData = data.map(d => d.irradiation_wm2 || 0);
+            console.log(`  Using fallback data: predicted=${predictedData.length}, irradiation=${irradiationData.length} (actual values)`);
+            continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predictedData, irradiationData);
+        });
+}
+
+function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predictedData, irradiationData) {
+    
+    // Check if we're viewing today
+    const today = new Date().toISOString().split('T')[0];
+    const viewingToday = selectedDate === today;
+    
+    let totalGeneration, totalPredicted, peakPower, avgPower;
+    
+    // Use dailyRecord if available (most accurate from Phase 1 migration)
+    if (dailyRecord) {
+        totalGeneration = dailyRecord.generation_kwh;
+        peakPower = Math.max(...pvData);
+        avgPower = pvData.filter(v => v > 0).length > 0 ? 
+                   (totalGeneration / pvData.filter(v => v > 0).length) : 0;
+    } else if (viewingToday && dashboardData && dashboardData.today) {
+        // Fallback to old structure for backward compatibility
+        totalGeneration = dashboardData.today.generation_kwh;
+        totalPredicted = dashboardData.today.expected_kwh;  // RESTORE: Use sum of day (correct)
+        peakPower = dashboardData.today.peak_power_kw;
+        avgPower = dashboardData.today.avg_power_kw;
+    } else {
+        // Last resort: calculate from hourly data
+        totalGeneration = pvData.reduce((sum, val) => sum + val, 0);
+        peakPower = Math.max(...pvData);
+        avgPower = totalGeneration / pvData.filter(v => v > 0).length || 0;
+    }
+    
+    // Calculate expected using monthly average daily prediction with degradation
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const monthKey = month.toString().padStart(2, '0');
+    
+    if (dashboardData && dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+        const commissioningDate = new Date(dashboardData.system.commissioning_date);
+        const targetDate = new Date(year, month - 1, day);
+        const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+        const yearsActive = daysActive / 365.25;
+        
+        let degradationPercent;
+        if (yearsActive < 1) {
+            degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+        } else {
+            degradationPercent = (dashboardData.system.degradation_year_1 + 
+                (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+        }
+        
+        const degradationFactor = 1 - (degradationPercent / 100);
+        totalPredicted = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
+    } else {
+        // Fallback to generic average
+        totalPredicted = 316;
+    }
+    
+    const performance = totalPredicted > 0 ? (totalGeneration / totalPredicted * 100) : 0;
+    
+    document.getElementById('daily-gen').textContent = formatKwh(totalGeneration);
+    document.getElementById('daily-gen-expected').textContent = formatNumber(totalPredicted);
+    
+    const genPerf = document.getElementById('daily-gen-perf');
+    genPerf.textContent = `${performance.toFixed(1)}% of expected`;
+    genPerf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
+    
+    // ALWAYS calculate ACTUAL Load/Grid from real data
+    const actualLoadData = data.map(d => d.load_kw || 0);
+    const actualGridData = data.map(d => Math.abs(d.grid_kw || 0));
+    
+    let actualTotalLoad, actualTotalGrid;
+    if (dailyRecord && dailyRecord.actual_load_kwh) {
+        actualTotalLoad = dailyRecord.actual_load_kwh;
+    } else {
+        actualTotalLoad = actualLoadData.reduce((sum, val) => sum + val, 0);
+    }
+    
+    if (dailyRecord && dailyRecord.actual_grid_kwh) {
+        actualTotalGrid = dailyRecord.actual_grid_kwh;
+    } else {
+        actualTotalGrid = actualGridData.reduce((sum, val) => sum + val, 0);
+    }
+    
+    console.log(`ACTUAL Load: ${actualTotalLoad.toFixed(2)} kWh, Grid: ${actualTotalGrid.toFixed(2)} kWh`);
+    
+    // Continue with display updates - finishDailyViewUpdate will fetch expected values
+    finishDailyViewUpdate(actualTotalLoad, actualTotalGrid, actualLoadData, actualGridData, totalGeneration, totalPredicted, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate);
+}
+
+// Helper function to complete the daily view update
+function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, totalPredicted, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate) {
+    // Calculate coverage metrics for ACTUAL data
+    const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
+    
+    // Fetch EXPECTED data regardless of current mode to show comparisons
+    const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+    const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+    
+    fetch(predictionsPath)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Predictions file not found');
+            }
+            return response.json();
+        })
+        .then(predictionsData => {
+            let expectedLoad = 0, expectedGrid = 0, expectedPVCoverage = 0;
+            
+            // CORRECT: Use MONTHLY AVERAGE for expected Load/Grid (same as PV)
+            if (predictionsData.daily_predictions) {
+                const monthKey = selectedDate.substring(0, 7); // "2026-01"
+                let totalMonthlyLoad = 0, totalMonthlyGrid = 0, dayCount = 0;
+                
+                // Sum all days in the month
+                Object.keys(predictionsData.daily_predictions)
+                    .filter(date => date.startsWith(monthKey))
+                    .forEach(date => {
+                        const dayPredictions = predictionsData.daily_predictions[date];
+                        
+                        if (dayPredictions.load_kw && Array.isArray(dayPredictions.load_kw)) {
+                            const dailyLoad = dayPredictions.load_kw.reduce((sum, val) => sum + val, 0);
+                            totalMonthlyLoad += dailyLoad;
+                        }
+                        
+                        if (dayPredictions.grid_kw && Array.isArray(dayPredictions.grid_kw)) {
+                            const dailyGrid = dayPredictions.grid_kw.reduce((sum, val) => sum + Math.abs(val), 0);
+                            totalMonthlyGrid += dailyGrid;
+                        }
+                        
+                        dayCount++;
+                    });
+                
+                // Calculate monthly average
+                expectedLoad = dayCount > 0 ? totalMonthlyLoad / dayCount : 0;
+                expectedGrid = dayCount > 0 ? totalMonthlyGrid / dayCount : 0;
+                expectedPVCoverage = expectedLoad > 0 ? ((totalPredicted / expectedLoad) * 100) : 0;
+                
+                console.log(`✅ Expected values (monthly avg): Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}, PV Coverage=${expectedPVCoverage.toFixed(1)}%`);
+            }
+            
+            // Calculate % differences
+            const loadPerf = expectedLoad > 0 ? ((totalLoad / expectedLoad) * 100) : 0;
+            const gridPerf = expectedGrid > 0 ? ((totalGrid / expectedGrid) * 100) : 0;
+            const pvCoveragePerf = expectedPVCoverage > 0 ? ((pvCoverage / expectedPVCoverage) * 100) : 0;
+            
+            // Update Load display
+            document.getElementById('daily-load').textContent = formatKwh(totalLoad);
+            document.getElementById('daily-load-expected').textContent = formatNumber(expectedLoad);
+            const loadPerfEl = document.getElementById('daily-load-perf');
+            loadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
+            loadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
+            
+            // Update Grid display
+            document.getElementById('daily-grid').textContent = formatKwh(totalGrid);
+            document.getElementById('daily-grid-expected').textContent = formatNumber(expectedGrid);
+            const gridPerfEl = document.getElementById('daily-grid-perf');
+            gridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
+            gridPerfEl.className = 'performance ' + (gridPerf <= 100 ? 'positive' : 'negative');
+            
+            // Update PV Coverage display
+            document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
+            document.getElementById('pv-coverage-expected').textContent = expectedPVCoverage.toFixed(1);
+            const pvCoveragePerfEl = document.getElementById('pv-coverage-perf');
+            pvCoveragePerfEl.textContent = `${pvCoveragePerf.toFixed(1)}% of expected`;
+            pvCoveragePerfEl.className = 'performance ' + (pvCoveragePerf >= 100 ? 'positive' : 'negative');
+            
+            // Continue with chart rendering
+            renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord, selectedDate);
+        })
+        .catch(error => {
+            console.warn('Could not load predictions file, using fallback:', error);
+            // Fallback: Use typical ratios based on generation
+            const typicalLoadRatio = 1.5;
+            const expectedLoad = totalPredicted * typicalLoadRatio;
+            const expectedGrid = expectedLoad - totalPredicted;
+            const expectedPVCoverage = expectedLoad > 0 ? ((totalPredicted / expectedLoad) * 100) : 0;
+            
+            // Calculate % differences
+            const loadPerf = expectedLoad > 0 ? ((totalLoad / expectedLoad) * 100) : 0;
+            const gridPerf = expectedGrid > 0 ? ((totalGrid / expectedGrid) * 100) : 0;
+            const pvCoveragePerf = expectedPVCoverage > 0 ? ((pvCoverage / expectedPVCoverage) * 100) : 0;
+            
+            // Update displays with fallback values
+            document.getElementById('daily-load').textContent = formatKwh(totalLoad);
+            document.getElementById('daily-load-expected').textContent = formatNumber(expectedLoad);
+            const loadPerfEl = document.getElementById('daily-load-perf');
+            if (loadPerfEl) {
+                loadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
+                loadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
+            }
+            
+            document.getElementById('daily-grid').textContent = formatKwh(totalGrid);
+            document.getElementById('daily-grid-expected').textContent = formatNumber(expectedGrid);
+            const gridPerfEl = document.getElementById('daily-grid-perf');
+            if (gridPerfEl) {
+                gridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
+                gridPerfEl.className = 'performance ' + (gridPerf <= 100 ? 'positive' : 'negative');
+            }
+            
+            document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
+            document.getElementById('pv-coverage-expected').textContent = expectedPVCoverage.toFixed(1);
+            const pvCoveragePerfEl = document.getElementById('pv-coverage-perf');
+            if (pvCoveragePerfEl) {
+                pvCoveragePerfEl.textContent = `${pvCoveragePerf.toFixed(1)}% of expected`;
+                pvCoveragePerfEl.className = 'performance ' + (pvCoveragePerf >= 100 ? 'positive' : 'negative');
+            }
+            
+            renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord, selectedDate);
+        });
+}
+
+function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord, selectedDate) {
+    const ctx = document.getElementById('dailyChart').getContext('2d');
+    if (dailyChart) dailyChart.destroy();
+    
+    // Calculate averages for chart display
+    const avgLoad = totalLoad / (data.length || 24);
+    const avgGrid = totalGrid / (data.length || 24);
+    
+    // Create full 24-hour arrays (00:00 to 23:00)
+    const allHours = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+    
+    // Map data to full 24-hour format
+    const full24HourData = {
+        pv: new Array(24).fill(0),
+        predicted: new Array(24).fill(0),
+        irradiation: new Array(24).fill(0),
+        load: new Array(24).fill(avgLoad),
+        grid: new Array(24).fill(avgGrid)
+    };
+    
+    // Fill in actual data for hours that exist
+    data.forEach(d => {
+        const hour = parseInt(d.time.split(':')[0]);
+        full24HourData.pv[hour] = d.generation_kw || 0;
+    });
+    
+    // Calculate monthly hourly average for predicted data from predictions file
+    // Get the average of each hour across the entire month from predictions_2025_2044.min.json
+    // Use the selectedDate parameter that was passed to this function, don't re-read from date picker
+    const [year, month] = selectedDate.split('-');
+    const monthKey = `${year}-${month}`;
+    
+    // Fetch predictions file to calculate monthly hourly averages
+    const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+    const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+    
+    fetch(predictionsPath)
+        .then(response => response.json())
+        .then(predictionsData => {
+            // Initialize hourly accumulators for the month
+            const monthlyHourlySum = new Array(24).fill(0);
+            const monthlyHourlyCount = new Array(24).fill(0);
+            
+            // Get all days in the selected month from predictions
+            if (predictionsData.daily_predictions) {
+                Object.keys(predictionsData.daily_predictions)
+                    .filter(date => date.startsWith(monthKey))
+                    .forEach(date => {
+                        const dayPredictions = predictionsData.daily_predictions[date];
+                        
+                        // Calculate PV hourly averages (full month for PV)
+                        if (dayPredictions.pv_kw) {
+                            dayPredictions.pv_kw.forEach((gen, hour) => {
+                                monthlyHourlySum[hour] += gen;
+                                if (gen > 0) monthlyHourlyCount[hour]++;
+                            });
+                        }
+                    });
+            }
+            
+            // Calculate average for each hour (PV)
+            for (let hour = 0; hour < 24; hour++) {
+                if (monthlyHourlyCount[hour] > 0) {
+                    full24HourData.predicted[hour] = monthlyHourlySum[hour] / monthlyHourlyCount[hour];
+                } else {
+                    full24HourData.predicted[hour] = 0;
+                }
+            }
+            
+            // Calculate actual Load/Grid hourly curves (MTD average per hour)
+            const actualLoadHourly = new Array(24).fill(0);
+            const actualGridHourly = new Array(24).fill(0);
+            const actualLoadHourlyCount = new Array(24).fill(0);
+            const actualGridHourlyCount = new Array(24).fill(0);
+            
+            // Calculate expected Load/Grid hourly curves (MTD average per hour - SAME AS PV PREDICTED)
+            const expectedLoadHourly = new Array(24).fill(0);
+            const expectedGridHourly = new Array(24).fill(0);
+            const expectedLoadHourlySum = new Array(24).fill(0);
+            const expectedGridHourlySum = new Array(24).fill(0);
+            const expectedLoadHourlyCount = new Array(24).fill(0);
+            const expectedGridHourlyCount = new Array(24).fill(0);
+            
+            // Get all MTD days from predictions and calculate Load/Grid averages per hour
+            if (predictionsData.daily_predictions) {
+                // Determine if we're viewing a past month or current month
+                const today = new Date().toISOString().split('T')[0];
+                const currentMonthKey = today.substring(0, 7); // "2026-01"
+                const isPastMonth = monthKey < currentMonthKey;
+                
+                // For past months: use entire month
+                // For current month: use MTD (up to selected date)
+                const dateFilter = isPastMonth 
+                    ? (date => date.startsWith(monthKey))
+                    : (date => date.startsWith(monthKey) && date <= selectedDate);
+                
+                Object.keys(predictionsData.daily_predictions)
+                    .filter(dateFilter)
+                    .forEach(date => {
+                        const dayPredictions = predictionsData.daily_predictions[date];
+                        
+                        // Sum Load for each hour
+                        if (dayPredictions.load_kw && Array.isArray(dayPredictions.load_kw)) {
+                            dayPredictions.load_kw.forEach((load, hour) => {
+                                expectedLoadHourlySum[hour] += load;
+                                expectedLoadHourlyCount[hour]++;
+                            });
+                        }
+                        
+                        // Sum Grid for each hour
+                        if (dayPredictions.grid_kw && Array.isArray(dayPredictions.grid_kw)) {
+                            dayPredictions.grid_kw.forEach((grid, hour) => {
+                                expectedGridHourlySum[hour] += Math.abs(grid);
+                                expectedGridHourlyCount[hour]++;
+                            });
+                        }
+                    });
+                
+                console.log(`  📊 Expected Load/Grid calculation (${isPastMonth ? 'FULL MONTH' : 'MTD'}):`);
+                console.log(`     Month: ${monthKey}, Dates included: ${Object.keys(predictionsData.daily_predictions).filter(dateFilter).length}`);
+            }
+            
+            // Calculate average for each hour (Expected Load/Grid)
+            for (let hour = 0; hour < 24; hour++) {
+                if (expectedLoadHourlyCount[hour] > 0) {
+                    expectedLoadHourly[hour] = expectedLoadHourlySum[hour] / expectedLoadHourlyCount[hour];
+                } else {
+                    expectedLoadHourly[hour] = 0;
+                }
+                if (expectedGridHourlyCount[hour] > 0) {
+                    expectedGridHourly[hour] = expectedGridHourlySum[hour] / expectedGridHourlyCount[hour];
+                } else {
+                    expectedGridHourly[hour] = 0;
+                }
+            }
+            
+            if (dashboardData && dashboardData.daily_records) {
+                // Determine if we're viewing a past month or current month
+                const today = new Date().toISOString().split('T')[0];
+                const currentMonthKey = today.substring(0, 7); // "2026-01"
+                const isPastMonth = monthKey < currentMonthKey;
+                
+                // For past months: use entire month
+                // For current month: use MTD (up to selected date)
+                const dateFilter = isPastMonth
+                    ? (record => record.date.startsWith(monthKey))
+                    : (record => record.date.startsWith(monthKey) && record.date <= selectedDate);
+                
+                // First, identify which hours have PV generation across the month
+                const hoursWithGeneration = new Set();
+                
+                dashboardData.daily_records
+                    .filter(dateFilter)
+                    .forEach(record => {
+                        if (record.hourly_data && Array.isArray(record.hourly_data)) {
+                            record.hourly_data.forEach((hourData) => {
+                                // Use the 'time' field to get the actual hour, not the array index!
+                                const actualHour = parseInt(hourData.time.split(':')[0]);
+                                const pvVal = hourData.generation_kw || 0;
+                                
+                                if (pvVal > 0.1) {
+                                    hoursWithGeneration.add(actualHour);
+                                }
+                            });
+                        }
+                    });
+                
+                console.log(`  📊 Actual Load/Grid calculation (${isPastMonth ? 'FULL MONTH' : 'MTD'}):`);
+                console.log(`     Hours with PV generation (>0.1kW):`, Array.from(hoursWithGeneration).sort((a,b) => a-b));
+                
+                // Now collect actual Load/Grid ONLY for hours that have generation
+                dashboardData.daily_records
+                    .filter(dateFilter)
+                    .forEach(record => {
+                        if (record.hourly_data && Array.isArray(record.hourly_data)) {
+                            record.hourly_data.forEach((hourData) => {
+                                // Use the 'time' field to get the actual hour!
+                                const actualHour = parseInt(hourData.time.split(':')[0]);
+                                
+                                // Only include this hour if it's in our generation hours set
+                                if (hoursWithGeneration.has(actualHour)) {
+                                    const loadVal = hourData.load_kw || 0;
+                                    const gridVal = hourData.grid_kw || 0;
+                                    
+                                    // Count Load if it has a value
+                                    if (loadVal > 0) {
+                                        actualLoadHourly[actualHour] += loadVal;
+                                        actualLoadHourlyCount[actualHour]++;
+                                    }
+                                    
+                                    // Count Grid if it has a value
+                                    if (Math.abs(gridVal) > 0.01) {
+                                        actualGridHourly[actualHour] += Math.abs(gridVal);
+                                        actualGridHourlyCount[actualHour]++;
+                                    }
+                                }
+                            });
+                        }
+                    });
+            }
+            
+            // Calculate averages for each hour (Actual Load/Grid)
+            for (let hour = 0; hour < 24; hour++) {
+                if (actualLoadHourlyCount[hour] > 0) {
+                    actualLoadHourly[hour] = actualLoadHourly[hour] / actualLoadHourlyCount[hour];
+                } else {
+                    actualLoadHourly[hour] = null;  // null = Chart.js skips this point
+                }
+                
+                if (actualGridHourlyCount[hour] > 0) {
+                    actualGridHourly[hour] = actualGridHourly[hour] / actualGridHourlyCount[hour];
+                } else {
+                    actualGridHourly[hour] = null;  // null = Chart.js skips this point
+                }
+            }
+            
+            // Debug logging
+            console.log(`  📊 Actual Load/Grid data points per hour:`, [...actualLoadHourlyCount]);
+            console.log(`  📊 Expected Load/Grid data points per hour:`, [...expectedLoadHourlyCount]);
+            console.log(`  📊 Actual Load values (hours 5-14):`, actualLoadHourly.slice(5, 15).map(v => v === null ? 'null' : v.toFixed(2)));
+            console.log(`  📊 Actual Grid values (hours 5-14):`, actualGridHourly.slice(5, 15).map(v => v === null ? 'null' : v.toFixed(2)));
+            
+            // Create curves for Load and Grid
+            full24HourData.predictedLoad = expectedLoadHourly;
+            full24HourData.predictedGrid = expectedGridHourly;
+            full24HourData.actualLoad = actualLoadHourly;
+            full24HourData.actualGrid = actualGridHourly;
+            
+            // Continue with chart rendering
+            finishChartRendering();
+        })
+        .catch(error => {
+            console.warn('Could not load predictions for monthly average, using daily predicted:', error);
+            // Fallback to daily predicted data
+            predictedData.forEach((val, idx) => {
+                if (idx < 24) full24HourData.predicted[idx] = val;
+            });
+            finishChartRendering();
+        });
+    
+    // Fill in irradiation data
+    irradiationData.forEach((val, idx) => {
+        if (idx < 24) full24HourData.irradiation[idx] = val;
+    });
+    
+    // Function to finish chart rendering after predicted data is ready
+    function finishChartRendering() {
+    
+    // Irradiation is on its own axis (y1), so no scaling needed
+    const maxPV = Math.max(...full24HourData.pv);
+    const maxIrr = Math.max(...full24HourData.irradiation);
+    
+    // Use passed irradiationData and predictedData (loaded from predictions - hourly values)
+    console.log(`  📊 Chart data prepared (24 hours):`);
+    console.log(`     Predicted: ${full24HourData.predicted.length} values`);
+    console.log(`     Irradiation: ${full24HourData.irradiation.length} values, max: ${maxIrr.toFixed(0)} W/m²`);
+    console.log(`     PV: ${full24HourData.pv.length} values, max: ${maxPV.toFixed(2)} kW`);
+    
+    dailyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: allHours,
+            datasets: [
+                {
+                    label: 'PV Generation (kW)',
+                    data: full24HourData.pv,
+                    type: 'bar',
+                    backgroundColor: '#4ade80',
+                    borderColor: '#22c55e',
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    label: 'Predicted (Monthly Avg)',
+                    data: full24HourData.predicted,
+                    type: 'line',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 1,
+                    fill: false
+                },
+                {
+                    label: 'Actual Load (MTD Avg)',
+                    data: full24HourData.actualLoad || full24HourData.load,
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    spanGaps: false,
+                    yAxisID: 'y',
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Expected Load (MTD Avg)',
+                    data: full24HourData.predictedLoad || full24HourData.load,
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Actual Grid (MTD Avg)',
+                    data: full24HourData.actualGrid || full24HourData.grid,
+                    type: 'line',
+                    borderColor: '#f97316',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    spanGaps: false,
+                    yAxisID: 'y',
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Expected Grid (MTD Avg)',
+                    data: full24HourData.predictedGrid || full24HourData.grid,
+                    type: 'line',
+                    borderColor: '#f97316',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Predicted Irradiation (W/m²)',
+                    data: full24HourData.irradiation,
+                    type: 'line',
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y1',
+                    order: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+    legend: { 
+        position: 'top',
+        labels: { 
+            color: '#ffffff',
+            font: { size: 16, weight: 'bold' },
+            usePointStyle: true,
+            padding: 20,
+            generateLabels: function(chart) {
+                const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                labels.forEach(label => {
+                    const dataset = chart.data.datasets[label.datasetIndex];
+                    // Make Expected/Predicted show as hollow circles
+                    if (label.text.includes('Expected') || label.text.includes('Predicted')) {
+                        label.pointStyle = 'circle';
+                        label.fillStyle = 'rgba(0,0,0,0)';
+                        label.strokeStyle = dataset.borderColor;
+                        label.lineWidth = 2;
+                    }
+                });
+                return labels;
+            }
+        }
+    },
+                tooltip: {
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    titleColor: '#ffffff',
+    titleFont: { size: 18, weight: 'bold' },
+    bodyColor: '#ffffff',
+    bodyFont: { size: 16 },
+    borderColor: '#4ade80',
+    borderWidth: 2,
+    padding: 20,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                // Irradiation uses W/m², everything else uses kW
+                                if (label.includes('Irradiation')) {
+                                    label += context.parsed.y.toFixed(0) + ' W/m²';
+                                } else {
+                                    label += context.parsed.y.toFixed(1) + ' kW';
+                                }
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+    ticks: { 
+        color: '#ffffff',
+        font: { size: 14, weight: '500' }
+    },
+                    grid: { 
+                        color: 'rgba(255, 255, 255, 0.15)',
+                        drawBorder: false
+                    }
+                },
+                y: {
+    type: 'linear',
+    display: true,
+    position: 'left',
+    beginAtZero: true,
+    title: {
+        display: true,
+        text: 'Power (kW) - Generation, Load, Grid',
+        color: '#ffffff',
+        font: { size: 16, weight: 'bold' }
+    },
+    ticks: { 
+        color: '#ffffff',
+        font: { size: 14, weight: '500' }
+    },
+                    grid: { 
+                        color: 'rgba(255, 255, 255, 0.15)',
+                        drawBorder: false
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Irradiation (W/m²)',
+                        color: '#fbbf24',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    ticks: {
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+    
+    } // End of finishChartRendering function
+    
+    // Phase 2: Update TOU and Financial data
+    if (dailyRecord) {
+        updateTouBreakdown('daily', dailyRecord);
+    }
+}
+
+        function loadCurrentMonth() {
+    const now = new Date();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const currentYear = now.getFullYear();
+    
+    document.getElementById('monthSelector').value = currentMonth;
+    document.getElementById('yearSelector').value = currentYear;
+    
+    // Clear localStorage when explicitly selecting current month
+    localStorage.removeItem('selectedMonth');
+    localStorage.removeItem('selectedYear');
+    
+    loadMonthlyData();
+}
+
+function saveMonthSelection() {
+    const selectedMonth = document.getElementById('monthSelector').value;
+    const selectedYear = document.getElementById('yearSelector').value;
+    localStorage.setItem('selectedMonth', selectedMonth);
+    localStorage.setItem('selectedYear', selectedYear);
+}
+
+function restoreMonthSelection() {
+    const savedMonth = localStorage.getItem('selectedMonth');
+    const savedYear = localStorage.getItem('selectedYear');
+    
+    if (savedMonth && savedYear) {
+        document.getElementById('monthSelector').value = savedMonth;
+        document.getElementById('yearSelector').value = savedYear;
+        return true;
+    }
+    return false;
+}
+
+async function loadMonthlyData() {
+    try {
+        // Save the current selection to localStorage
+        saveMonthSelection();
+        
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        
+        // Load from dashboard_data.json (has both actual and aggregated data)
+        const dashboardPath = `${basePath}data/dashboard_data.json`.replace('//', '/');
+        const response = await fetch(dashboardPath);
+        
+        if (!response.ok) {
+            console.error('Could not load dashboard data');
+            return;
+        }
+        
+        const dashData = await response.json();
+        const selectedMonth = document.getElementById('monthSelector').value;
+        const selectedYear = document.getElementById('yearSelector').value;
+        const selectedMonthYear = `${selectedYear}-${selectedMonth}`;
+        
+        // Get daily records for this month
+        const monthRecords = dashData.daily_records.filter(record => 
+            record.date.startsWith(selectedMonthYear)
+        );
+        
+        console.log(`📅 Loading data for ${selectedMonthYear}`);
+        console.log(`   Total records in dashboard: ${dashData.daily_records.length}`);
+        console.log(`   Records for this month: ${monthRecords.length}`);
+        if (monthRecords.length > 0) {
+            const firstDate = monthRecords[0].date;
+            const lastDate = monthRecords[monthRecords.length - 1].date;
+            console.log(`   Date range: ${firstDate} to ${lastDate}`);
+            
+            // Check last 3 records for Load/Grid data
+            console.log(`   Last 3 records Load/Grid data:`);
+            monthRecords.slice(-3).forEach(r => {
+                console.log(`     ${r.date}: Load=${r.actual_load_kwh?.toFixed(1) || 'missing'}, Grid=${r.actual_grid_kwh?.toFixed(1) || 'missing'}`);
+            });
+        }
+        
+        if (monthRecords.length === 0) {
+            alert(`No data available for ${selectedMonthYear}`);
+            return;
+        }
+        
+        const monthlyGen = monthRecords.reduce((sum, day) => sum + day.generation_kwh, 0);
+        const daysWithData = monthRecords.length;
+        
+        // Calculate expected value for the selected year/month using base predictions + degradation
+        let expectedMonthly, expectedForDaysWithData;
+        
+        const year = parseInt(selectedYear);
+        const month = parseInt(selectedMonth);
+        const monthKey = selectedMonth;  // "01", "02", etc.
+        
+        console.log(`📊 Calculating expected for ${selectedMonthYear}, monthKey=${monthKey}`);
+        console.log(`   monthly_predictions_base available:`, !!dashboardData.monthly_predictions_base);
+        console.log(`   monthKey in predictions:`, dashboardData.monthly_predictions_base?.[monthKey] ? 'YES' : 'NO');
+        
+        if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+            // Calculate degradation factor for this specific year
+            const commissioningDate = new Date(dashboardData.system.commissioning_date);
+            const targetDate = new Date(year, month - 1, 15);  // Middle of target month
+            
+            const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+            const yearsActive = daysActive / 365.25;
+            
+            let degradationPercent;
+            if (yearsActive < 1) {
+                degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+            } else {
+                degradationPercent = (dashboardData.system.degradation_year_1 + 
+                    (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+            }
+            
+            const degradationFactor = 1 - (degradationPercent / 100);
+            
+            // Apply degradation to base prediction
+            const baseKwh = dashboardData.monthly_predictions_base[monthKey].base_kwh;
+            expectedMonthly = baseKwh * degradationFactor;
+            
+            // Calculate expected for only the days with data
+            const avgDailyPrediction = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
+            expectedForDaysWithData = avgDailyPrediction * daysWithData;
+            
+            console.log(`   ✅ Base=${baseKwh.toFixed(2)} kWh, Years=${yearsActive.toFixed(2)}, Degradation=${degradationPercent.toFixed(2)}%, Expected=${expectedMonthly.toFixed(2)} kWh`);
+        } else {
+            // Fallback if base predictions not available
+            console.warn(`⚠️ No base prediction for month ${monthKey}, using fallback`);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            expectedMonthly = 316 * daysInMonth;
+            expectedForDaysWithData = 316 * daysWithData;
+        }
+        
+        // Ensure values are valid numbers
+        expectedMonthly = expectedMonthly || 0;
+        expectedForDaysWithData = expectedForDaysWithData || 0;
+        
+        // Overall performance for the full month
+        const performanceFull = expectedMonthly > 0 ? ((monthlyGen / expectedMonthly) * 100).toFixed(1) : 0;
+        
+        // Target progress: performance for days with data
+        const targetProgress = expectedForDaysWithData > 0 ? ((monthlyGen / expectedForDaysWithData) * 100).toFixed(1) : 0;
+        
+        document.getElementById('monthly-gen').textContent = formatKwh(monthlyGen);
+        document.getElementById('monthly-expected').textContent = formatNumber(expectedForDaysWithData);  // MTD not full month
+        document.getElementById('monthly-days-count').textContent = daysWithData;
+        document.getElementById('monthly-target-perf').textContent = formatNumber(targetProgress);
+        document.getElementById('monthly-actual-gen').textContent = monthlyGen.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        document.getElementById('monthly-target-gen').textContent = expectedForDaysWithData.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        
+        const perfEl = document.getElementById('monthly-perf');
+        perfEl.textContent = `${targetProgress}% of expected`;  // Use MTD performance
+        perfEl.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
+        
+        const targetPerfEl = document.querySelector('#monthly-target-perf').parentElement.querySelector('.performance');
+        if (!targetPerfEl) {
+            const targetCard = document.querySelector('#monthly-target-perf').closest('.stat-card');
+            const newPerf = document.createElement('div');
+            newPerf.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
+            newPerf.textContent = `${targetProgress >= 100 ? 'Ahead of' : 'Behind'} target`;
+            targetCard.appendChild(newPerf);
+        } else {
+            targetPerfEl.textContent = `${targetProgress >= 100 ? 'Ahead of' : 'Behind'} target`;
+            targetPerfEl.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
+        }
+        
+        // Calculate Load and Grid for the month - ALWAYS get both Actual and Expected
+        let actualLoad = 0, actualGrid = 0, expectedLoad = 0, expectedGrid = 0;
+        
+        console.log(`📊 Monthly Load/Grid calculation`);
+        
+        // Get ACTUAL Load and Grid from daily records
+        actualLoad = monthRecords.reduce((sum, day) => sum + (day.actual_load_kwh || 0), 0);
+        actualGrid = monthRecords.reduce((sum, day) => sum + (day.actual_grid_kwh || 0), 0);
+        console.log(`  ✅ ACTUAL Monthly Load: ${actualLoad.toFixed(2)} kWh, Grid: ${actualGrid.toFixed(2)} kWh`);
+        
+        // Get EXPECTED Load and Grid from predictions
+        console.log(`  Loading predictions for expected Load/Grid...`);
+        try {
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            const predictionsResponse = await fetch(predictionsPath);
+            
+            if (predictionsResponse.ok) {
+                const predictionsData = await predictionsResponse.json();
+                
+                // Sum Load and Grid for each day in the month from predictions
+                monthRecords.forEach(record => {
+                    const dateKey = record.date;
+                    if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                        const dayData = predictionsData.daily_predictions[dateKey];
+                        const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                        expectedLoad += dailyLoad;
+                        expectedGrid += dailyGrid;
+                    }
+                });
+                console.log(`  ✅ EXPECTED Monthly Load: ${expectedLoad.toFixed(2)} kWh, Grid: ${expectedGrid.toFixed(2)} kWh (from predictions)`);
+            } else {
+                console.warn(`  ⚠️ Predictions not available, using estimate`);
+                expectedLoad = monthlyGen * 1.5;
+                expectedGrid = expectedLoad - monthlyGen;
+            }
+        } catch (error) {
+            console.error(`  ❌ Error loading predictions:`, error);
+            expectedLoad = monthlyGen * 1.5;
+            expectedGrid = expectedLoad - monthlyGen;
+        }
+        
+        // Calculate PV Coverage
+        const actualPVCoverage = actualLoad > 0 ? ((monthlyGen / actualLoad) * 100) : 0;
+        const expectedPVCoverage = expectedLoad > 0 ? ((monthlyGen / expectedLoad) * 100) : 0;
+        
+        // Calculate % differences
+        const loadPerf = expectedLoad > 0 ? ((actualLoad / expectedLoad) * 100) : 0;
+        const gridPerf = expectedGrid > 0 ? ((actualGrid / expectedGrid) * 100) : 0;
+        const pvCoveragePerf = expectedPVCoverage > 0 ? ((actualPVCoverage / expectedPVCoverage) * 100) : 0;
+        
+        // Update Load display
+        document.getElementById('monthly-load').textContent = formatKwh(actualLoad);
+        document.getElementById('monthly-load-expected').textContent = formatNumber(expectedLoad);
+        const monthlyLoadPerfEl = document.getElementById('monthly-load-perf');
+        if (monthlyLoadPerfEl) {
+            monthlyLoadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
+            monthlyLoadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
+        }
+        
+        // Update Grid display
+        document.getElementById('monthly-grid').textContent = formatKwh(actualGrid);
+        document.getElementById('monthly-grid-expected').textContent = formatNumber(expectedGrid);
+        const monthlyGridPerfEl = document.getElementById('monthly-grid-perf');
+        if (monthlyGridPerfEl) {
+            monthlyGridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
+            monthlyGridPerfEl.className = 'performance ' + (gridPerf <= 100 ? 'positive' : 'negative');
+        }
+        
+        // Update PV Coverage display
+        document.getElementById('monthly-coverage').textContent = actualPVCoverage.toFixed(1) + '%';
+        document.getElementById('monthly-coverage-expected').textContent = expectedPVCoverage.toFixed(1);
+        const monthlyCoveragePerfEl = document.getElementById('monthly-coverage-perf');
+        if (monthlyCoveragePerfEl) {
+            monthlyCoveragePerfEl.textContent = `${pvCoveragePerf.toFixed(1)}% of expected`;
+            monthlyCoveragePerfEl.className = 'performance ' + (pvCoveragePerf >= 100 ? 'positive' : 'negative');
+        }
+        
+        updateMonthlyChart(monthRecords, selectedMonthYear, actualLoad, actualGrid, expectedLoad, expectedGrid);
+        
+    } catch (error) {
+        console.error('Error loading monthly data:', error);
+    }
+}
+
+function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, expectedLoad, expectedGrid) {
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    if (monthlyChart) monthlyChart.destroy();
+    
+    // Calculate daily performance percentages
+    const [year, month] = selectedMonthYear.split('-').map(Number);
+    const monthKey = month.toString().padStart(2, '0');
+    
+    let avgDailyPrediction = 316; // Fallback
+    if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+        const commissioningDate = new Date(dashboardData.system.commissioning_date);
+        const targetDate = new Date(year, month - 1, 15);
+        const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+        const yearsActive = daysActive / 365.25;
+        
+        let degradationPercent;
+        if (yearsActive < 1) {
+            degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+        } else {
+            degradationPercent = (dashboardData.system.degradation_year_1 + 
+                (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+        }
+        
+        const degradationFactor = 1 - (degradationPercent / 100);
+        avgDailyPrediction = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
+    }
+    
+    // Create array of avg prediction for line
+    const avgPredictionLine = new Array(records.length).fill(avgDailyPrediction);
+    
+    // PHASE 3: Calculate actual PV average
+    const actualAverage = records.reduce((sum, d) => sum + d.generation_kwh, 0) / records.length;
+    const actualAverageLine = new Array(records.length).fill(actualAverage);
+    
+    // Get irradiation data from predictions file for each day
+    const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+    fetch(`${basePath}predictions_2025_2044.min.json`.replace('//', '/'))
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(predictionsData => {
+            console.log(`✅ Loaded predictions file, checking ${records.length} days...`);
+            
+            // Get irradiation for each day (if available)
+            const irradiationData = records.map(record => {
+                const dateKey = record.date;
+                if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                    const dayData = predictionsData.daily_predictions[dateKey];
+                    // Irradiation may not exist in all predictions files
+                    if (dayData.irradiation_wm2) {
+                        return dayData.irradiation_wm2.reduce((sum, val) => sum + val, 0);
+                    }
+                }
+                return 0;
+            });
+            
+            // Calculate daily averages from monthly totals
+            const daysCount = records.length;
+            const actualAvgLoadPerDay = daysCount > 0 ? actualLoad / daysCount : 0;
+            const actualAvgGridPerDay = daysCount > 0 ? actualGrid / daysCount : 0;
+            const expectedAvgLoadPerDay = daysCount > 0 ? expectedLoad / daysCount : 0;
+            const expectedAvgGridPerDay = daysCount > 0 ? expectedGrid / daysCount : 0;
+            
+            // Create straight lines (same value for all days)
+            const actualLoadLine = new Array(daysCount).fill(actualAvgLoadPerDay);
+            const actualGridLine = new Array(daysCount).fill(actualAvgGridPerDay);
+            const expectedLoadLine = new Array(daysCount).fill(expectedAvgLoadPerDay);
+            const expectedGridLine = new Array(daysCount).fill(expectedAvgGridPerDay);
+            
+            console.log(`📊 Monthly Chart - Straight line averages:`);
+            console.log(`   Actual: Load=${actualAvgLoadPerDay.toFixed(2)} kWh/day, Grid=${actualAvgGridPerDay.toFixed(2)} kWh/day`);
+            console.log(`   Expected: Load=${expectedAvgLoadPerDay.toFixed(2)} kWh/day, Grid=${expectedAvgGridPerDay.toFixed(2)} kWh/day`);
+            
+            // Recreate chart with Load and Grid straight lines
+            if (monthlyChart) monthlyChart.destroy();
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, irradiationData, 
+                actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine);
+        })
+        .catch(error => {
+            console.error('❌ Failed to load predictions:', error.message || error);
+            console.error('   Please ensure predictions_2025_2044.min.json is deployed');
+            
+            // Create chart without Load/Grid data
+            const emptyIrradiation = new Array(records.length).fill(0);
+            const emptyLine = new Array(records.length).fill(0);
+            createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, emptyIrradiation, 
+                emptyLine, emptyLine, emptyLine, emptyLine);
+        });
+}
+
+function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, irradiationData, 
+    actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine) {
+    // Scale irradiation to match PV generation scale for visual comparison
+    const maxGen = Math.max(...records.map(d => d.generation_kwh));
+    const maxIrr = Math.max(...irradiationData);
+    
+    monthlyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: records.map(d => {
+                const date = new Date(d.date);
+                return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+            }),
+            datasets: [
+                {
+                    label: 'PV Generation (kWh)',
+                    data: records.map(d => d.generation_kwh),
+                    backgroundColor: '#4ade80',
+                    borderRadius: 5,
+                    yAxisID: 'y',
+                    order: 4
+                },
+                {
+                    label: 'Predicted PV (kWh)',
+                    data: avgPredictionLine,
+                    type: 'line',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 3
+                },
+                {
+                    label: 'Actual PV Average (kWh)',
+                    data: actualAverageLine,
+                    type: 'line',
+                    borderColor: '#22c55e',
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 2,
+                    hidden: true  // Hide by default - user can toggle on
+                },
+                {
+                    label: 'Actual Load (Avg)',
+                    data: actualLoadLine,
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 1,
+                    hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Expected Load (Avg)',
+                    data: expectedLoadLine,
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 1,
+                    hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Actual Grid (Avg)',
+                    data: actualGridLine,
+                    type: 'line',
+                    borderColor: '#f97316',
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Expected Grid (Avg)',
+                    data: expectedGridLine,
+                    type: 'line',
+                    borderColor: '#f97316',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 0,
+                    hidden: true  // PHASE 2: Hide from graph
+                },
+                {
+                    label: 'Predicted Irradiation (Wh/m²)',
+                    data: irradiationData,
+                    type: 'line',
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y1',
+                    order: 5
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: { 
+                    labels: { 
+                        color: '#ffffff',
+                        font: { size: 16, weight: 'bold' }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                    titleFont: { size: 18, weight: 'bold' },
+                    bodyFont: { size: 16 },
+                    padding: 20,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            // Irradiation uses Wh/m², everything else uses kWh
+                            if (label.includes('Irradiation')) {
+                                label += context.parsed.y.toFixed(0) + ' Wh/m²';
+                            } else {
+                                label += context.parsed.y.toFixed(1) + ' kWh';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: { 
+                        display: true, 
+                        text: 'Energy (kWh) - Generation, Load, Grid',
+                        color: '#ffffff',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Irradiation (Wh/m²)',
+                        color: '#fbbf24',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    ticks: {
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+    
+    // Phase 2: Update TOU and Financial data - Calculate from daily_records
+    if (dashboardData && dashboardData.daily_records) {
+        const selectedYear = document.getElementById('yearSelector').value;
+        const selectedMonth = document.getElementById('monthSelector').value;
+        const monthKey = `${selectedYear}-${selectedMonth}`;
+        
+        // Calculate monthly TOU from daily_records for this month
+        const monthlyTOU = { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
+        let totalGeneration = 0;
+        let recordCount = 0;
+        
+        console.log(`📊 Calculating monthly TOU for ${monthKey}...`);
+        
+        dashboardData.daily_records.forEach(record => {
+            if (record.date.startsWith(monthKey)) {
+                recordCount++;
+                totalGeneration += record.generation_kwh || 0;
+                
+                console.log(`  ${record.date}: Gen=${record.generation_kwh?.toFixed(2)}, TOU={peak:${record.tou_breakdown?.peak_kwh?.toFixed(2)}, std:${record.tou_breakdown?.standard_kwh?.toFixed(2)}, off:${record.tou_breakdown?.off_peak_kwh?.toFixed(2)}}`);
+                
+                if (record.tou_breakdown) {
+                    monthlyTOU.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                    monthlyTOU.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                    monthlyTOU.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+                }
+            }
+        });
+        
+        const touTotal = monthlyTOU.peak_kwh + monthlyTOU.standard_kwh + monthlyTOU.off_peak_kwh;
+        
+        console.log(`📊 Monthly TOU calculated from daily_records for ${monthKey}: {generation: '${totalGeneration.toFixed(2)}', recordCount: ${recordCount}, tou: {peak: ${monthlyTOU.peak_kwh.toFixed(2)}, std: ${monthlyTOU.standard_kwh.toFixed(2)}, off: ${monthlyTOU.off_peak_kwh.toFixed(2)}}, touTotal: '${touTotal.toFixed(2)}'}`);
+        
+        // Create monthly data object for updateTouBreakdown
+        const monthlyData = {
+            tou_breakdown: monthlyTOU,
+            month: monthKey
+        };
+        
+        updateTouBreakdown('monthly', monthlyData);
+    }
+    
+    // PHASE 3: Create Load & Grid comparison chart
+    const loadGridCtx = document.getElementById('monthlyLoadGridChart').getContext('2d');
+    if (monthlyLoadGridChart) monthlyLoadGridChart.destroy();
+    
+    console.log(`📊 Load & Grid Chart Creation:`);
+    console.log(`   Records count: ${records.length}`);
+    console.log(`   First 3 dates: ${records.slice(0, 3).map(r => r.date).join(', ')}`);
+    console.log(`   Last 3 dates: ${records.slice(-3).map(r => r.date).join(', ')}`);
+    console.log(`   Actual Load values (last 5): ${records.slice(-5).map(r => (r.actual_load_kwh || 0).toFixed(1)).join(', ')}`);
+    console.log(`   Actual Grid values (last 5): ${records.slice(-5).map(r => (r.actual_grid_kwh || 0).toFixed(1)).join(', ')}`);
+    
+    monthlyLoadGridChart = new Chart(loadGridCtx, {
+        type: 'bar',
+        data: {
+            labels: records.map(d => {
+                const date = new Date(d.date);
+                return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+            }),
+            datasets: [
+                {
+                    label: 'Actual Load (kWh)',
+                    data: records.map(d => d.actual_load_kwh || 0),  // Daily sums
+                    type: 'bar',
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                    borderColor: '#ef4444',
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    order: 3
+                },
+                {
+                    label: 'Expected Load (kWh)',
+                    data: expectedLoadLine,  // Average line
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 1
+                },
+                {
+                    label: 'Actual Grid (kWh)',
+                    data: records.map(d => d.actual_grid_kwh || 0),  // Daily sums
+                    type: 'bar',
+                    backgroundColor: 'rgba(249, 115, 22, 0.7)',
+                    borderColor: '#f97316',
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    label: 'Expected Grid (kWh)',
+                    data: expectedGridLine,
+                    type: 'line',
+                    borderColor: '#f97316',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    yAxisID: 'y',
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: { 
+                    labels: { 
+                        color: '#ffffff',
+                        font: { size: 16, weight: 'bold' }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                    titleFont: { size: 18, weight: 'bold' },
+                    bodyFont: { size: 16 },
+                    padding: 20,
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + ' kWh';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: { 
+                        display: true, 
+                        text: 'Energy (kWh)',
+                        color: '#ffffff',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 14, weight: '500' }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                }
+            }
+        }
+    });
+}
+
+async function loadLifetimeMonthlyBreakdown() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        
+        // Load from dashboard_data.json (has both actual and predictions)
+        const dashboardPath = `${basePath}data/dashboard_data.json`.replace('//', '/');
+        const response = await fetch(dashboardPath);
+        
+        if (!response.ok) {
+            console.error('Could not load dashboard data');
+            return;
+        }
+        
+        const dashData = await response.json();
+        
+        // Group daily records by month
+        const monthlyData = {};
+        dashData.daily_records.forEach(record => {
+            const monthKey = record.date.substring(0, 7); // "YYYY-MM"
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {
+                    generation: 0,
+                    expected: 0,
+                    irradiation: 0,
+                    load: 0,
+                    grid: 0,
+                    days: 0
+                };
+            }
+            monthlyData[monthKey].generation += record.generation_kwh;
+            monthlyData[monthKey].irradiation += (record.irradiation_wh_m2 || 0);
+            monthlyData[monthKey].days += 1;
+            
+            // ALWAYS collect ACTUAL data
+            monthlyData[monthKey].load += (record.actual_load_kwh || 0);
+            monthlyData[monthKey].grid += (record.actual_grid_kwh || 0);
+        });
+        
+        console.log(`📊 Lifetime Load/Grid calculation`);
+        console.log(`   Total months: ${Object.keys(monthlyData).length}`);
+        
+        // Store actual totals
+        const actualTotalLoad = Object.values(monthlyData).reduce((sum, month) => sum + month.load, 0);
+        const actualTotalGrid = Object.values(monthlyData).reduce((sum, month) => sum + month.grid, 0);
+        
+        // ALWAYS get EXPECTED data from predictions
+        console.log(`   Loading predictions for expected Load/Grid...`);
+        let expectedTotalLoad = 0, expectedTotalGrid = 0;
+        const monthlyExpectedData = {}; // Store per-month expected values
+        
+        try {
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            const predictionsResponse = await fetch(predictionsPath);
+            if (predictionsResponse.ok) {
+                const predictionsData = await predictionsResponse.json();
+                
+                // Calculate expected Load and Grid for each day and accumulate by month
+                dashData.daily_records.forEach(record => {
+                    const dateKey = record.date;
+                    const monthKey = record.date.substring(0, 7);
+                    
+                    if (!monthlyExpectedData[monthKey]) {
+                        monthlyExpectedData[monthKey] = { load: 0, grid: 0 };
+                    }
+                    
+                    if (predictionsData.daily_predictions && predictionsData.daily_predictions[dateKey]) {
+                        const dayData = predictionsData.daily_predictions[dateKey];
+                        const dailyLoad = dayData.load_kw.reduce((sum, val) => sum + val, 0);
+                        const dailyGrid = dayData.grid_kw.reduce((sum, val) => sum + val, 0);
+                        
+                        monthlyExpectedData[monthKey].load += dailyLoad;
+                        monthlyExpectedData[monthKey].grid += dailyGrid;
+                        
+                        expectedTotalLoad += dailyLoad;
+                        expectedTotalGrid += dailyGrid;
+                    }
+                });
+                console.log(`   ✅ EXPECTED Lifetime Load: ${expectedTotalLoad.toFixed(2)} kWh, Grid: ${expectedTotalGrid.toFixed(2)} kWh`);
+            } else {
+                console.warn(`   ⚠️ Predictions response not OK: ${predictionsResponse.status}`);
+                // Fallback calculation
+                expectedTotalLoad = totalGeneration * 1.5;
+                expectedTotalGrid = expectedTotalLoad - totalGeneration;
+                console.log(`   Using fallback calculation`);
+            }
+        } catch (error) {
+            console.error(`   ❌ Error loading predictions:`, error);
+            // Fallback calculation
+            expectedTotalLoad = totalGeneration * 1.5;
+            expectedTotalGrid = expectedTotalLoad - totalGeneration;
+            console.log(`   Using fallback calculation`);
+        }
+        
+        console.log(`   ✅ ACTUAL Lifetime Load: ${actualTotalLoad.toFixed(2)} kWh, Grid: ${actualTotalGrid.toFixed(2)} kWh`);
+        
+        // Calculate expected values and performance for each month
+        const monthKeys = Object.keys(monthlyData).sort();
+        const monthLabels = [];
+        const monthGeneration = [];
+        const monthExpected = [];
+        const monthIrradiation = [];
+        const monthActualLoad = [];
+        const monthActualGrid = [];
+        const monthExpectedLoad = [];
+        const monthExpectedGrid = [];
+        const monthPerformance = [];
+        
+        // Build arrays with nulls to prevent connecting lines across months
+        let index = 0;
+        monthKeys.forEach((monthKey, i) => {
+            const [year, month] = monthKey.split('-').map(Number);
+            const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
+            monthLabels.push(monthName);
+            monthGeneration.push(monthlyData[monthKey].generation);
+            monthIrradiation.push(monthlyData[monthKey].irradiation);
+            
+            // Actual Load/Grid from monthlyData - add null after each value except last
+            monthActualLoad.push(monthlyData[monthKey].load);
+            monthActualGrid.push(monthlyData[monthKey].grid);
+            
+            // Expected Load/Grid from predictions
+            if (monthlyExpectedData[monthKey]) {
+                monthExpectedLoad.push(monthlyExpectedData[monthKey].load);
+                monthExpectedGrid.push(monthlyExpectedData[monthKey].grid);
+            } else {
+                monthExpectedLoad.push(0);
+                monthExpectedGrid.push(0);
+            }
+            
+            // Calculate expected value with degradation
+            const monthPadded = month.toString().padStart(2, '0');
+            if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthPadded]) {
+                const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                const targetDate = new Date(year, month - 1, 15);
+                const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                const yearsActive = daysActive / 365.25;
+                
+                let degradationPercent;
+                if (yearsActive < 1) {
+                    degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                } else {
+                    degradationPercent = (dashboardData.system.degradation_year_1 + 
+                        (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                }
+                
+                const degradationFactor = 1 - (degradationPercent / 100);
+                const avgDailyPrediction = dashboardData.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
+                const expectedForDays = avgDailyPrediction * monthlyData[monthKey].days;
+                
+                monthExpected.push(expectedForDays);
+                
+                const performance = expectedForDays > 0 ? (monthlyData[monthKey].generation / expectedForDays * 100) : 0;
+                monthPerformance.push(performance);
+            } else {
+                monthExpected.push(0);
+                monthPerformance.push(0);
+            }
+        });
+        
+        // Calculate CUMULATIVE performance for the performance line chart
+        const cumulativePerformance = [];
+        let cumulativeGeneration = 0;
+        let cumulativeExpected = 0;
+        
+        monthKeys.forEach((monthKey, idx) => {
+            cumulativeGeneration += monthGeneration[idx];
+            cumulativeExpected += monthExpected[idx];
+            
+            const cumPerf = cumulativeExpected > 0 ? (cumulativeGeneration / cumulativeExpected * 100) : 0;
+            cumulativePerformance.push(cumPerf);
+        });
+        
+        console.log('📊 Cumulative Performance calculated:', cumulativePerformance.map(p => p.toFixed(1) + '%').join(', '));
+        
+        // Calculate lifetime performance
+        const totalGeneration = monthGeneration.reduce((sum, val) => sum + val, 0);
+        let totalExpected = 0;
+        
+        Object.keys(monthlyData).forEach(monthKey => {
+            const [year, month] = monthKey.split('-').map(Number);
+            const monthPadded = month.toString().padStart(2, '0');
+            
+            if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthPadded]) {
+                const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                const targetDate = new Date(year, month - 1, 15);
+                const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                const yearsActive = daysActive / 365.25;
+                
+                let degradationPercent;
+                if (yearsActive < 1) {
+                    degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                } else {
+                    degradationPercent = (dashboardData.system.degradation_year_1 + 
+                        (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                }
+                
+                const degradationFactor = 1 - (degradationPercent / 100);
+                const avgDailyPrediction = dashboardData.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
+                totalExpected += avgDailyPrediction * monthlyData[monthKey].days;
+            }
+        });
+        
+        const lifetimePerformance = totalExpected > 0 ? ((totalGeneration / totalExpected) * 100).toFixed(1) : 0;
+        const lifetimeDifference = totalGeneration - totalExpected;
+        const lifetimeStatus = lifetimeDifference >= 0 ? 'ahead' : 'behind';
+        
+        // Calculate lifetime Load and Grid totals
+        const totalLoad = actualTotalLoad;
+        const totalGrid = actualTotalGrid;
+        const lifetimeCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100).toFixed(1) : 0;
+        const expectedLifetimeCoverage = expectedTotalLoad > 0 ? ((totalExpected / expectedTotalLoad) * 100).toFixed(1) : 0;
+        
+        // Calculate % differences
+        const loadPerf = expectedTotalLoad > 0 ? ((actualTotalLoad / expectedTotalLoad) * 100) : 0;
+        const gridPerf = expectedTotalGrid > 0 ? ((actualTotalGrid / expectedTotalGrid) * 100) : 0;
+        const coveragePerf = expectedLifetimeCoverage > 0 ? ((parseFloat(lifetimeCoverage) / parseFloat(expectedLifetimeCoverage)) * 100) : 0;
+        
+        // Update Load display
+        document.getElementById('lifetime-load').textContent = formatNumber(actualTotalLoad);
+        document.getElementById('lifetime-load-expected').textContent = formatNumber(expectedTotalLoad);
+        const lifetimeLoadPerfEl = document.getElementById('lifetime-load-perf');
+        if (lifetimeLoadPerfEl) {
+            lifetimeLoadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
+            lifetimeLoadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
+        }
+        
+        // Update Grid display
+        document.getElementById('lifetime-grid').textContent = formatNumber(actualTotalGrid);
+        document.getElementById('lifetime-grid-expected').textContent = formatNumber(expectedTotalGrid);
+        const lifetimeGridPerfEl = document.getElementById('lifetime-grid-perf');
+        if (lifetimeGridPerfEl) {
+            lifetimeGridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
+            lifetimeGridPerfEl.className = 'performance ' + (gridPerf <= 100 ? 'positive' : 'negative');
+        }
+        
+        // Update PV Coverage display
+        document.getElementById('lifetime-coverage').textContent = lifetimeCoverage + '%';
+        document.getElementById('lifetime-coverage-expected').textContent = expectedLifetimeCoverage;
+        const lifetimeCoveragePerfEl = document.getElementById('lifetime-coverage-perf');
+        if (lifetimeCoveragePerfEl) {
+            lifetimeCoveragePerfEl.textContent = `${coveragePerf.toFixed(1)}% of expected`;
+            lifetimeCoveragePerfEl.className = 'performance ' + (coveragePerf >= 100 ? 'positive' : 'negative');
+        }
+        
+        // Update Generation display
+        document.getElementById('lifetime-gen').textContent = formatKwh(totalGeneration);
+        document.getElementById('lifetime-gen-expected').textContent = formatNumber(totalExpected);
+        const lifetimeGenPerfEl = document.getElementById('lifetime-gen-perf');
+        if (lifetimeGenPerfEl) {
+            lifetimeGenPerfEl.textContent = `${lifetimePerformance}% of expected`;
+            lifetimeGenPerfEl.className = 'performance ' + (lifetimePerformance >= 100 ? 'positive' : 'negative');
+        }
+        
+        document.getElementById('lifetime-perf').textContent = formatNumber(lifetimePerformance);
+        document.getElementById('lifetime-perf-diff').textContent = formatNumber(Math.abs(lifetimeDifference));
+        document.getElementById('lifetime-perf-status').textContent = lifetimeStatus;
+        
+        // Update lifetime performance card styling
+        const lifetimePerfCard = document.querySelector('#lifetime-perf').closest('.stat-card');
+        const lifetimePerfEl = lifetimePerfCard.querySelector('.performance');
+        if (!lifetimePerfEl) {
+            const newPerf = document.createElement('div');
+            newPerf.className = 'performance ' + (lifetimePerformance >= 100 ? 'positive' : 'negative');
+            newPerf.textContent = `${lifetimePerformance >= 100 ? 'Ahead of' : 'Behind'} target`;
+            lifetimePerfCard.appendChild(newPerf);
+        } else {
+            lifetimePerfEl.textContent = `${lifetimePerformance >= 100 ? 'Ahead of' : 'Behind'} target`;
+            lifetimePerfEl.className = 'performance ' + (lifetimePerformance >= 100 ? 'positive' : 'negative');
+        }
+        
+        // Create chart
+        const ctx = document.getElementById('lifetimeMonthlyChart').getContext('2d');
+        if (lifetimeMonthlyChart) lifetimeMonthlyChart.destroy();
+        
+        // Custom plugin to draw horizontal lines across each bar for Load/Grid
+        const horizontalLinesPlugin = {
+            id: 'horizontalLines',
+            afterDatasetsDraw: (chart) => {
+                const {ctx, chartArea, scales} = chart;
+                const {left, right} = chartArea;
+                const xScale = scales.x;
+                const y1Scale = scales.y1; // Load/Grid axis
+                
+                // Get bar width from the actual bar chart
+                const barWidth = chart.getDatasetMeta(0).data[0]?.width || 60;
+                const halfBarWidth = barWidth / 2;
+                
+                // Draw lines for Load/Grid datasets (datasets 3-6)
+                [
+                    {data: monthActualLoad, color: '#ef4444', width: 3, dash: []},
+                    {data: monthExpectedLoad, color: '#ef4444', width: 2, dash: [5, 5]},
+                    {data: monthActualGrid, color: '#f97316', width: 3, dash: []},
+                    {data: monthExpectedGrid, color: '#f97316', width: 2, dash: [5, 5]}
+                ].forEach((dataset, idx) => {
+                    dataset.data.forEach((value, i) => {
+                        if (value != null && value > 0) {
+                            const x = xScale.getPixelForValue(i);
+                            const y = y1Scale.getPixelForValue(value);
+                            
+                            ctx.save();
+                            ctx.strokeStyle = dataset.color;
+                            ctx.lineWidth = dataset.width;
+                            ctx.setLineDash(dataset.dash);
+                            ctx.beginPath();
+                            ctx.moveTo(x - halfBarWidth, y);
+                            ctx.lineTo(x + halfBarWidth, y);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    });
+                });
+            }
+        };
+        
+        // Scale Performance to fit on primary axis with Generation
+        // Performance is 0-150%, scale it to match generation range
+        const maxGeneration = Math.max(...monthGeneration);
+        const scaledPerformance = cumulativePerformance.map(perf => (perf / 100) * (maxGeneration * 0.8));
+        
+        lifetimeMonthlyChart = new Chart(ctx, {
+            type: 'bar',
+            plugins: [horizontalLinesPlugin],
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        label: 'Expected Generation (kWh)',
+                        data: monthExpected,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        yAxisID: 'y',
+                        order: 3
+                    },
+                    {
+                        label: 'Actual Generation (kWh)',
+                        data: monthGeneration,
+                        backgroundColor: '#4ade80',
+                        borderRadius: 5,
+                        yAxisID: 'y',
+                        order: 2
+                    },
+                    {
+                        label: 'Cumulative Performance (%)',
+                        data: scaledPerformance,
+                        type: 'line',
+                        borderColor: '#FFD700',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#FFD700',
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        order: 1,
+                        // Store original performance values for tooltip
+                        originalData: cumulativePerformance
+                    },
+                    {
+                        label: 'Actual Load (kWh)',
+                        data: monthActualLoad,
+                        type: 'line',
+                        borderColor: '#ef4444',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointStyle: 'line',
+                        pointBorderWidth: 3,
+                        pointBorderColor: '#ef4444',
+                        tension: 0,
+                        showLine: false,
+                        yAxisID: 'y1',
+                        order: 0,
+                        hidden: true
+                    },
+                    {
+                        label: 'Expected Load (kWh)',
+                        data: monthExpectedLoad,
+                        type: 'line',
+                        borderColor: '#ef4444',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 6,
+                        pointStyle: 'line',
+                        pointBorderWidth: 2,
+                        pointBorderColor: '#ef4444',
+                        borderDash: [5, 5],
+                        tension: 0,
+                        showLine: false,
+                        yAxisID: 'y1',
+                        order: 0,
+                        hidden: true
+                    },
+                    {
+                        label: 'Actual Grid (kWh)',
+                        data: monthActualGrid,
+                        type: 'line',
+                        borderColor: '#f97316',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointStyle: 'line',
+                        pointBorderWidth: 3,
+                        pointBorderColor: '#f97316',
+                        tension: 0,
+                        showLine: false,
+                        yAxisID: 'y1',
+                        order: 0,
+                        hidden: true
+                    },
+                    {
+                        label: 'Expected Grid (kWh)',
+                        data: monthExpectedGrid,
+                        type: 'line',
+                        borderColor: '#f97316',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 6,
+                        pointStyle: 'line',
+                        pointBorderWidth: 2,
+                        pointBorderColor: '#f97316',
+                        borderDash: [5, 5],
+                        tension: 0,
+                        showLine: false,
+                        yAxisID: 'y1',
+                        order: 0,
+                        hidden: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { 
+                        labels: { 
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleFont: { size: 18, weight: 'bold' },
+                        bodyFont: { size: 16 },
+                        padding: 20,
+                        callbacks: {
+                            label: function(context) {
+                                if (context.datasetIndex === 0) {
+                                    return 'Expected Gen: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 1) {
+                                    return 'Actual Gen: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 2) {
+                                    // Show actual performance % from originalData
+                                    const actualPerf = context.dataset.originalData[context.dataIndex];
+                                    return 'Cumulative Performance: ' + actualPerf.toFixed(1) + '%';
+                                } else if (context.datasetIndex === 3) {
+                                    return 'Actual Load: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 4) {
+                                    return 'Expected Load: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 5) {
+                                    return 'Actual Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 6) {
+                                    return 'Expected Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Generation (kWh)',
+                            color: '#4ade80',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Load / Grid (kWh)',
+                            color: '#ef4444',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: {
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading lifetime monthly breakdown:', error);
+    }
+}
+
+async function loadLifetimeActualVsExpectedChart() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+        const response = await fetch(historyPath);
+        
+        if (!response.ok) {
+            console.error('Could not load historical data');
+            return;
+        }
+        
+        const historyData = await response.json();
+        
+        // Group daily records by month
+        const monthlyData = {};
+        historyData.daily_records.forEach(record => {
+            const monthKey = record.date.substring(0, 7); // "YYYY-MM"
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {
+                    generation: 0,
+                    expected: 0,
+                    days: 0
+                };
+            }
+            monthlyData[monthKey].generation += record.generation_kwh;
+            monthlyData[monthKey].days += 1;
+        });
+        
+        // Calculate expected values for each month
+        const monthKeys = Object.keys(monthlyData).sort();
+        const monthLabels = [];
+        const monthActual = [];
+        const monthExpected = [];
+        
+        monthKeys.forEach(monthKey => {
+            const [year, month] = monthKey.split('-').map(Number);
+            const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
+            monthLabels.push(monthName);
+            monthActual.push(monthlyData[monthKey].generation);
+            
+            // Calculate expected value with degradation
+            const monthPadded = month.toString().padStart(2, '0');
+            if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthPadded]) {
+                const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                const targetDate = new Date(year, month - 1, 15);
+                const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                const yearsActive = daysActive / 365.25;
+                
+                let degradationPercent;
+                if (yearsActive < 1) {
+                    degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                } else {
+                    degradationPercent = (dashboardData.system.degradation_year_1 + 
+                        (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                }
+                
+                const degradationFactor = 1 - (degradationPercent / 100);
+                const avgDailyPrediction = dashboardData.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
+                const expectedForDays = avgDailyPrediction * monthlyData[monthKey].days;
+                
+                monthExpected.push(expectedForDays);
+            } else {
+                monthExpected.push(0);
+            }
+        });
+        
+        // Create chart
+        const ctx = document.getElementById('lifetimeActualVsExpectedChart').getContext('2d');
+        if (lifetimeActualVsExpectedChart) lifetimeActualVsExpectedChart.destroy();
+        
+        lifetimeActualVsExpectedChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        label: 'Expected Generation (kWh)',
+                        data: monthExpected,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 4,
+                        pointBackgroundColor: '#3b82f6',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Actual Generation (kWh)',
+                        data: monthActual,
+                        borderColor: '#4ade80',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#4ade80',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { 
+                        labels: { 
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleFont: { size: 18, weight: 'bold' },
+                        bodyFont: { size: 16 },
+                        padding: 20
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Generation (kWh)',
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading actual vs expected chart:', error);
+    }
+}
+
+async function loadLifetimePerformanceLineChart() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+        const response = await fetch(historyPath);
+        
+        if (!response.ok) {
+            console.error('Could not load historical data');
+            return;
+        }
+        
+        const historyData = await response.json();
+        
+        // Group daily records by month
+        const monthlyData = {};
+        historyData.daily_records.forEach(record => {
+            const monthKey = record.date.substring(0, 7); // "YYYY-MM"
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {
+                    generation: 0,
+                    expected: 0,
+                    days: 0
+                };
+            }
+            monthlyData[monthKey].generation += record.generation_kwh;
+            monthlyData[monthKey].days += 1;
+        });
+        
+        // Calculate performance for each month
+        const monthKeys = Object.keys(monthlyData).sort();
+        const monthLabels = [];
+        const monthPerformance = [];
+        
+        monthKeys.forEach(monthKey => {
+            const [year, month] = monthKey.split('-').map(Number);
+            const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
+            monthLabels.push(monthName);
+            
+            // Calculate expected value with degradation
+            const monthPadded = month.toString().padStart(2, '0');
+            if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthPadded]) {
+                const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                const targetDate = new Date(year, month - 1, 15);
+                const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                const yearsActive = daysActive / 365.25;
+                
+                let degradationPercent;
+                if (yearsActive < 1) {
+                    degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                } else {
+                    degradationPercent = (dashboardData.system.degradation_year_1 + 
+                        (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                }
+                
+                const degradationFactor = 1 - (degradationPercent / 100);
+                const avgDailyPrediction = dashboardData.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
+                const expectedForDays = avgDailyPrediction * monthlyData[monthKey].days;
+                
+                monthlyData[monthKey].expected = expectedForDays;
+                
+                const performance = expectedForDays > 0 ? (monthlyData[monthKey].generation / expectedForDays * 100) : 0;
+                monthPerformance.push(performance);
+            } else {
+                monthPerformance.push(0);
+                monthlyData[monthKey].expected = 0;
+            }
+        });
+        
+        // Calculate CUMULATIVE performance
+        const cumulativePerformance = [];
+        let cumulativeGeneration = 0;
+        let cumulativeExpected = 0;
+        
+        monthKeys.forEach(monthKey => {
+            cumulativeGeneration += monthlyData[monthKey].generation;
+            cumulativeExpected += monthlyData[monthKey].expected;
+            
+            const cumPerf = cumulativeExpected > 0 ? (cumulativeGeneration / cumulativeExpected * 100) : 0;
+            cumulativePerformance.push(cumPerf);
+        });
+        
+        console.log('📊 Performance Line Chart - Cumulative Performance:', cumulativePerformance.map(p => p.toFixed(1) + '%').join(', '));
+        
+        // Create chart
+        const ctx = document.getElementById('lifetimePerformanceLineChart').getContext('2d');
+        if (lifetimePerformanceLineChart) lifetimePerformanceLineChart.destroy();
+        
+        lifetimePerformanceLineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        label: 'Cumulative Performance (%)',
+                        data: cumulativePerformance,
+                        borderColor: '#FFD700',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#FFD700',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { 
+                        labels: { 
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleFont: { size: 18, weight: 'bold' },
+                        bodyFont: { size: 16 },
+                        padding: 20,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Performance: ' + context.parsed.y.toFixed(1) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        max: 150,
+                        title: { 
+                            display: true, 
+                            text: 'Performance (%)',
+                            color: '#FFD700',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' },
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading performance line chart:', error);
+    }
+}
+
+// PHASE 3: Load Lifetime TOU Savings Chart
+async function loadLifetimeTouSavingsChart() {
+    try {
+        // Use the validated global dashboardData instead of fetching fresh
+        if (!dashboardData || !dashboardData.daily_records) {
+            console.error('Dashboard data not loaded');
+            return;
+        }
+        const data = dashboardData;
+        
+        // Calculate monthly TOU from daily_records (same as cumulative chart)
+        const monthlyData = {};
+        
+        data.daily_records.forEach(record => {
+            const yearMonth = record.date.substring(0, 7); // "YYYY-MM"
+            if (!monthlyData[yearMonth]) {
+                monthlyData[yearMonth] = {
+                    generation: 0,
+                    tou: { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 }
+                };
+            }
+            
+            monthlyData[yearMonth].generation += record.generation_kwh || 0;
+            
+            // Sum TOU breakdown (using recalculated values from V11+)
+            if (record.tou_breakdown) {
+                monthlyData[yearMonth].tou.peak_kwh += record.tou_breakdown.peak_kwh || 0;
+                monthlyData[yearMonth].tou.standard_kwh += record.tou_breakdown.standard_kwh || 0;
+                monthlyData[yearMonth].tou.off_peak_kwh += record.tou_breakdown.off_peak_kwh || 0;
+            }
+        });
+        
+        const monthKeys = Object.keys(monthlyData).sort();
+        
+        if (monthKeys.length === 0) {
+            console.warn('No monthly data for TOU savings chart');
+            return;
+        }
+        
+        const monthLabels = [];
+        const peakSavingsActual = [];
+        const standardSavingsActual = [];
+        const offPeakSavingsActual = [];
+        const peakSavingsExpected = [];
+        const standardSavingsExpected = [];
+        const offPeakSavingsExpected = [];
+        
+        console.log('📊 TOU Savings Chart - Months:', monthKeys.length);
+        
+        monthKeys.forEach(monthKey => {
+            // Format label as "Jan 2025"
+            const [year, month] = monthKey.split('-');
+            const date = new Date(year, parseInt(month) - 1);
+            monthLabels.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+            
+            // === ACTUAL TOU SAVINGS ===
+            // Calculate financial savings from corrected TOU
+            const touKwh = monthlyData[monthKey].tou;
+            const monthDate = monthKey + '-01'; // First day of month for season detection
+            const financial = calculateTOUFinancials(touKwh, monthDate);
+            
+            // Extract savings by TOU period
+            peakSavingsActual.push(financial.savings.peak || 0);
+            standardSavingsActual.push(financial.savings.standard || 0);
+            offPeakSavingsActual.push(financial.savings.off_peak || 0);
+            
+            // === EXPECTED TOU SAVINGS ===
+            // Calculate expected generation for this month with degradation
+            const monthPadded = month.toString().padStart(2, '0');
+            let expectedMonthlyGen = 0;
+            
+            if (data.monthly_predictions_base && data.monthly_predictions_base[monthPadded]) {
+                const commissioningDate = new Date(data.system.commissioning_date);
+                const targetDate = new Date(parseInt(year), parseInt(month) - 1, 15);
+                const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                const yearsActive = daysActive / 365.25;
+                
+                let degradationPercent;
+                if (yearsActive < 1) {
+                    degradationPercent = data.system.degradation_year_1 * yearsActive * 100;
+                } else {
+                    degradationPercent = (data.system.degradation_year_1 + 
+                        (data.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                }
+                
+                const degradationFactor = 1 - (degradationPercent / 100);
+                
+                // Get the days count from actual data to match MTD calculation
+                const actualMonthRecords = data.daily_records.filter(r => r.date.startsWith(monthKey));
+                const daysWithData = actualMonthRecords.length;
+                const avgDailyPrediction = data.monthly_predictions_base[monthPadded].avg_daily_kwh * degradationFactor;
+                expectedMonthlyGen = avgDailyPrediction * daysWithData;
+            }
+            
+            // Calculate expected TOU breakdown using same distribution as actual
+            const actualTotal = touKwh.peak_kwh + touKwh.standard_kwh + touKwh.off_peak_kwh;
+            let expectedTouKwh;
+            
+            if (actualTotal > 0) {
+                // Use actual TOU distribution percentages
+                const peakPercent = touKwh.peak_kwh / actualTotal;
+                const standardPercent = touKwh.standard_kwh / actualTotal;
+                const offPeakPercent = touKwh.off_peak_kwh / actualTotal;
+                
+                expectedTouKwh = {
+                    peak_kwh: expectedMonthlyGen * peakPercent,
+                    standard_kwh: expectedMonthlyGen * standardPercent,
+                    off_peak_kwh: expectedMonthlyGen * offPeakPercent
+                };
+            } else {
+                // Default distribution if no actual data (shouldn't happen)
+                expectedTouKwh = {
+                    peak_kwh: expectedMonthlyGen * 0.30,
+                    standard_kwh: expectedMonthlyGen * 0.50,
+                    off_peak_kwh: expectedMonthlyGen * 0.20
+                };
+            }
+            
+            // Calculate expected financial savings
+            const expectedFinancial = calculateTOUFinancials(expectedTouKwh, monthDate);
+            peakSavingsExpected.push(expectedFinancial.savings.peak || 0);
+            standardSavingsExpected.push(expectedFinancial.savings.standard || 0);
+            offPeakSavingsExpected.push(expectedFinancial.savings.off_peak || 0);
+        });
+        
+        // Create chart
+        const ctx = document.getElementById('lifetimeTouSavingsChart').getContext('2d');
+        if (lifetimeTouSavingsChart) lifetimeTouSavingsChart.destroy();
+        
+        lifetimeTouSavingsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        label: 'Actual Peak Savings (R)',
+                        data: peakSavingsActual,
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        stack: 'actual'
+                    },
+                    {
+                        label: 'Actual Standard Savings (R)',
+                        data: standardSavingsActual,
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                        borderColor: '#f59e0b',
+                        borderWidth: 2,
+                        stack: 'actual'
+                    },
+                    {
+                        label: 'Actual Off-Peak Savings (R)',
+                        data: offPeakSavingsActual,
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        stack: 'actual'
+                    },
+                    {
+                        label: 'Expected Peak Savings (R)',
+                        data: peakSavingsExpected,
+                        backgroundColor: 'rgba(239, 68, 68, 0.4)',
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        stack: 'expected'
+                    },
+                    {
+                        label: 'Expected Standard Savings (R)',
+                        data: standardSavingsExpected,
+                        backgroundColor: 'rgba(245, 158, 11, 0.4)',
+                        borderColor: '#f59e0b',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        stack: 'expected'
+                    },
+                    {
+                        label: 'Expected Off-Peak Savings (R)',
+                        data: offPeakSavingsExpected,
+                        backgroundColor: 'rgba(16, 185, 129, 0.4)',
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        stack: 'expected'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { 
+                        labels: { 
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleFont: { size: 18, weight: 'bold' },
+                        bodyFont: { size: 16 },
+                        padding: 20,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': R ' + context.parsed.y.toFixed(2);
+                            },
+                            footer: function(tooltipItems) {
+                                // Calculate totals for actual and expected
+                                let actualTotal = 0;
+                                let expectedTotal = 0;
+                                tooltipItems.forEach(item => {
+                                    if (item.datasetIndex < 3) {
+                                        actualTotal += item.parsed.y;
+                                    } else {
+                                        expectedTotal += item.parsed.y;
+                                    }
+                                });
+                                return '\n' + 
+                                       'Actual Total: R ' + actualTotal.toFixed(2) + '\n' +
+                                       'Expected Total: R ' + expectedTotal.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y: {
+                        stacked: true,
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Savings (R)',
+                            color: '#4ade80',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' },
+                            callback: function(value) {
+                                return 'R ' + value.toFixed(0);
+                            }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading TOU savings chart:', error);
+    }
+}
+
+async function loadPast30Days() {
+    try {
+        const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+        const historyPath = `${basePath}data/generation_history.json`.replace('//', '/');
+        const response = await fetch(historyPath);
+        
+        if (!response.ok) {
+            console.error('Could not load historical data');
+            return;
+        }
+        
+        const historyData = await response.json();
+        
+        // Get last 30 days
+        const recentRecords = historyData.daily_records.slice(-30);
+        
+        if (recentRecords.length === 0) {
+            alert('No recent data available');
+            return;
+        }
+        
+        const totalGen = recentRecords.reduce((sum, day) => sum + day.generation_kwh, 0);
+        
+        // Clear the monthly stats cards
+        document.getElementById('monthly-gen').textContent = formatKwh(totalGen);
+        document.getElementById('monthly-expected').textContent = '--';
+        document.getElementById('monthly-days-count').textContent = recentRecords.length;
+        document.getElementById('monthly-target-perf').textContent = '--';
+        document.getElementById('monthly-actual-gen').textContent = '--';
+        document.getElementById('monthly-target-gen').textContent = '--';
+        
+        const perfEl = document.getElementById('monthly-perf');
+        perfEl.textContent = `Past 30 days (no performance calculation)`;
+        perfEl.className = 'performance';
+        
+        // Update chart with past 30 days (no performance line)
+        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        if (monthlyChart) monthlyChart.destroy();
+        
+        monthlyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: recentRecords.map(d => {
+                    const date = new Date(d.date);
+                    return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+                }),
+                datasets: [
+                    {
+                        label: 'Daily Generation (kWh)',
+                        data: recentRecords.map(d => d.generation_kwh),
+                        backgroundColor: '#4ade80',
+                        borderRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { 
+                        labels: { 
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleFont: { size: 18, weight: 'bold' },
+                        bodyFont: { size: 16 },
+                        padding: 20,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Generation: ' + context.parsed.y.toFixed(1) + ' kWh';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Generation (kWh)',
+                            color: '#ffffff',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        ticks: { 
+                            color: '#ffffff',
+                            font: { size: 14, weight: '500' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading past 30 days:', error);
+    }
+}
+
+        let lastDataLoad = 0;  // Track when data was last loaded
+        const MIN_RELOAD_INTERVAL = 30000;  // 30 seconds minimum between reloads
+        
+        async function loadData() {
+            // Prevent reloading if data was just loaded (within 30 seconds)
+            const now = Date.now();
+            if (now - lastDataLoad < MIN_RELOAD_INTERVAL) {
+                console.log('⏭️ Skipping reload - data was just loaded');
+                return;
+            }
+            
+            try {
+                const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+                console.log('Base path:', basePath);
+                console.log('Current URL:', window.location.href);
+                
+                const dataPath = `${basePath}data/dashboard_data.json`.replace('//', '/');
+                console.log('Attempting to load from:', dataPath);
+                
+                const response = await fetch(dataPath);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - Failed to load ${dataPath}`);
+                }
+                
+                dashboardData = await response.json();
+                lastDataLoad = Date.now();  // Update last load timestamp
+                console.log('✓ Dashboard data loaded successfully');
+                console.log('Dashboard data structure:', dashboardData);
+                
+                // ===================================================================
+                // COMPATIBILITY LAYER: Convert new structure to old structure
+                // ===================================================================
+                // Always use daily_records if available (it's more current than root-level data)
+                if (dashboardData.daily_records && dashboardData.daily_records.length > 0) {
+                    console.log('📊 Converting new data structure to legacy format...');
+                    
+                    const today = new Date().toISOString().split('T')[0];
+                    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                    const thisMonth = today.substring(0, 7); // YYYY-MM
+                    
+                    // Find today's record
+                    const todayRecord = dashboardData.daily_records.find(r => r.date === today);
+                    const yesterdayRecord = dashboardData.daily_records.find(r => r.date === yesterday);
+                    
+                    // Get this month's summary
+                    const monthSummary = dashboardData.monthly_summaries?.[thisMonth];
+                    
+                    // Build legacy structure
+                    if (todayRecord) {
+                        const todayKwh = todayRecord.generation_kwh || 0;
+                        dashboardData.today = {
+                            generation_kwh: todayKwh,
+                            env_impact: {
+                                co2_offset_tons: todayKwh * 0.001,
+                                trees_equivalent: todayKwh * 0.045,
+                                households_offset: todayKwh * 0.102,
+                                km_driven_offset: todayKwh * 3.98,
+                                km_flown_offset: todayKwh * 0.081,
+                                coal_saved_kg: todayKwh * 0.548,
+                                water_saved_litres: todayKwh * 1.4
+                            }
+                        };
+                    }
+                    
+                    if (yesterdayRecord) {
+                        const yesterdayKwh = yesterdayRecord.generation_kwh || 0;
+                        dashboardData.yesterday = {
+                            generation_kwh: yesterdayKwh,
+                            env_impact: {
+                                co2_offset_tons: yesterdayKwh * 0.001,
+                                trees_equivalent: yesterdayKwh * 0.045,
+                                households_offset: yesterdayKwh * 0.102,
+                                km_driven_offset: yesterdayKwh * 3.98,
+                                km_flown_offset: yesterdayKwh * 0.081,
+                                coal_saved_kg: yesterdayKwh * 0.548,
+                                water_saved_litres: yesterdayKwh * 1.4
+                            }
+                        };
+                    }
+                    
+                    // CALCULATE month total from daily_records (always current)
+                    const monthRecords = dashboardData.daily_records.filter(r => r.date.startsWith(thisMonth));
+                    const monthTotalKwh = monthRecords.reduce((sum, r) => sum + (r.generation_kwh || 0), 0);
+                    
+                    // Calculate expected_kwh if not in monthly_summaries
+                    let monthExpectedKwh = monthSummary?.expected_generation_kwh || 0;
+                    let monthPerformancePercent = monthSummary?.performance_percent || 0;
+                    
+                    if (!monthExpectedKwh || monthExpectedKwh === 0) {
+                        // Calculate from base predictions with degradation
+                        const monthNum = thisMonth.split('-')[1]; // "02" from "2026-02"
+                        if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthNum]) {
+                            const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                            const now = new Date();
+                            const yearsActive = (now - commissioningDate) / (365.25 * 24 * 60 * 60 * 1000);
+                            
+                            let degradationPercent;
+                            if (yearsActive < 1) {
+                                degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                            } else {
+                                degradationPercent = (dashboardData.system.degradation_year_1 + 
+                                    (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                            }
+                            
+                            const degradationFactor = 1 - (degradationPercent / 100);
+                            const avgDailyPrediction = dashboardData.monthly_predictions_base[monthNum].avg_daily_kwh * degradationFactor;
+                            monthExpectedKwh = avgDailyPrediction * monthRecords.length; // MTD
+                            
+                            if (monthExpectedKwh > 0) {
+                                monthPerformancePercent = ((monthTotalKwh / monthExpectedKwh) * 100).toFixed(1);
+                            }
+                            
+                            console.log(`✓ [Compatibility] Calculated monthly expected: ${monthExpectedKwh.toFixed(2)} kWh for ${monthRecords.length} days (${monthPerformancePercent}%)`);
+                        }
+                    }
+                    
+                    dashboardData.month = {
+                        generation_kwh: monthTotalKwh,
+                        expected_kwh: monthExpectedKwh,
+                        performance_percent: monthPerformancePercent,
+                        env_impact: {
+                            co2_offset_tons: monthTotalKwh * 0.001,
+                            trees_equivalent: monthTotalKwh * 0.045,
+                            households_offset: monthTotalKwh * 0.102,
+                            km_driven_offset: monthTotalKwh * 3.98,
+                            km_flown_offset: monthTotalKwh * 0.081,
+                            coal_saved_kg: monthTotalKwh * 0.548,
+                            water_saved_litres: monthTotalKwh * 1.4
+                        }
+                    };
+                    
+                    // CALCULATE lifetime total from daily_records (always current)
+                    const lifetimeTotalKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.generation_kwh || 0), 0);
+                    
+                    // CALCULATE lifetime TOU breakdown from daily_records
+                    // For records with tou_breakdown, use it
+                    // For records without tou_breakdown but with hourly_data, calculate it
+                    const recordsWithTou = dashboardData.daily_records.filter(r => r.tou_breakdown);
+                    const recordsWithoutTouButWithHourly = dashboardData.daily_records.filter(r => !r.tou_breakdown && r.hourly_data && r.hourly_data.length > 0);
+                    
+                    console.log(`📊 Calculating lifetime TOU:`, {
+                        totalRecords: dashboardData.daily_records.length,
+                        withTouBreakdown: recordsWithTou.length,
+                        withoutTouButWithHourly: recordsWithoutTouButWithHourly.length,
+                        missing: dashboardData.daily_records.length - recordsWithTou.length - recordsWithoutTouButWithHourly.length
+                    });
+                    
+                    console.log(`📊 Checking TOU breakdowns for accuracy...`);
+                    
+                    let recalculatedCount = 0;
+                    let validCount = 0;
+                    let noDataCount = 0;
+                    
+                    // Use global calculateTouFromHourlyData function
+                    
+                    const lifetimeTouBreakdown = dashboardData.daily_records.reduce((acc, r) => {
+                        let useTou = null;
+                        
+                        // Check if existing tou_breakdown is valid
+                        if (r.tou_breakdown) {
+                            const touTotal = (r.tou_breakdown.peak_kwh || 0) + (r.tou_breakdown.standard_kwh || 0) + (r.tou_breakdown.off_peak_kwh || 0);
+                            const genTotal = r.generation_kwh || 0;
+                            const diff = Math.abs(touTotal - genTotal);
+                            
+                            // If TOU breakdown matches generation (within 0.1 kWh), use it
+                            if (diff < 0.1) {
+                                useTou = r.tou_breakdown;
+                                validCount++;
+                            } else if (r.hourly_data && r.hourly_data.length > 0) {
+                                // TOU doesn't match - recalculate from hourly data
+                                const calculatedTou = calculateTouFromHourlyData(r.date, r.hourly_data);
+                                const calcTotal = calculatedTou.peak_kwh + calculatedTou.standard_kwh + calculatedTou.off_peak_kwh;
+                                console.log(`  ⚠️ Recalculating TOU for ${r.date}:`);
+                                console.log(`     Existing: total=${touTotal.toFixed(2)}, peak=${r.tou_breakdown.peak_kwh?.toFixed(2)}, std=${r.tou_breakdown.standard_kwh?.toFixed(2)}, off=${r.tou_breakdown.off_peak_kwh?.toFixed(2)}`);
+                                console.log(`     Generation: ${genTotal.toFixed(2)} kWh`);
+                                console.log(`     Hourly data: ${r.hourly_data.length} hours, sample hour 7:`, r.hourly_data[7]);
+                                console.log(`     Recalculated: total=${calcTotal.toFixed(2)}, peak=${calculatedTou.peak_kwh.toFixed(2)}, std=${calculatedTou.standard_kwh.toFixed(2)}, off=${calculatedTou.off_peak_kwh.toFixed(2)}`);
+                                console.log(`     Match: ${Math.abs(calcTotal - genTotal) < 0.1 ? '✅' : '❌'} (diff=${Math.abs(calcTotal - genTotal).toFixed(2)})`);
+                                
+                                // CRITICAL: Update the record itself so monthly calculations use correct values!
+                                r.tou_breakdown = calculatedTou;
+                                
+                                useTou = calculatedTou;
+                                recalculatedCount++;
+                            } else {
+                                // Use existing even if wrong (no hourly data to recalculate)
+                                console.log(`  ⚠️ TOU mismatch for ${r.date} but no hourly_data: using existing TOU anyway`);
+                                useTou = r.tou_breakdown;
+                                noDataCount++;
+                            }
+                        } else if (r.hourly_data && r.hourly_data.length > 0) {
+                            // No TOU breakdown - calculate from hourly data
+                            console.log(`  📊 Calculating TOU for ${r.date} from hourly_data`);
+                            useTou = calculateTouFromHourlyData(r.date, r.hourly_data);
+                            recalculatedCount++;
+                        } else {
+                            noDataCount++;
+                        }
+                        
+                        if (useTou) {
+                            acc.peak_kwh += useTou.peak_kwh || 0;
+                            acc.standard_kwh += useTou.standard_kwh || 0;
+                            acc.off_peak_kwh += useTou.off_peak_kwh || 0;
+                        }
+                        
+                        return acc;
+                    }, { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 });
+                    
+                    console.log(`📊 TOU Validation Summary:`, {
+                        valid: validCount,
+                        recalculated: recalculatedCount,
+                        noData: noDataCount,
+                        total: dashboardData.daily_records.length
+                    });
+                    
+                    // CALCULATE lifetime Load/Grid from daily_records
+                    const lifetimeLoadKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.actual_load_kwh || 0), 0);
+                    const lifetimeGridKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.actual_grid_kwh || 0), 0);
+                    
+                    dashboardData.lifetime = {
+                        total_generation_kwh: lifetimeTotalKwh,
+                        total_generation_mwh: lifetimeTotalKwh / 1000,
+                        days_active: dashboardData.daily_records.length,
+                        actual_load_kwh: lifetimeLoadKwh,
+                        actual_grid_kwh: lifetimeGridKwh,
+                        tou_breakdown: lifetimeTouBreakdown,
+                        env_impact: {
+                            co2_offset_tons: lifetimeTotalKwh * 0.001,
+                            trees_equivalent: lifetimeTotalKwh * 0.045,
+                            households_offset: lifetimeTotalKwh * 0.102,
+                            km_driven_offset: lifetimeTotalKwh * 3.98,
+                            km_flown_offset: lifetimeTotalKwh * 0.081,
+                            coal_saved_kg: lifetimeTotalKwh * 0.548,
+                            water_saved_litres: lifetimeTotalKwh * 1.4
+                        }
+                    };
+                    
+                    const touTotal = lifetimeTouBreakdown.peak_kwh + lifetimeTouBreakdown.standard_kwh + lifetimeTouBreakdown.off_peak_kwh;
+                    const touDiff = Math.abs(touTotal - lifetimeTotalKwh);
+                    const touMatch = touDiff < 1; // Within 1 kWh tolerance
+                    
+                    console.log('✓ Legacy format created from daily_records:');
+                    console.log('  Today:', dashboardData.today?.generation_kwh?.toFixed(1), 'kWh');
+                    console.log('  Yesterday:', dashboardData.yesterday?.generation_kwh?.toFixed(1), 'kWh');
+                    console.log('  Month:', dashboardData.month?.generation_kwh?.toFixed(1), 'kWh (', monthRecords.length, 'days)');
+                    console.log('  Lifetime:', lifetimeTotalKwh.toFixed(1), 'kWh (', dashboardData.daily_records.length, 'days)');
+                    console.log('  Lifetime TOU Breakdown:');
+                    console.log('    Peak:', lifetimeTouBreakdown.peak_kwh.toFixed(1), 'kWh');
+                    console.log('    Standard:', lifetimeTouBreakdown.standard_kwh.toFixed(1), 'kWh');
+                    console.log('    Off-Peak:', lifetimeTouBreakdown.off_peak_kwh.toFixed(1), 'kWh');
+                    console.log('    TOU Total:', touTotal.toFixed(1), 'kWh');
+                    console.log('  TOU vs Lifetime Difference:', touDiff.toFixed(1), 'kWh');
+                    console.log('  TOU Matches Lifetime:', touMatch ? '✅ YES' : '❌ NO');
+                    console.log('  Lifetime Load:', lifetimeLoadKwh.toFixed(1), 'kWh');
+                    console.log('  Lifetime Grid:', lifetimeGridKwh.toFixed(1), 'kWh');
+                }
+                // ===================================================================
+                // END COMPATIBILITY LAYER
+                // ===================================================================
+                
+                // Validate data structure
+                if (!dashboardData.today || !dashboardData.month || !dashboardData.lifetime) {
+                    throw new Error('Missing required data sections (today, month, or lifetime)');
+                }
+                
+                // Get the most recent update time from daily_records
+                let lastUpdate;
+                // Use the latest timestamp from today's actual hourly data (what's displayed on Daily tab)
+                const today = new Date().toISOString().split('T')[0];
+                const todayRecord = dashboardData.daily_records?.find(r => r.date === today);
+                
+                if (todayRecord && todayRecord.hourly_data && todayRecord.hourly_data.length > 0) {
+                    // Find the last hour with actual generation data (non-zero)
+                    let latestHour = null;
+                    for (let i = todayRecord.hourly_data.length - 1; i >= 0; i--) {
+                        const hour = todayRecord.hourly_data[i];
+                        if (hour.generation_kw > 0 || hour.load_kw > 0) {
+                            latestHour = hour;
+                            break;
+                        }
+                    }
+                    
+                    if (latestHour && latestHour.time) {
+                        // Construct full timestamp from date + time (e.g., "2026-01-23T08:38:00")
+                        lastUpdate = new Date(`${today}T${latestHour.time}`);
+                    } else {
+                        // No data yet today, use updated_at or date
+                        lastUpdate = new Date(todayRecord.updated_at || todayRecord.date);
+                    }
+                } else if (dashboardData.last_updated) {
+                    // Fallback to root-level last_updated
+                    lastUpdate = new Date(dashboardData.last_updated);
+                } else if (dashboardData.daily_records && dashboardData.daily_records.length > 0) {
+                    // Last fallback: most recent record
+                    const mostRecentRecord = dashboardData.daily_records.reduce((latest, record) => {
+                        const recordTime = new Date(record.updated_at || record.date);
+                        const latestTime = new Date(latest.updated_at || latest.date);
+                        return recordTime > latestTime ? record : latest;
+                    });
+                    lastUpdate = new Date(mostRecentRecord.updated_at || mostRecentRecord.date);
+                } else {
+                    // Last resort: use current time
+                    lastUpdate = new Date();
+                }
+                
+                // Format the last update time in a friendly way
+                const now = new Date();
+                const todayString = now.toDateString();
+                const updateDate = lastUpdate.toDateString();
+                
+                let displayTime;
+                if (updateDate === todayString) {
+                    // Show "Today at HH:MM AM/PM" using the actual lastUpdate time
+                    displayTime = `Today at ${lastUpdate.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+                } else {
+                    // Show full date and time
+                    displayTime = lastUpdate.toLocaleString('en-ZA', { 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                    });
+                }
+                
+                document.getElementById('last-update').textContent = displayTime;
+                
+                // PHASE 3: Update header info
+                const headerLastUpdate = document.getElementById('header-last-update');
+                if (headerLastUpdate) {
+                    headerLastUpdate.textContent = displayTime;
+                }
+                
+                const headerDaysActive = document.getElementById('header-days-active');
+                if (headerDaysActive) {
+                    // Try multiple possible locations for days_active
+                    const daysActive = dashboardData.lifetime?.days_active || 
+                                      dashboardData.lifetime_summary?.days_active || 
+                                      (dashboardData.daily_records ? dashboardData.daily_records.length : null);
+                    if (daysActive) {
+                        headerDaysActive.textContent = daysActive;
+                    }
+                }
+                
+                // Handle yesterday's data - either from dashboard_data.json or calculate from today
+                const yesterdayGen = dashboardData.yesterday ? dashboardData.yesterday.generation_kwh : (dashboardData.today.generation_kwh * 0.95);
+                const yesterdayEnv = dashboardData.yesterday ? dashboardData.yesterday.env_impact : dashboardData.today.env_impact;
+                
+                // Safely set text content with existence checks
+                const setTextIfExists = (id, text) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = text;
+                    else console.warn(`Element ${id} not found`);
+                };
+                
+                setTextIfExists('pub-yesterday-gen', formatNumber(yesterdayGen));
+                setTextIfExists('pub-today-gen', formatNumber(dashboardData.today.generation_kwh));
+                setTextIfExists('pub-month-gen', formatNumber(dashboardData.month.generation_kwh));
+                
+                // Handle lifetime data with fallback
+                const lifetimeKwh = dashboardData.lifetime.total_generation_kwh || dashboardData.lifetime.generation_kwh || 0;
+                const lifetimeMwh = dashboardData.lifetime.total_generation_mwh || (lifetimeKwh / 1000) || 0;
+                
+                setTextIfExists('pub-lifetime-gen', formatNumber(lifetimeKwh, 0));
+                
+                // Populate environmental impact table
+                populateEnvTable(
+                    yesterdayEnv, 
+                    dashboardData.today.env_impact, 
+                    dashboardData.month.env_impact, 
+                    dashboardData.lifetime.env_impact
+                );
+                
+                setTextIfExists('monthly-gen', formatNumber(dashboardData.month.generation_kwh) + ' kWh');
+                
+                // Calculate expected value if missing from JSON
+                let monthlyExpectedValue = dashboardData.month.expected_kwh;
+                let monthlyPerfValue = dashboardData.month.performance_percent;
+                
+                console.log(`📊 [loadData] Monthly expected from JSON: ${monthlyExpectedValue}`);
+                
+                if (!monthlyExpectedValue || monthlyExpectedValue === 0) {
+                    // Calculate it from base predictions with degradation
+                    const today = new Date();
+                    const thisMonth = today.toISOString().substring(0, 7); // YYYY-MM
+                    const monthKey = thisMonth.split('-')[1]; // e.g., "02" from "2026-02"
+                    
+                    console.log(`📊 [loadData] Calculating expected for month ${thisMonth}, key=${monthKey}`);
+                    
+                    if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+                        // Calculate years active and degradation
+                        const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                        const yearsActive = (today - commissioningDate) / (365.25 * 24 * 60 * 60 * 1000);
+                        
+                        let degradationPercent;
+                        if (yearsActive < 1) {
+                            degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                        } else {
+                            degradationPercent = (dashboardData.system.degradation_year_1 + 
+                                (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                        }
+                        
+                        const degradationFactor = 1 - (degradationPercent / 100);
+                        const baseKwh = dashboardData.monthly_predictions_base[monthKey].base_kwh;
+                        
+                        // Get days with data for this month
+                        const monthRecords = dashboardData.daily_records?.filter(r => r.date.startsWith(thisMonth)) || [];
+                        const daysWithData = monthRecords.length;
+                        
+                        // Calculate expected for days with data (MTD)
+                        const avgDailyPrediction = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
+                        monthlyExpectedValue = avgDailyPrediction * daysWithData;
+                        
+                        // Recalculate performance
+                        if (monthlyExpectedValue > 0) {
+                            monthlyPerfValue = ((dashboardData.month.generation_kwh / monthlyExpectedValue) * 100).toFixed(1);
+                        }
+                        
+                        console.log(`✓ Calculated missing monthly expected: ${monthlyExpectedValue.toFixed(2)} kWh for ${daysWithData} days (${monthlyPerfValue}% performance)`);
+                    } else {
+                        console.warn(`⚠️ [loadData] Could not find predictions for month key ${monthKey}`);
+                    }
+                }
+                
+                setTextIfExists('monthly-expected', formatNumber(monthlyExpectedValue || 0));
+                setTextIfExists('monthly-perf', `${monthlyPerfValue || 0}% of expected`);
+                
+                setTextIfExists('lifetime-gen', formatNumber(lifetimeKwh, 0));
+                setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active || 0, 0));
+                
+                createEnvCards(dashboardData.lifetime.env_impact, 'client-env-lifetime');
+                
+                // Phase 2: Update TOU and Financial data for Lifetime tab
+                if (dashboardData.lifetime) {
+                    updateTouBreakdown('lifetime', dashboardData.lifetime);
+                }
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                // Only show public view on initial load, not on refreshes
+                if (!isLoggedIn) {
+                    showPublicView();
+                }
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: #f87171;">
+                        <p>⚠️ Error loading dashboard data</p>
+                        <p style="font-size: var(--font-xs); margin-top: 10px;">Error: ${error.message}</p>
+                        <p style="font-size: var(--font-xs); margin-top: 10px; color: #888;">
+                            Check browser console (F12) for details<br>
+                            Repository: GenergyDashboard/1stAveSpar
+                        </p>
+                    </div>
+                `;
+            }
+        }
+        
+        loadCredentials().then(() => {
+            // Check if docx library is loaded
+            console.log('📄 Checking docx library:', typeof window.docx !== 'undefined' ? '✓ Loaded' : '✗ Not loaded');
+            if (typeof window.docx !== 'undefined') {
+                console.log('📄 docx exports:', Object.keys(window.docx));
+            }
+            
+            // Check for persisted authentication
+            const wasLoggedIn = checkPersistedAuth();
+            
+            // Load data first
+            loadData().then(() => {
+                // If user was logged in, restore client view
+                if (wasLoggedIn) {
+                    showClientView();
+                }
+            });
+            
+            // Auto-refresh every 2 minutes (more frequent for TV display)
+            setInterval(loadData, 2 * 60 * 1000);
+            
+            // DISABLED: Auto-refresh was causing generation values to change unexpectedly
+            // Users can manually refresh the page if they want updated data
+            /*
+            // Also refresh when page becomes visible (for background tabs)
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    console.log('Page became visible - refreshing data');
+                    loadData();
+                }
+            });
+            
+            // Refresh when window regains focus
+            window.addEventListener('focus', () => {
+                console.log('Window focused - refreshing data');
+                loadData();
+            });
+            */
+            
+            console.log('✓ Auto-refresh enabled: Every 2 minutes');
+        });
+    </script>
+</body>
+</html>
