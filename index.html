@@ -1923,7 +1923,15 @@
                 
                 <div class="chart-container">
                     <h3 class="chart-title">Daily Generation for Selected Month</h3>
-                    <canvas id="monthlyChart"></canvas>
+                    <div style="display: flex; gap: 20px; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                        <div id="monthlyChartToggables" style="min-width: 200px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                            <h4 style="margin: 0 0 10px 0; color: #fff; font-size: 14px; font-weight: bold;">Toggleables</h4>
+                            <div id="monthlyChartToggleList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- PHASE 3: New Actual vs Expected Load & Grid Graph -->
@@ -6507,6 +6515,138 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
             if (monthlyChart) monthlyChart.destroy();
             createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, irradiationData, 
                 actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine, actualAvgLoadPerDay, avgDailyPrediction);
+            
+            // PHASE 3: Create Load & Grid comparison chart
+            const loadGridCtx = document.getElementById('monthlyLoadGridChart').getContext('2d');
+            if (monthlyLoadGridChart) monthlyLoadGridChart.destroy();
+            
+            console.log(`📊 Load & Grid Chart Creation:`);
+            console.log(`   Records count: ${records.length}`);
+            console.log(`   First 3 dates: ${records.slice(0, 3).map(r => r.date).join(', ')}`);
+            console.log(`   Last 3 dates: ${records.slice(-3).map(r => r.date).join(', ')}`);
+            console.log(`   Actual Load values (last 5): ${records.slice(-5).map(r => (r.actual_load_kwh || 0).toFixed(1)).join(', ')}`);
+            console.log(`   Actual Grid values (last 5): ${records.slice(-5).map(r => (r.actual_grid_kwh || 0).toFixed(1)).join(', ')}`);
+            
+            monthlyLoadGridChart = new Chart(loadGridCtx, {
+                type: 'bar',
+                data: {
+                    labels: records.map(d => {
+                        const date = new Date(d.date);
+                        return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+                    }),
+                    datasets: [
+                        {
+                            label: 'Actual Load (kWh)',
+                            data: records.map(d => d.actual_load_kwh || 0),  // Daily sums
+                            type: 'bar',
+                            backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                            borderColor: '#ef4444',
+                            borderWidth: 2,
+                            yAxisID: 'y',
+                            order: 3
+                        },
+                        {
+                            label: 'Expected Load (kWh)',
+                            data: expectedLoadLine,  // Average line
+                            type: 'line',
+                            borderColor: '#ef4444',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            tension: 0,
+                            yAxisID: 'y',
+                            order: 2
+                        },
+                        {
+                            label: 'Actual Grid (kWh)',
+                            data: records.map(d => d.actual_grid_kwh || 0),  // Daily sums
+                            type: 'bar',
+                            backgroundColor: 'rgba(249, 115, 22, 0.7)',
+                            borderColor: '#f97316',
+                            borderWidth: 2,
+                            yAxisID: 'y',
+                            order: 2
+                        },
+                        {
+                            label: 'Expected Grid (kWh)',
+                            data: expectedGridLine,
+                            type: 'line',
+                            borderColor: '#f97316',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            tension: 0,
+                            yAxisID: 'y',
+                            order: 1
+                        },
+                        {
+                            label: 'Actual PV Generation (kWh)',
+                            data: records.map(d => d.generation_kwh || 0),
+                            type: 'bar',
+                            backgroundColor: 'rgba(74, 222, 128, 0.7)',
+                            borderColor: '#4ade80',
+                            borderWidth: 2,
+                            yAxisID: 'y',
+                            order: 4,
+                            hidden: true  // Hidden by default
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: { 
+                            labels: { 
+                                color: '#ffffff',
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                            titleFont: { size: 18, weight: 'bold' },
+                            bodyFont: { size: 16 },
+                            padding: 20,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + ' kWh';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { 
+                                color: '#ffffff',
+                                font: { size: 14, weight: '500' }
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            beginAtZero: true,
+                            title: { 
+                                display: true, 
+                                text: 'Energy (kWh)',
+                                color: '#ffffff',
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            ticks: { 
+                                color: '#ffffff',
+                                font: { size: 14, weight: '500' }
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.15)' }
+                        }
+                    }
+                }
+            });
         })
         .catch(error => {
             console.error('❌ Failed to load predictions:', error.message || error);
@@ -6685,11 +6825,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                 mode: 'index',
                 intersect: false,
             },
-            layout: {
-                padding: {
-                    right: 20  // Extra space for percentage labels
-                }
-            },
             plugins: {
                 legend: {
                     position: 'top',
@@ -6786,7 +6921,65 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
             }
         }
     });
+    
+    // Populate custom toggleable legend
+    const toggleList = document.getElementById('monthlyChartToggleList');
+    if (toggleList) {
+        toggleList.innerHTML = '';
+        
+        const toggleableLabels = ['Actual Load', 'Expected Load', 'Actual Grid', 'Expected Grid'];
+        
+        monthlyChart.data.datasets.forEach((dataset, index) => {
+            if (toggleableLabels.some(label => dataset.label.includes(label))) {
+                const legendItem = document.createElement('div');
+                legendItem.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    padding: 5px;
+                    border-radius: 4px;
+                    transition: background 0.2s;
+                `;
+                
+                legendItem.onmouseover = () => legendItem.style.background = 'rgba(255,255,255,0.1)';
+                legendItem.onmouseout = () => legendItem.style.background = 'transparent';
+                
+                // Color box
+                const colorBox = document.createElement('div');
+                colorBox.style.cssText = `
+                    width: 30px;
+                    height: 3px;
+                    background: ${dataset.borderColor || dataset.backgroundColor};
+                    ${dataset.borderDash ? 'background: repeating-linear-gradient(to right, ' + (dataset.borderColor || dataset.backgroundColor) + ' 0px, ' + (dataset.borderColor || dataset.backgroundColor) + ' 5px, transparent 5px, transparent 10px);' : ''}
+                    border-radius: 2px;
+                `;
+                
+                // Label text
+                const labelText = document.createElement('span');
+                labelText.textContent = dataset.label;
+                labelText.style.cssText = `
+                    color: ${monthlyChart.isDatasetVisible(index) ? '#fff' : '#999'};
+                    font-size: 13px;
+                    text-decoration: ${monthlyChart.isDatasetVisible(index) ? 'none' : 'line-through'};
+                `;
+                
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(labelText);
+                
+                legendItem.onclick = () => {
+                    monthlyChart.setDatasetVisibility(index, !monthlyChart.isDatasetVisible(index));
+                    monthlyChart.update();
+                    labelText.style.color = monthlyChart.isDatasetVisible(index) ? '#fff' : '#999';
+                    labelText.style.textDecoration = monthlyChart.isDatasetVisible(index) ? 'none' : 'line-through';
+                };
+                
+                toggleList.appendChild(legendItem);
+            }
+        });
+    }
 }
+
     
     // Phase 2: Update TOU and Financial data - Calculate from daily_records
     if (dashboardData && dashboardData.daily_records) {
@@ -6829,137 +7022,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
         updateTouBreakdown('monthly', monthlyData);
     }
     
-    // PHASE 3: Create Load & Grid comparison chart
-    const loadGridCtx = document.getElementById('monthlyLoadGridChart').getContext('2d');
-    if (monthlyLoadGridChart) monthlyLoadGridChart.destroy();
-    
-    console.log(`📊 Load & Grid Chart Creation:`);
-    console.log(`   Records count: ${records.length}`);
-    console.log(`   First 3 dates: ${records.slice(0, 3).map(r => r.date).join(', ')}`);
-    console.log(`   Last 3 dates: ${records.slice(-3).map(r => r.date).join(', ')}`);
-    console.log(`   Actual Load values (last 5): ${records.slice(-5).map(r => (r.actual_load_kwh || 0).toFixed(1)).join(', ')}`);
-    console.log(`   Actual Grid values (last 5): ${records.slice(-5).map(r => (r.actual_grid_kwh || 0).toFixed(1)).join(', ')}`);
-    
-    monthlyLoadGridChart = new Chart(loadGridCtx, {
-        type: 'bar',
-        data: {
-            labels: records.map(d => {
-                const date = new Date(d.date);
-                return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
-            }),
-            datasets: [
-                {
-                    label: 'Actual Load (kWh)',
-                    data: records.map(d => d.actual_load_kwh || 0),  // Daily sums
-                    type: 'bar',
-                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
-                    borderColor: '#ef4444',
-                    borderWidth: 2,
-                    yAxisID: 'y',
-                    order: 3
-                },
-                {
-                    label: 'Expected Load (kWh)',
-                    data: expectedLoadLine,  // Average line
-                    type: 'line',
-                    borderColor: '#ef4444',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    tension: 0,
-                    yAxisID: 'y',
-                    order: 1
-                },
-                {
-                    label: 'Actual Grid (kWh)',
-                    data: records.map(d => d.actual_grid_kwh || 0),  // Daily sums
-                    type: 'bar',
-                    backgroundColor: 'rgba(249, 115, 22, 0.7)',
-                    borderColor: '#f97316',
-                    borderWidth: 2,
-                    yAxisID: 'y',
-                    order: 2
-                },
-                {
-                    label: 'Expected Grid (kWh)',
-                    data: expectedGridLine,
-                    type: 'line',
-                    borderColor: '#f97316',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    tension: 0,
-                    yAxisID: 'y',
-                    order: 1
-                },
-                {
-                    label: 'Actual PV Generation (kWh)',
-                    data: records.map(d => d.generation_kwh || 0),
-                    type: 'bar',
-                    backgroundColor: 'rgba(74, 222, 128, 0.7)',
-                    borderColor: '#4ade80',
-                    borderWidth: 2,
-                    yAxisID: 'y',
-                    order: 4,
-                    hidden: true  // Hidden by default
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            plugins: {
-                legend: { 
-                    labels: { 
-                        color: '#ffffff',
-                        font: { size: 16, weight: 'bold' }
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-                    titleFont: { size: 18, weight: 'bold' },
-                    bodyFont: { size: 16 },
-                    padding: 20,
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + ' kWh';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: { 
-                        color: '#ffffff',
-                        font: { size: 14, weight: '500' }
-                    },
-                    grid: { color: 'rgba(255, 255, 255, 0.15)' }
-                },
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    beginAtZero: true,
-                    title: { 
-                        display: true, 
-                        text: 'Energy (kWh)',
-                        color: '#ffffff',
-                        font: { size: 16, weight: 'bold' }
-                    },
-                    ticks: { 
-                        color: '#ffffff',
-                        font: { size: 14, weight: '500' }
-                    },
-                    grid: { color: 'rgba(255, 255, 255, 0.15)' }
-                }
-            }
-        }
-    });
 }  // End updateMonthlyChart
 
 async function loadLifetimeMonthlyBreakdown() {
