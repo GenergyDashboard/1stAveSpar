@@ -5475,7 +5475,8 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
     console.log(`  📊 Last hour with data: ${lastHourWithData}`);
     
     // totalPredicted will be calculated later along with Load/Grid using monthly average hourly pattern
-    let totalPredicted = 0;
+    // (already declared at top of function, just reset it here)
+    totalPredicted = 0;
     
     // Display will be updated in finishDailyViewUpdate after calculating expected values
     document.getElementById('daily-gen').textContent = formatKwh(totalGeneration);
