@@ -1769,7 +1769,13 @@
                 
                 <div class="chart-container">
                     <h3 class="chart-title">Hourly Generation Pattern</h3>
-                    <canvas id="dailyChart"></canvas>
+                    <div style="display: flex; gap: 20px;">
+                        <canvas id="dailyChart" style="flex: 1;"></canvas>
+                        <div style="min-width: 200px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 15px;">
+                            <h4 style="color: #fff; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">Toggleables</h4>
+                            <div id="dailyChartToggleList"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -6089,10 +6095,18 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             plugins: {
     legend: { 
         position: 'top',
+        align: 'center',  // Center the legend
         labels: { 
             color: '#ffffff',
             font: { size: 16, weight: 'bold' },
-            padding: 20
+            padding: 20,
+            filter: function(item, chart) {
+                // Hide Load and Grid items - they go in toggleables
+                if (item.text.includes('Load') || item.text.includes('Grid')) {
+                    return false;
+                }
+                return true;
+            }
         }
     },
                 tooltip: {
@@ -6177,6 +6191,63 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             }
         }
     });
+    
+    // Populate custom toggleable legend
+    const toggleList = document.getElementById('dailyChartToggleList');
+    if (toggleList) {
+        toggleList.innerHTML = '';
+        
+        const toggleableLabels = ['Actual Load', 'Expected Load', 'Actual Grid', 'Expected Grid'];
+        
+        dailyChart.data.datasets.forEach((dataset, index) => {
+            if (toggleableLabels.some(label => dataset.label.includes(label))) {
+                const legendItem = document.createElement('div');
+                legendItem.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    padding: 5px;
+                    border-radius: 4px;
+                    transition: background 0.2s;
+                `;
+                
+                legendItem.onmouseover = () => legendItem.style.background = 'rgba(255,255,255,0.1)';
+                legendItem.onmouseout = () => legendItem.style.background = 'transparent';
+                
+                // Color box
+                const colorBox = document.createElement('div');
+                colorBox.style.cssText = `
+                    width: 30px;
+                    height: 3px;
+                    background: ${dataset.borderColor || dataset.backgroundColor};
+                    ${dataset.borderDash ? 'background: repeating-linear-gradient(to right, ' + (dataset.borderColor || dataset.backgroundColor) + ' 0px, ' + (dataset.borderColor || dataset.backgroundColor) + ' 5px, transparent 5px, transparent 10px);' : ''}
+                    border-radius: 2px;
+                `;
+                
+                // Label text
+                const labelText = document.createElement('span');
+                labelText.textContent = dataset.label;
+                labelText.style.cssText = `
+                    color: ${dailyChart.isDatasetVisible(index) ? '#fff' : '#999'};
+                    font-size: 13px;
+                    text-decoration: ${dailyChart.isDatasetVisible(index) ? 'none' : 'line-through'};
+                `;
+                
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(labelText);
+                
+                legendItem.onclick = () => {
+                    dailyChart.setDatasetVisibility(index, !dailyChart.isDatasetVisible(index));
+                    dailyChart.update();
+                    labelText.style.color = dailyChart.isDatasetVisible(index) ? '#fff' : '#999';
+                    labelText.style.textDecoration = dailyChart.isDatasetVisible(index) ? 'none' : 'line-through';
+                };
+                
+                toggleList.appendChild(legendItem);
+            }
+        });
+    }
     
     } // End of finishChartRendering function
     
