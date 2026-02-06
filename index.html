@@ -6518,7 +6518,6 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
             createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, emptyIrradiation, 
                 emptyLine, emptyLine, emptyLine, emptyLine, 0, avgDailyPrediction);
         });
-}
 
 function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, irradiationData, 
     actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine, actualAvgLoadPerDay, avgDailyPrediction) {
@@ -6724,9 +6723,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                             }
                             
                             if (label.includes('Irradiation')) {
-                                // Show original value before scaling
-                                const originalValue = irradiationData[context.dataIndex];
-                                label += originalValue.toFixed(0) + ' Wh/m²';
+                                // For scaled irradiation, show it was scaled
+                                label += context.parsed.y.toFixed(1) + ' kWh (scaled)';
                             } else if (context.dataset.yAxisID === 'y1') {
                                 label += context.parsed.y.toFixed(1) + '%';
                             } else {
@@ -6962,7 +6960,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
             }
         }
     });
-}
+}  // End updateMonthlyChart
 
 async function loadLifetimeMonthlyBreakdown() {
     try {
