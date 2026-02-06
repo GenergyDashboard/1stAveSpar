@@ -5463,39 +5463,22 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
         avgPower = totalGeneration / pvData.filter(v => v > 0).length || 0;
     }
     
-    // Calculate expected using monthly average daily prediction with degradation
-    const [year, month, day] = selectedDate.split('-').map(Number);
-    const monthKey = month.toString().padStart(2, '0');
-    
-    if (dashboardData && dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
-        const commissioningDate = new Date(dashboardData.system.commissioning_date);
-        const targetDate = new Date(year, month - 1, day);
-        const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
-        const yearsActive = daysActive / 365.25;
-        
-        let degradationPercent;
-        if (yearsActive < 1) {
-            degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
-        } else {
-            degradationPercent = (dashboardData.system.degradation_year_1 + 
-                (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+    // Find the last hour with data to calculate expected values up to that hour
+    let lastHourWithData = -1;
+    data.forEach((hourData, idx) => {
+        const hour = parseInt((hourData.time || hourData.timestamp || '').split(':')[0]) || idx;
+        if (hourData.generation_kw || hourData.pv_kw || hourData.load_kw) {
+            lastHourWithData = Math.max(lastHourWithData, hour);
         }
-        
-        const degradationFactor = 1 - (degradationPercent / 100);
-        totalPredicted = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
-    } else {
-        // Fallback to generic average
-        totalPredicted = 316;
-    }
+    });
     
-    const performance = totalPredicted > 0 ? (totalGeneration / totalPredicted * 100) : 0;
+    console.log(`  📊 Last hour with data: ${lastHourWithData}`);
     
+    // totalPredicted will be calculated later along with Load/Grid using monthly average hourly pattern
+    let totalPredicted = 0;
+    
+    // Display will be updated in finishDailyViewUpdate after calculating expected values
     document.getElementById('daily-gen').textContent = formatKwh(totalGeneration);
-    document.getElementById('daily-gen-expected').textContent = formatNumber(totalPredicted);
-    
-    const genPerf = document.getElementById('daily-gen-perf');
-    genPerf.textContent = `${performance.toFixed(1)}% of expected`;
-    genPerf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
     
     // ALWAYS calculate ACTUAL Load/Grid from real data
     const actualLoadData = data.map(d => d.load_kw || 0);
@@ -5517,11 +5500,11 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
     console.log(`ACTUAL Load: ${actualTotalLoad.toFixed(2)} kWh, Grid: ${actualTotalGrid.toFixed(2)} kWh`);
     
     // Continue with display updates - finishDailyViewUpdate will fetch expected values
-    finishDailyViewUpdate(actualTotalLoad, actualTotalGrid, actualLoadData, actualGridData, totalGeneration, totalPredicted, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate);
+    finishDailyViewUpdate(actualTotalLoad, actualTotalGrid, actualLoadData, actualGridData, totalGeneration, totalPredicted, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate, lastHourWithData);
 }
 
 // Helper function to complete the daily view update
-function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, totalPredicted, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate) {
+function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGeneration, totalPredicted, data, pvData, predictedData, dailyRecord, irradiationData, selectedDate, lastHourWithData = -1) {
     // Calculate coverage metrics for ACTUAL data
     const pvCoverage = totalLoad > 0 ? ((totalGeneration / totalLoad) * 100) : 0;
     
@@ -5539,36 +5522,79 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
         .then(predictionsData => {
             let expectedLoad = 0, expectedGrid = 0, expectedPVCoverage = 0;
             
-            // CORRECT: Use MONTHLY AVERAGE for expected Load/Grid (same as PV)
+            // Calculate MONTHLY AVERAGE hourly pattern, then sum up to lastHourWithData
             if (predictionsData.daily_predictions) {
                 const monthKey = selectedDate.substring(0, 7); // "2026-01"
-                let totalMonthlyLoad = 0, totalMonthlyGrid = 0, dayCount = 0;
                 
-                // Sum all days in the month
+                // Calculate monthly average for each hour
+                const monthlyAvgPV = new Array(24).fill(0);
+                const monthlyAvgLoad = new Array(24).fill(0);
+                const monthlyAvgGrid = new Array(24).fill(0);
+                const hourlyCounts = new Array(24).fill(0);
+                
+                // Sum all days in the month for each hour
                 Object.keys(predictionsData.daily_predictions)
                     .filter(date => date.startsWith(monthKey))
                     .forEach(date => {
                         const dayPredictions = predictionsData.daily_predictions[date];
                         
+                        if (dayPredictions.pv_kw && Array.isArray(dayPredictions.pv_kw)) {
+                            dayPredictions.pv_kw.forEach((val, hour) => {
+                                monthlyAvgPV[hour] += val;
+                                hourlyCounts[hour]++;
+                            });
+                        }
+                        
                         if (dayPredictions.load_kw && Array.isArray(dayPredictions.load_kw)) {
-                            const dailyLoad = dayPredictions.load_kw.reduce((sum, val) => sum + val, 0);
-                            totalMonthlyLoad += dailyLoad;
+                            dayPredictions.load_kw.forEach((val, hour) => {
+                                monthlyAvgLoad[hour] += val;
+                            });
                         }
                         
                         if (dayPredictions.grid_kw && Array.isArray(dayPredictions.grid_kw)) {
-                            const dailyGrid = dayPredictions.grid_kw.reduce((sum, val) => sum + Math.abs(val), 0);
-                            totalMonthlyGrid += dailyGrid;
+                            dayPredictions.grid_kw.forEach((val, hour) => {
+                                monthlyAvgGrid[hour] += Math.abs(val);
+                            });
                         }
-                        
-                        dayCount++;
                     });
                 
-                // Calculate monthly average
-                expectedLoad = dayCount > 0 ? totalMonthlyLoad / dayCount : 0;
-                expectedGrid = dayCount > 0 ? totalMonthlyGrid / dayCount : 0;
+                // Calculate averages
+                for (let hour = 0; hour < 24; hour++) {
+                    if (hourlyCounts[hour] > 0) {
+                        monthlyAvgPV[hour] /= hourlyCounts[hour];
+                        monthlyAvgLoad[hour] /= hourlyCounts[hour];
+                        monthlyAvgGrid[hour] /= hourlyCounts[hour];
+                    }
+                }
+                
+                // Now sum only up to lastHourWithData (or all 24 hours if it's a complete day)
+                const hoursToSum = lastHourWithData >= 0 ? lastHourWithData + 1 : 24;
+                let expectedPVSum = 0, expectedLoadSum = 0, expectedGridSum = 0;
+                
+                for (let hour = 0; hour < hoursToSum && hour < 24; hour++) {
+                    expectedPVSum += monthlyAvgPV[hour];
+                    expectedLoadSum += monthlyAvgLoad[hour];
+                    expectedGridSum += monthlyAvgGrid[hour];
+                }
+                
+                totalPredicted = expectedPVSum;
+                expectedLoad = expectedLoadSum;
+                expectedGrid = expectedGridSum;
                 expectedPVCoverage = expectedLoad > 0 ? ((totalPredicted / expectedLoad) * 100) : 0;
                 
-                console.log(`✅ Expected values (monthly avg): Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}, PV Coverage=${expectedPVCoverage.toFixed(1)}%`);
+                // Update generation display now that we have the correct totalPredicted
+                const performance = totalPredicted > 0 ? (totalGeneration / totalPredicted * 100) : 0;
+                document.getElementById('daily-gen-expected').textContent = formatNumber(totalPredicted);
+                const genPerf = document.getElementById('daily-gen-perf');
+                genPerf.textContent = `${performance.toFixed(1)}% of expected`;
+                genPerf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
+                
+                console.log(`✅ Expected values (monthly avg pattern, ${hoursToSum} hours):`);
+                console.log(`   PV=${totalPredicted.toFixed(2)}, Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}, Coverage=${expectedPVCoverage.toFixed(1)}%`);
+                
+                // Log full day total for verification
+                const fullDayPV = monthlyAvgPV.reduce((sum, val) => sum + val, 0);
+                console.log(`   (Full 24-hour monthly avg would be: ${fullDayPV.toFixed(2)} kWh)`);
             }
             
             // Calculate % differences
@@ -5602,18 +5628,53 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
         })
         .catch(error => {
             console.warn('Could not load predictions file, using fallback:', error);
-            // Fallback: Use typical ratios based on generation
+            
+            // Fallback: Use monthly average from dashboardData
+            const [year, month, day] = selectedDate.split('-').map(Number);
+            const monthKey = month.toString().padStart(2, '0');
+            
+            let fullDayPredicted = 316; // Generic fallback
+            if (dashboardData && dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+                const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                const targetDate = new Date(year, month - 1, day);
+                const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                const yearsActive = daysActive / 365.25;
+                
+                let degradationPercent;
+                if (yearsActive < 1) {
+                    degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                } else {
+                    degradationPercent = (dashboardData.system.degradation_year_1 + 
+                        (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                }
+                
+                const degradationFactor = 1 - (degradationPercent / 100);
+                fullDayPredicted = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
+            }
+            
+            // Prorate to hours with data
+            const hoursToSum = lastHourWithData >= 0 ? lastHourWithData + 1 : 24;
+            totalPredicted = fullDayPredicted * (hoursToSum / 24);
+            
+            // Use typical ratios for Load/Grid
             const typicalLoadRatio = 1.5;
             const expectedLoad = totalPredicted * typicalLoadRatio;
             const expectedGrid = expectedLoad - totalPredicted;
             const expectedPVCoverage = expectedLoad > 0 ? ((totalPredicted / expectedLoad) * 100) : 0;
             
             // Calculate % differences
+            const performance = totalPredicted > 0 ? (totalGeneration / totalPredicted * 100) : 0;
             const loadPerf = expectedLoad > 0 ? ((totalLoad / expectedLoad) * 100) : 0;
             const gridPerf = expectedGrid > 0 ? ((totalGrid / expectedGrid) * 100) : 0;
             const pvCoveragePerf = expectedPVCoverage > 0 ? ((pvCoverage / expectedPVCoverage) * 100) : 0;
             
-            // Update displays with fallback values
+            // Update generation display
+            document.getElementById('daily-gen-expected').textContent = formatNumber(totalPredicted);
+            const genPerf = document.getElementById('daily-gen-perf');
+            genPerf.textContent = `${performance.toFixed(1)}% of expected`;
+            genPerf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
+            
+            // Update Load display
             document.getElementById('daily-load').textContent = formatKwh(totalLoad);
             document.getElementById('daily-load-expected').textContent = formatNumber(expectedLoad);
             const loadPerfEl = document.getElementById('daily-load-perf');
@@ -5622,6 +5683,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 loadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
             }
             
+            // Update Grid display
             document.getElementById('daily-grid').textContent = formatKwh(totalGrid);
             document.getElementById('daily-grid-expected').textContent = formatNumber(expectedGrid);
             const gridPerfEl = document.getElementById('daily-grid-perf');
@@ -5630,6 +5692,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 gridPerfEl.className = 'performance ' + (gridPerf <= 100 ? 'positive' : 'negative');
             }
             
+            // Update PV Coverage display
             document.getElementById('pv-coverage').textContent = pvCoverage.toFixed(1) + '%';
             document.getElementById('pv-coverage-expected').textContent = expectedPVCoverage.toFixed(1);
             const pvCoveragePerfEl = document.getElementById('pv-coverage-perf');
@@ -5637,6 +5700,8 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 pvCoveragePerfEl.textContent = `${pvCoveragePerf.toFixed(1)}% of expected`;
                 pvCoveragePerfEl.className = 'performance ' + (pvCoveragePerf >= 100 ? 'positive' : 'negative');
             }
+            
+            console.log(`✅ Fallback expected values (${hoursToSum} hours): PV=${totalPredicted.toFixed(2)}, Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}`);
             
             renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData, predictedData, irradiationData, dailyRecord, selectedDate);
         });
@@ -6018,29 +6083,7 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
         labels: { 
             color: '#ffffff',
             font: { size: 16, weight: 'bold' },
-            usePointStyle: true,
-            padding: 20,
-            generateLabels: function(chart) {
-                const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-                labels.forEach(label => {
-                    const dataset = chart.data.datasets[label.datasetIndex];
-                    
-                    // Make Expected/Predicted/Irradiation show as hollow circles with border
-                    if (label.text.includes('Expected') || label.text.includes('Predicted')) {
-                        label.pointStyle = 'circle';
-                        label.fillStyle = 'transparent';  // Transparent fill
-                        label.strokeStyle = dataset.borderColor;
-                        label.lineWidth = 3;  // Thicker border for visibility
-                    } else {
-                        // Make Actual items show as filled circles
-                        label.pointStyle = 'circle';
-                        label.fillStyle = dataset.borderColor || dataset.backgroundColor;
-                        label.strokeStyle = dataset.borderColor || dataset.backgroundColor;
-                        label.lineWidth = 0;
-                    }
-                });
-                return labels;
-            }
+            padding: 20
         }
     },
                 tooltip: {
