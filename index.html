@@ -6744,11 +6744,12 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     type: 'line',
                     borderColor: '#3b82f6',
                     backgroundColor: 'transparent',
-                    borderWidth: 0,
+                    borderWidth: 3,
+                    borderDash: [10, 5],
                     pointRadius: 0,
                     yAxisID: 'y1',
-                    hidden: true,  // Hidden, just for axis setup
-                    order: 10
+                    hidden: false,  // Show on right axis
+                    order: 1
                 },
                 {
                     label: 'Actual PV Coverage',
@@ -6756,11 +6757,11 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     type: 'line',
                     borderColor: '#22c55e',
                     backgroundColor: 'transparent',
-                    borderWidth: 0,
+                    borderWidth: 3,
                     pointRadius: 0,
                     yAxisID: 'y1',
-                    hidden: true,  // Hidden, just for axis setup
-                    order: 10
+                    hidden: false,  // Show on right axis
+                    order: 1
                 },
                 // Toggleable items below
                 {
@@ -6828,7 +6829,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
             plugins: {
                 legend: {
                     position: 'top',
-                    align: 'start',
+                    align: 'center',  // Center the legend
                     labels: { 
                         color: '#ffffff',
                         font: { size: 16, weight: 'bold' },
@@ -6906,7 +6907,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     display: true,
                     position: 'right',
                     beginAtZero: true,
-                    max: 100,  // Percentage scale
+                    max: Math.ceil(Math.max(actualPVCoverage, expectedPVCoverage) / 10) * 10 + 10,  // Auto-scale with padding
                     title: {
                         display: true,
                         text: `PV Coverage: ${actualPVCoverage.toFixed(1)}% actual | ${expectedPVCoverage.toFixed(1)}% expected`,
@@ -6925,37 +6926,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     }
                 }
             }
-        },
-        plugins: [{
-            id: 'coverageLabels',
-            afterDatasetsDraw(chart) {
-                const ctx = chart.ctx;
-                const xAxis = chart.scales.x;
-                const yAxis = chart.scales.y1;
-                
-                // Get the rightmost x position (last data point)
-                const lastIndex = chart.data.labels.length - 1;
-                const xPos = xAxis.getPixelForValue(lastIndex);
-                
-                // Draw Actual PV Coverage percentage (green) - positioned on right axis
-                const actualYPos = yAxis.getPixelForValue(actualPVCoverage);
-                ctx.save();
-                ctx.fillStyle = '#22c55e';
-                ctx.font = 'bold 16px sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText(`${actualPVCoverage.toFixed(1)}%`, xPos + 10, actualYPos + 5);
-                ctx.restore();
-                
-                // Draw Expected PV Coverage percentage (blue) - positioned on right axis
-                const expectedYPos = yAxis.getPixelForValue(expectedPVCoverage);
-                ctx.save();
-                ctx.fillStyle = '#3b82f6';
-                ctx.font = 'bold 16px sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText(`${expectedPVCoverage.toFixed(1)}%`, xPos + 10, expectedYPos + 5);
-                ctx.restore();
-            }
-        }]
+        }
     });
     
     // Populate custom toggleable legend
