@@ -6693,6 +6693,18 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
         const actualCoverageLine = new Array(records.length).fill(actualPVCoverage);
         const expectedCoverageLine = new Array(records.length).fill(expectedPVCoverage);
         
+        // Calculate the maximum value for the chart to sync both axes
+        const chartMaxValue = Math.max(
+            maxGen,
+            Math.max(...scaledIrradiation),
+            avgPredictionLine[0] || 0,
+            actualAverageLine[0] || 0
+        );
+        // Add 10% padding
+        const chartMax = chartMaxValue * 1.1;
+        
+        console.log(`📊 Chart max value: ${chartMax.toFixed(1)} kWh`);
+        
         monthlyChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -6878,20 +6890,6 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     }
                 }
             },
-            plugins: [{
-                id: 'syncAxes',
-                afterUpdate: function(chart) {
-                    // Sync y1 axis to match y axis range
-                    if (chart.scales.y && chart.scales.y1) {
-                        const yMax = chart.scales.y.max;
-                        const yMin = chart.scales.y.min;
-                        if (chart.scales.y1.max !== yMax || chart.scales.y1.min !== yMin) {
-                            chart.scales.y1.options.max = yMax;
-                            chart.scales.y1.options.min = yMin;
-                        }
-                    }
-                }
-            }],
             scales: {
                 x: {
                     ticks: { 
@@ -6905,6 +6903,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     display: true,
                     position: 'left',
                     beginAtZero: true,
+                    max: chartMax,  // Set explicit max for sync
                     title: { 
                         display: true, 
                         text: 'Energy (kWh)',
@@ -6922,6 +6921,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     display: true,
                     position: 'right',
                     beginAtZero: true,
+                    max: chartMax,  // Set explicit max to match y axis
                     title: {
                         display: true,
                         text: `PV Coverage (%) - Actual: ${actualPVCoverage.toFixed(1)}% | Expected: ${expectedPVCoverage.toFixed(1)}%`,
