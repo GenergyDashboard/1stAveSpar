@@ -6512,7 +6512,6 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
             console.log(`   Expected: Load=${expectedAvgLoadPerDay.toFixed(2)} kWh/day, Grid=${expectedAvgGridPerDay.toFixed(2)} kWh/day`);
             
             // Recreate chart with Load and Grid straight lines
-            if (monthlyChart) monthlyChart.destroy();
             createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, irradiationData, 
                 actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine, actualAvgLoadPerDay, avgDailyPrediction);
             
@@ -6662,7 +6661,14 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
 function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualAverageLine, irradiationData, 
     actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine, actualAvgLoadPerDay, avgDailyPrediction) {
     
-    // Calculate PV Coverage percentages
+    try {
+        // Destroy existing chart first
+        if (monthlyChart) {
+            monthlyChart.destroy();
+            monthlyChart = null;
+        }
+        
+        // Calculate PV Coverage percentages
     const actualPVCoverage = actualAvgLoadPerDay > 0 ? (actualAverageLine[0] / actualAvgLoadPerDay * 100) : 0;
     const expectedPVCoverage = actualAvgLoadPerDay > 0 ? (avgPredictionLine[0] / actualAvgLoadPerDay * 100) : 0;
     
@@ -6708,6 +6714,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     borderWidth: 2,
                     borderDash: [5, 5],
                     pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 10,
                     tension: 0,
                     yAxisID: 'y1',  // Use right axis (percentage)
                     order: 3
@@ -6720,6 +6728,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     backgroundColor: 'transparent',
                     borderWidth: 3,
                     pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 10,
                     tension: 0,
                     yAxisID: 'y1',  // Use right axis (percentage)
                     order: 2,
@@ -6733,6 +6743,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     backgroundColor: 'rgba(251, 191, 36, 0.2)',
                     borderWidth: 2,
                     pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 10,
                     tension: 0.4,
                     fill: true,
                     yAxisID: 'y',
@@ -6746,6 +6758,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     backgroundColor: 'transparent',
                     borderWidth: 0,
                     pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 10,
                     yAxisID: 'y1',
                     hidden: true,  // Hide - we're using Predicted PV line instead
                     order: 10
@@ -6758,6 +6772,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     backgroundColor: 'transparent',
                     borderWidth: 0,
                     pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 10,
                     yAxisID: 'y1',
                     hidden: true,  // Hide - we're using Actual PV Average line instead
                     order: 10
@@ -6771,6 +6787,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     backgroundColor: 'transparent',
                     borderWidth: 3,
                     pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 10,
                     tension: 0,
                     yAxisID: 'y',
                     order: 1,
@@ -6785,6 +6803,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     borderWidth: 2,
                     borderDash: [5, 5],
                     pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 10,
                     tension: 0,
                     yAxisID: 'y',
                     order: 1,
@@ -6798,6 +6818,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     backgroundColor: 'transparent',
                     borderWidth: 3,
                     pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 10,
                     tension: 0,
                     yAxisID: 'y',
                     order: 0,
@@ -6812,6 +6834,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     borderWidth: 2,
                     borderDash: [5, 5],
                     pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 10,
                     tension: 0,
                     yAxisID: 'y',
                     order: 0,
@@ -6984,6 +7008,10 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                 toggleList.appendChild(legendItem);
             }
         });
+    }
+    } catch (error) {
+        console.error('❌ Error creating monthly chart:', error);
+        throw error;  // Re-throw to be caught by outer catch
     }
 }
 
