@@ -7487,35 +7487,13 @@ async function loadLifetimeMonthlyBreakdown() {
                 labels: monthLabels,
                 datasets: [
                     {
-                        label: 'Expected Generation (kWh)',
-                        data: monthExpected,
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                        borderColor: '#3b82f6',
-                        borderWidth: 1,
-                        borderRadius: 5,
-                        yAxisID: 'y',
-                        stack: 'stack0',
-                        order: 3
-                    },
-                    {
                         label: 'Actual Generation (kWh)',
                         data: monthGeneration,
                         backgroundColor: '#4ade80',
                         borderRadius: 5,
                         yAxisID: 'y',
-                        stack: 'stack0',
+                        stack: 'actual',
                         order: 2
-                    },
-                    {
-                        label: 'Expected Grid (kWh)',
-                        data: monthExpectedGrid,
-                        backgroundColor: 'rgba(249, 115, 22, 0.5)',
-                        borderColor: '#f97316',
-                        borderWidth: 1,
-                        borderRadius: 5,
-                        yAxisID: 'y',
-                        stack: 'stack0',
-                        order: 1
                     },
                     {
                         label: 'Actual Grid (kWh)',
@@ -7525,7 +7503,29 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderWidth: 1,
                         borderRadius: 5,
                         yAxisID: 'y',
-                        stack: 'stack0',
+                        stack: 'actual',
+                        order: 1
+                    },
+                    {
+                        label: 'Expected Generation (kWh)',
+                        data: monthExpected,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        yAxisID: 'y',
+                        stack: 'expected',
+                        order: 3
+                    },
+                    {
+                        label: 'Expected Grid (kWh)',
+                        data: monthExpectedGrid,
+                        backgroundColor: 'rgba(249, 115, 22, 0.5)',
+                        borderColor: '#f97316',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        yAxisID: 'y',
+                        stack: 'expected',
                         order: 1
                     },
                     {
@@ -7599,13 +7599,13 @@ async function loadLifetimeMonthlyBreakdown() {
                         callbacks: {
                             label: function(context) {
                                 if (context.datasetIndex === 0) {
-                                    return 'Expected Gen: ' + context.parsed.y.toFixed(0) + ' kWh';
-                                } else if (context.datasetIndex === 1) {
                                     return 'Actual Gen: ' + context.parsed.y.toFixed(0) + ' kWh';
-                                } else if (context.datasetIndex === 2) {
-                                    return 'Expected Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
-                                } else if (context.datasetIndex === 3) {
+                                } else if (context.datasetIndex === 1) {
                                     return 'Actual Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 2) {
+                                    return 'Expected Gen: ' + context.parsed.y.toFixed(0) + ' kWh';
+                                } else if (context.datasetIndex === 3) {
+                                    return 'Expected Grid: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else if (context.datasetIndex === 4) {
                                     return 'Actual Load: ' + context.parsed.y.toFixed(0) + ' kWh';
                                 } else if (context.datasetIndex === 5) {
