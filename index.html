@@ -7504,7 +7504,8 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderRadius: 5,
                         yAxisID: 'y',
                         stack: 'actual',
-                        order: 1
+                        order: 1,
+                        hidden: true
                     },
                     {
                         label: 'Expected Generation (kWh)',
@@ -7526,7 +7527,8 @@ async function loadLifetimeMonthlyBreakdown() {
                         borderRadius: 5,
                         yAxisID: 'y',
                         stack: 'expected',
-                        order: 1
+                        order: 1,
+                        hidden: true
                     },
                     {
                         label: 'Actual Load (kWh)',
@@ -7538,7 +7540,8 @@ async function loadLifetimeMonthlyBreakdown() {
                         pointRadius: 0,
                         tension: 0.4,
                         yAxisID: 'y',
-                        order: 0
+                        order: 0,
+                        hidden: true
                     },
                     {
                         label: 'Expected Load (kWh)',
@@ -7551,7 +7554,8 @@ async function loadLifetimeMonthlyBreakdown() {
                         pointRadius: 0,
                         tension: 0.4,
                         yAxisID: 'y',
-                        order: 0
+                        order: 0,
+                        hidden: true
                     },
                     {
                         label: 'Cumulative Performance (%)',
