@@ -6694,8 +6694,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
         const expectedCoverageLine = new Array(records.length).fill(expectedPVCoverage);
         
         monthlyChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
+            type: 'bar',
+            data: {
             labels: records.map(d => {
                 const date = new Date(d.date);
                 return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
@@ -6846,9 +6846,9 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     hidden: true
                 }
             ]
-        },
-        options: {
-            responsive: true,
+            },
+            options: {
+                responsive: true,
             interaction: {
                 mode: 'index',
                 intersect: false,
@@ -6956,6 +6956,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     }
                 }
             }
+        }
         });
         
         // Populate custom toggleable legend
