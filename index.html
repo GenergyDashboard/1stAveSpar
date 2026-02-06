@@ -6662,34 +6662,38 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
     actualLoadLine, actualGridLine, expectedLoadLine, expectedGridLine, actualAvgLoadPerDay, avgDailyPrediction) {
     
     try {
-        // Destroy existing chart first
+        // Destroy existing chart first - use Chart.getChart to find any chart on this canvas
+        const existingChart = Chart.getChart(ctx);
+        if (existingChart) {
+            existingChart.destroy();
+        }
         if (monthlyChart) {
             monthlyChart.destroy();
             monthlyChart = null;
         }
         
         // Calculate PV Coverage percentages
-    const actualPVCoverage = actualAvgLoadPerDay > 0 ? (actualAverageLine[0] / actualAvgLoadPerDay * 100) : 0;
-    const expectedPVCoverage = actualAvgLoadPerDay > 0 ? (avgPredictionLine[0] / actualAvgLoadPerDay * 100) : 0;
-    
-    console.log(`📊 PV Coverage: Actual=${actualPVCoverage.toFixed(1)}%, Expected=${expectedPVCoverage.toFixed(1)}%`);
-    
-    // Scale irradiation to match generation scale
-    // Find max generation and max irradiation
-    const maxGen = Math.max(...records.map(d => d.generation_kwh));
-    const maxIrr = Math.max(...irradiationData.filter(v => v > 0));
-    
-    // Scale factor to make irradiation peak align with generation peak
-    const irrScaleFactor = maxIrr > 0 ? (maxGen / maxIrr) : 1;
-    const scaledIrradiation = irradiationData.map(v => v * irrScaleFactor);
-    
-    console.log(`📊 Irradiation scaling: max=${maxIrr.toFixed(0)} Wh/m², scaled to ${(maxIrr * irrScaleFactor).toFixed(1)} kWh (factor=${irrScaleFactor.toFixed(4)})`);
-    
-    // Create coverage percentage arrays (constant value for each day)
-    const actualCoverageLine = new Array(records.length).fill(actualPVCoverage);
-    const expectedCoverageLine = new Array(records.length).fill(expectedPVCoverage);
-    
-    monthlyChart = new Chart(ctx, {
+        const actualPVCoverage = actualAvgLoadPerDay > 0 ? (actualAverageLine[0] / actualAvgLoadPerDay * 100) : 0;
+        const expectedPVCoverage = actualAvgLoadPerDay > 0 ? (avgPredictionLine[0] / actualAvgLoadPerDay * 100) : 0;
+        
+        console.log(`📊 PV Coverage: Actual=${actualPVCoverage.toFixed(1)}%, Expected=${expectedPVCoverage.toFixed(1)}%`);
+        
+        // Scale irradiation to match generation scale
+        // Find max generation and max irradiation
+        const maxGen = Math.max(...records.map(d => d.generation_kwh));
+        const maxIrr = Math.max(...irradiationData.filter(v => v > 0));
+        
+        // Scale factor to make irradiation peak align with generation peak
+        const irrScaleFactor = maxIrr > 0 ? (maxGen / maxIrr) : 1;
+        const scaledIrradiation = irradiationData.map(v => v * irrScaleFactor);
+        
+        console.log(`📊 Irradiation scaling: max=${maxIrr.toFixed(0)} Wh/m², scaled to ${(maxIrr * irrScaleFactor).toFixed(1)} kWh (factor=${irrScaleFactor.toFixed(4)})`);
+        
+        // Create coverage percentage arrays (constant value for each day)
+        const actualCoverageLine = new Array(records.length).fill(actualPVCoverage);
+        const expectedCoverageLine = new Array(records.length).fill(expectedPVCoverage);
+        
+        monthlyChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: records.map(d => {
@@ -6862,9 +6866,11 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                                 return false;
                             }
                             // Hide hidden Coverage datasets (borderWidth: 0)
-                            const dataset = chart.data.datasets[item.datasetIndex];
-                            if (item.text.includes('Coverage') && dataset.borderWidth === 0) {
-                                return false;
+                            if (chart && chart.data && chart.data.datasets) {
+                                const dataset = chart.data.datasets[item.datasetIndex];
+                                if (item.text.includes('Coverage') && dataset && dataset.borderWidth === 0) {
+                                    return false;
+                                }
                             }
                             // Show everything else including visible Coverage lines
                             return true;
@@ -6950,65 +6956,64 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     }
                 }
             }
-        }
-    });
-    
-    // Populate custom toggleable legend
-    const toggleList = document.getElementById('monthlyChartToggleList');
-    if (toggleList) {
-        toggleList.innerHTML = '';
-        
-        const toggleableLabels = ['Actual Load', 'Expected Load', 'Actual Grid', 'Expected Grid'];
-        
-        monthlyChart.data.datasets.forEach((dataset, index) => {
-            if (toggleableLabels.some(label => dataset.label.includes(label))) {
-                const legendItem = document.createElement('div');
-                legendItem.style.cssText = `
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    cursor: pointer;
-                    padding: 5px;
-                    border-radius: 4px;
-                    transition: background 0.2s;
-                `;
-                
-                legendItem.onmouseover = () => legendItem.style.background = 'rgba(255,255,255,0.1)';
-                legendItem.onmouseout = () => legendItem.style.background = 'transparent';
-                
-                // Color box
-                const colorBox = document.createElement('div');
-                colorBox.style.cssText = `
-                    width: 30px;
-                    height: 3px;
-                    background: ${dataset.borderColor || dataset.backgroundColor};
-                    ${dataset.borderDash ? 'background: repeating-linear-gradient(to right, ' + (dataset.borderColor || dataset.backgroundColor) + ' 0px, ' + (dataset.borderColor || dataset.backgroundColor) + ' 5px, transparent 5px, transparent 10px);' : ''}
-                    border-radius: 2px;
-                `;
-                
-                // Label text
-                const labelText = document.createElement('span');
-                labelText.textContent = dataset.label;
-                labelText.style.cssText = `
-                    color: ${monthlyChart.isDatasetVisible(index) ? '#fff' : '#999'};
-                    font-size: 13px;
-                    text-decoration: ${monthlyChart.isDatasetVisible(index) ? 'none' : 'line-through'};
-                `;
-                
-                legendItem.appendChild(colorBox);
-                legendItem.appendChild(labelText);
-                
-                legendItem.onclick = () => {
-                    monthlyChart.setDatasetVisibility(index, !monthlyChart.isDatasetVisible(index));
-                    monthlyChart.update();
-                    labelText.style.color = monthlyChart.isDatasetVisible(index) ? '#fff' : '#999';
-                    labelText.style.textDecoration = monthlyChart.isDatasetVisible(index) ? 'none' : 'line-through';
-                };
-                
-                toggleList.appendChild(legendItem);
-            }
         });
-    }
+        
+        // Populate custom toggleable legend
+        const toggleList = document.getElementById('monthlyChartToggleList');
+        if (toggleList) {
+            toggleList.innerHTML = '';
+            
+            const toggleableLabels = ['Actual Load', 'Expected Load', 'Actual Grid', 'Expected Grid'];
+            
+            monthlyChart.data.datasets.forEach((dataset, index) => {
+                if (toggleableLabels.some(label => dataset.label.includes(label))) {
+                    const legendItem = document.createElement('div');
+                    legendItem.style.cssText = `
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        cursor: pointer;
+                        padding: 5px;
+                        border-radius: 4px;
+                        transition: background 0.2s;
+                    `;
+                    
+                    legendItem.onmouseover = () => legendItem.style.background = 'rgba(255,255,255,0.1)';
+                    legendItem.onmouseout = () => legendItem.style.background = 'transparent';
+                    
+                    // Color box
+                    const colorBox = document.createElement('div');
+                    colorBox.style.cssText = `
+                        width: 30px;
+                        height: 3px;
+                        background: ${dataset.borderColor || dataset.backgroundColor};
+                        ${dataset.borderDash ? 'background: repeating-linear-gradient(to right, ' + (dataset.borderColor || dataset.backgroundColor) + ' 0px, ' + (dataset.borderColor || dataset.backgroundColor) + ' 5px, transparent 5px, transparent 10px);' : ''}
+                        border-radius: 2px;
+                    `;
+                    
+                    // Label text
+                    const labelText = document.createElement('span');
+                    labelText.textContent = dataset.label;
+                    labelText.style.cssText = `
+                        color: ${monthlyChart.isDatasetVisible(index) ? '#fff' : '#999'};
+                        font-size: 13px;
+                        text-decoration: ${monthlyChart.isDatasetVisible(index) ? 'none' : 'line-through'};
+                    `;
+                    
+                    legendItem.appendChild(colorBox);
+                    legendItem.appendChild(labelText);
+                    
+                    legendItem.onclick = () => {
+                        monthlyChart.setDatasetVisibility(index, !monthlyChart.isDatasetVisible(index));
+                        monthlyChart.update();
+                        labelText.style.color = monthlyChart.isDatasetVisible(index) ? '#fff' : '#999';
+                        labelText.style.textDecoration = monthlyChart.isDatasetVisible(index) ? 'none' : 'line-through';
+                    };
+                    
+                    toggleList.appendChild(legendItem);
+                }
+            });
+        }
     } catch (error) {
         console.error('❌ Error creating monthly chart:', error);
         throw error;  // Re-throw to be caught by outer catch
