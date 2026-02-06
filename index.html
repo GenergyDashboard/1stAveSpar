@@ -6710,8 +6710,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     order: 4
                 },
                 {
-                    label: 'Expected PV Coverage (%)',
-                    data: expectedCoverageLine,  // Use coverage percentage values
+                    label: 'Expected PV (kWh)',
+                    data: avgPredictionLine,  // Use kWh values
                     type: 'line',
                     borderColor: '#3b82f6',
                     backgroundColor: 'transparent',
@@ -6721,12 +6721,12 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     pointHoverRadius: 0,
                     pointHitRadius: 10,
                     tension: 0,
-                    yAxisID: 'y1',  // Use right axis (percentage)
+                    yAxisID: 'y1',  // Use right axis scaled to show as percentages
                     order: 3
                 },
                 {
-                    label: 'Actual PV Coverage (%)',
-                    data: actualCoverageLine,  // Use coverage percentage values
+                    label: 'Actual PV Average (kWh)',
+                    data: actualAverageLine,  // Use kWh values
                     type: 'line',
                     borderColor: '#22c55e',
                     backgroundColor: 'transparent',
@@ -6734,6 +6734,11 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     pointRadius: 0,
                     pointHoverRadius: 0,
                     pointHitRadius: 10,
+                    tension: 0,
+                    yAxisID: 'y1',  // Use right axis scaled to show as percentages
+                    order: 2,
+                    hidden: false  // Show by default
+                },
                     tension: 0,
                     yAxisID: 'y1',  // Use right axis (percentage)
                     order: 2,
@@ -6897,9 +6902,8 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                             if (label.includes('Irradiation')) {
                                 // For scaled irradiation, show it was scaled
                                 label += context.parsed.y.toFixed(1) + ' kWh (scaled)';
-                            } else if (context.dataset.yAxisID === 'y1') {
-                                label += context.parsed.y.toFixed(1) + '%';
                             } else {
+                                // All other items show kWh
                                 label += context.parsed.y.toFixed(1) + ' kWh';
                             }
                             return label;
@@ -6937,7 +6941,7 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     display: true,
                     position: 'right',
                     beginAtZero: true,
-                    max: Math.ceil(Math.max(actualPVCoverage, expectedPVCoverage) / 10) * 10 + 10,  // Auto-scale with padding
+                    max: actualAvgLoadPerDay,  // Scale to daily load (100% coverage)
                     title: {
                         display: true,
                         text: `PV Coverage (%) - Actual: ${actualPVCoverage.toFixed(1)}% | Expected: ${expectedPVCoverage.toFixed(1)}%`,
@@ -6948,7 +6952,9 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                         color: '#ffffff',
                         font: { size: 14, weight: '500' },
                         callback: function(value) {
-                            return value + '%';
+                            // Convert kWh to percentage
+                            const percentage = actualAvgLoadPerDay > 0 ? (value / actualAvgLoadPerDay * 100) : 0;
+                            return percentage.toFixed(0) + '%';
                         }
                     },
                     grid: {
