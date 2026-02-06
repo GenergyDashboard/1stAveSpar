@@ -6774,6 +6774,17 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     tension: 0,
                     yAxisID: 'y',
                     order: 1
+                },
+                {
+                    label: 'Actual PV Generation (kWh)',
+                    data: records.map(d => d.generation_kwh || 0),
+                    type: 'bar',
+                    backgroundColor: 'rgba(74, 222, 128, 0.7)',
+                    borderColor: '#4ade80',
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    order: 4,
+                    hidden: true  // Hidden by default
                 }
             ]
         },
