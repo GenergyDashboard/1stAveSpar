@@ -6870,6 +6870,36 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     }
                 }
             },
+            plugins: [{
+                id: 'coverageLabels',
+                afterDatasetsDraw(chart) {
+                    const ctx = chart.ctx;
+                    const xAxis = chart.scales.x;
+                    const yAxis = chart.scales.y1;
+                    
+                    // Get the rightmost x position (last data point)
+                    const lastIndex = chart.data.labels.length - 1;
+                    const xPos = xAxis.getPixelForValue(lastIndex);
+                    
+                    // Draw Actual PV Coverage percentage (green) - positioned on right axis
+                    const actualYPos = yAxis.getPixelForValue(actualPVCoverage);
+                    ctx.save();
+                    ctx.fillStyle = '#22c55e';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`${actualPVCoverage.toFixed(1)}%`, xPos + 10, actualYPos + 5);
+                    ctx.restore();
+                    
+                    // Draw Expected PV Coverage percentage (blue) - positioned on right axis
+                    const expectedYPos = yAxis.getPixelForValue(expectedPVCoverage);
+                    ctx.save();
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`${expectedPVCoverage.toFixed(1)}%`, xPos + 10, expectedYPos + 5);
+                    ctx.restore();
+                }
+            }],
             scales: {
                 x: {
                     ticks: { 
