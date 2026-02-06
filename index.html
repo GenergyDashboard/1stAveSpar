@@ -4703,9 +4703,9 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                     const load = hourData.load_kw || 0;
                     const grid = Math.abs(hourData.grid_kw || 0);
                     
-                    // Get irradiation from predictions (shift back by 1 hour to align with generation timing)
-                    const irrHour = actualHour > 0 ? actualHour - 1 : 0;
-                    const irr = predData?.daily_predictions?.[date]?.irradiation_wm2?.[irrHour] || 0;
+                    // Get irradiation from predictions (shift back by 2 hours to align with generation timing)
+                    const irrHour = actualHour >= 2 ? actualHour - 2 : 0;
+                    const irr = actualHour >= 2 ? (predData?.daily_predictions?.[date]?.irradiation_wm2?.[irrHour] || 0) : 0;
                     
                     let row = timestamp;
                     // Values are already in kW, convert to kWh (kW * 1 hour)
@@ -4784,10 +4784,10 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                     row += `,${predTotal.toFixed(2)}`;
                 }
                 if (fields.includes('irradiation')) {
-                    // Get total daily irradiation from predictions (shift back by 1 hour)
+                    // Get total daily irradiation from predictions (shift back by 2 hours)
                     const pred = predData?.daily_predictions?.[record.date];
                     const irrTotal = pred?.irradiation_wm2 && pred.irradiation_wm2.length === 24 
-                        ? pred.irradiation_wm2.slice(1).reduce((a,b) => a+b, 0) 
+                        ? pred.irradiation_wm2.slice(2).reduce((a,b) => a+b, 0) 
                         : 0;
                     row += `,${irrTotal.toFixed(0)}`;
                 }
@@ -5882,15 +5882,16 @@ function renderDailyChart(totalLoad, totalGrid, loadData, gridData, data, pvData
             finishChartRendering();
         });
     
-    // Fill in irradiation data (shift back by 1 hour to fix timing offset)
-    // Open-Meteo returns data as hour-ending, but display shows hour-beginning
-    console.log(`  📊 Applying 1-hour shift to irradiation data (${irradiationData.length} values)`);
-    for (let hour = 1; hour < 24; hour++) {
-        full24HourData.irradiation[hour] = irradiationData[hour - 1] || 0;
+    // Fill in irradiation data (shift back by 2 hours to fix timing offset)
+    // Open-Meteo returns data with 2-hour offset from actual generation timing
+    console.log(`  📊 Applying 2-hour shift to irradiation data (${irradiationData.length} values)`);
+    for (let hour = 2; hour < 24; hour++) {
+        full24HourData.irradiation[hour] = irradiationData[hour - 2] || 0;
     }
-    // Hour 0 gets 0 (no previous hour)
+    // Hours 0 and 1 get 0 (no data available)
     full24HourData.irradiation[0] = 0;
-    console.log(`  📊 Irradiation shifted: hour 8 now shows value from original hour 7`);
+    full24HourData.irradiation[1] = 0;
+    console.log(`  📊 Irradiation shifted: hour 8 now shows value from original hour 6`);
     
     // Function to finish chart rendering after predicted data is ready
     function finishChartRendering() {
@@ -6427,9 +6428,9 @@ function updateMonthlyChart(records, selectedMonthYear, actualLoad, actualGrid, 
                     const dayData = predictionsData.daily_predictions[dateKey];
                     // Irradiation may not exist in all predictions files
                     if (dayData.irradiation_wm2 && dayData.irradiation_wm2.length === 24) {
-                        // Shift back by 1 hour: sum hours 1-23 (skip hour 0)
-                        // This aligns with the hourly chart fix where hour N shows irradiation from hour N-1
-                        return dayData.irradiation_wm2.slice(1).reduce((sum, val) => sum + val, 0);
+                        // Shift back by 2 hours: sum hours 2-23 (skip hours 0 and 1)
+                        // This aligns with the hourly chart fix where hour N shows irradiation from hour N-2
+                        return dayData.irradiation_wm2.slice(2).reduce((sum, val) => sum + val, 0);
                     }
                 }
                 return 0;
