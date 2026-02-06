@@ -1769,11 +1769,13 @@
                 
                 <div class="chart-container">
                     <h3 class="chart-title">Hourly Generation Pattern</h3>
-                    <div style="display: flex; gap: 20px;">
-                        <canvas id="dailyChart" style="flex: 1;"></canvas>
-                        <div style="min-width: 200px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 15px;">
-                            <h4 style="color: #fff; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">Toggleables</h4>
-                            <div id="dailyChartToggleList"></div>
+                    <div style="display: flex; gap: 20px; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <canvas id="dailyChart"></canvas>
+                        </div>
+                        <div id="dailyChartToggables" style="min-width: 200px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                            <h4 style="margin: 0 0 10px 0; color: #fff; font-size: 14px; font-weight: bold;">Toggleables</h4>
+                            <div id="dailyChartToggleList" style="display: flex; flex-direction: column; gap: 8px;"></div>
                         </div>
                     </div>
                 </div>
