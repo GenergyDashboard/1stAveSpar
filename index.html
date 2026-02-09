@@ -7208,6 +7208,24 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                         console.log(`🔄 Toggling dataset ${index} (${dataset.label}): ${wasVisible} -> ${!wasVisible}`);
                         
                         monthlyChart.setDatasetVisibility(index, !wasVisible);
+                        
+                        // Check if any Load/Grid dataset is now visible
+                        let anyLoadGridVisible = false;
+                        monthlyChart.data.datasets.forEach((ds, idx) => {
+                            if (toggleableLabels.some(label => ds.label.includes(label)) && monthlyChart.isDatasetVisible(idx)) {
+                                anyLoadGridVisible = true;
+                            }
+                        });
+                        
+                        // Auto-scale y-axis if Load/Grid are visible (they're much larger values)
+                        if (anyLoadGridVisible) {
+                            console.log(`   📈 Load/Grid visible - removing y-axis max for auto-scaling`);
+                            monthlyChart.options.scales.y.max = undefined;
+                        } else {
+                            console.log(`   📉 Only PV visible - restoring fixed y-axis max`);
+                            monthlyChart.options.scales.y.max = chartMax;
+                        }
+                        
                         monthlyChart.update();
                         
                         const isNowVisible = monthlyChart.isDatasetVisible(index);
