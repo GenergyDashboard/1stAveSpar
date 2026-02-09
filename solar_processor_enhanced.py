@@ -3,6 +3,8 @@
 Solar Data Processor - Enhanced with TOU and Financial Calculations
 Updates dashboard_data.json with Time-of-Use breakdown and correct financial savings
 
+CORRECTED VERSION - Fixed TOU schedule for weekends
+
 CRITICAL: Uses correct savings formula:
 - Savings = (Generation × TOU_rate) - (Generation × PPA_rate)
 - NOT just Generation × TOU_rate
@@ -88,12 +90,12 @@ def get_weighted_average_rates():
 
 def get_tou_period(date_str, hour, minute=0):
     """
-    Determine TOU period for a given datetime
+    Determine TOU period for a given datetime - CORRECTED from official Eskom schedule
     
     Args:
         date_str: Date in format "YYYY-MM-DD"
         hour: Hour (0-23)
-        minute: Minute (0-59)
+        minute: Minute (0-59, ignored for TOU classification)
     
     Returns:
         str: 'peak', 'standard', or 'off_peak'
@@ -102,37 +104,76 @@ def get_tou_period(date_str, hour, minute=0):
     day_of_week = date.weekday()  # 0 = Monday, 6 = Sunday
     month = date.month
     
-    # Weekend check (Saturday=5, Sunday=6)
-    is_weekend = day_of_week >= 5
+    # Day classification
+    is_saturday = (day_of_week == 5)
+    is_sunday = (day_of_week == 6)
+    is_weekday = not is_saturday and not is_sunday
     
-    # Summer: September (9) to April (4)
-    is_summer = month >= 9 or month <= 4
+    # Season: Low-demand (Sept-April), High-demand (May-Aug)
+    is_low_demand = (month >= 9 or month <= 4)
     
-    # Decimal hour for easier comparison
-    decimal_hour = hour + (minute / 60)
+    # Use integer hour only (TOU periods don't use minutes)
+    h = hour
     
-    # Weekends: All Off-Peak
-    if is_weekend:
-        return 'off_peak'
-    
-    # Weekdays
-    if is_summer:
-        # Summer (Sept - April) - Weekdays
-        # FIX: Peak is 7-9am (not 7-10am) and 6-8pm
-        if (7 <= decimal_hour < 9) or (18 <= decimal_hour < 20):
-            return 'peak'
-        elif (6 <= decimal_hour < 7) or (9 <= decimal_hour < 18) or (20 <= decimal_hour < 22):
-            return 'standard'
+    if is_weekday:
+        if is_low_demand:
+            # LOW-DEMAND SEASON - Weekdays (Mon-Fri)
+            # Peak: 7-9am (hour 7,8), 6-9pm (hour 18,19,20)
+            if (7 <= h <= 8) or (18 <= h <= 20):
+                return 'peak'
+            # Standard: 6am (hour 6), 9am-6pm (hour 9-17), 9pm (hour 21)
+            elif h == 6 or (9 <= h <= 17) or h == 21:
+                return 'standard'
+            # Off-Peak: midnight-6am (hour 0-5), 10pm-midnight (hour 22-23)
+            else:
+                return 'off_peak'
         else:
-            return 'off_peak'
-    else:
-        # Winter (May - Aug) - Weekdays
-        if (6 <= decimal_hour < 9) or (17 <= decimal_hour < 19):
-            return 'peak'
-        elif (9 <= decimal_hour < 17) or (19 <= decimal_hour < 22):
-            return 'standard'
+            # HIGH-DEMAND SEASON - Weekdays (Mon-Fri)
+            # Peak: 6-8am (hour 6,7), 5-8pm (hour 17,18,19)
+            if (6 <= h <= 7) or (17 <= h <= 19):
+                return 'peak'
+            # Standard: 8am-5pm (hour 8-16), 8-10pm (hour 20-21)
+            elif (8 <= h <= 16) or (20 <= h <= 21):
+                return 'standard'
+            # Off-Peak: midnight-6am (hour 0-5), 10pm-midnight (hour 22-23)
+            else:
+                return 'off_peak'
+    
+    elif is_saturday:
+        if is_low_demand:
+            # LOW-DEMAND SEASON - Saturday
+            # Standard: 7am-12pm (hour 7-11), 6-8pm (hour 18-19)
+            if (7 <= h <= 11) or (18 <= h <= 19):
+                return 'standard'
+            # Off-Peak: everything else
+            else:
+                return 'off_peak'
         else:
-            return 'off_peak'
+            # HIGH-DEMAND SEASON - Saturday
+            # Standard: 7am-12pm (hour 7-11), 5-7pm (hour 17-18)
+            if (7 <= h <= 11) or (17 <= h <= 18):
+                return 'standard'
+            # Off-Peak: everything else
+            else:
+                return 'off_peak'
+    
+    else:  # Sunday
+        if is_low_demand:
+            # LOW-DEMAND SEASON - Sunday
+            # Standard: 6-8pm (hour 18-19)
+            if 18 <= h <= 19:
+                return 'standard'
+            # Off-Peak: everything else
+            else:
+                return 'off_peak'
+        else:
+            # HIGH-DEMAND SEASON - Sunday
+            # Standard: 5-7pm (hour 17-18)
+            if 17 <= h <= 18:
+                return 'standard'
+            # Off-Peak: everything else
+            else:
+                return 'off_peak'
 
 
 def calculate_tou_breakdown(hourly_data, date_str):
