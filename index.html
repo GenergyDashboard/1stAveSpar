@@ -3662,6 +3662,13 @@
             // Use integer hour (ignore minutes for TOU periods)
             const h = hour;
             
+            // DEBUG: Log for Feb 7 or 8 (Saturday/Sunday)
+            if (date === '2026-02-07' || date === '2026-02-08') {
+                console.log(`🔍 getTOUPeriod DEBUG for ${date} hour ${h}:`);
+                console.log(`   dayOfWeek=${dayOfWeek}, isSaturday=${isSaturday}, isSunday=${isSunday}, isWeekday=${isWeekday}`);
+                console.log(`   month=${month}, isLowDemand=${isLowDemand}`);
+            }
+            
             if (isWeekday) {
                 if (isLowDemand) {
                     // LOW-DEMAND SEASON - Weekdays (Mon-Fri)
@@ -3697,10 +3704,16 @@
                     // LOW-DEMAND SEASON - Saturday
                     // Standard: 7am-12pm (hour 7-11), 6-8pm (hour 18-19)
                     if ((h >= 7 && h <= 11) || (h >= 18 && h <= 19)) {
+                        if (date === '2026-02-07') {
+                            console.log(`   ✅ Saturday LOW-DEMAND, hour ${h} -> STANDARD`);
+                        }
                         return 'standard';
                     }
                     // Off-Peak: everything else
                     else {
+                        if (date === '2026-02-07') {
+                            console.log(`   ✅ Saturday LOW-DEMAND, hour ${h} -> OFF-PEAK`);
+                        }
                         return 'off_peak';
                     }
                 } else {
@@ -3719,10 +3732,16 @@
                     // LOW-DEMAND SEASON - Sunday
                     // Standard: 6-8pm (hour 18-19)
                     if (h >= 18 && h <= 19) {
+                        if (date === '2026-02-08') {
+                            console.log(`   ✅ Sunday LOW-DEMAND, hour ${h} -> STANDARD`);
+                        }
                         return 'standard';
                     }
                     // Off-Peak: everything else
                     else {
+                        if (date === '2026-02-08') {
+                            console.log(`   ✅ Sunday LOW-DEMAND, hour ${h} -> OFF-PEAK`);
+                        }
                         return 'off_peak';
                     }
                 } else {
@@ -5331,11 +5350,6 @@ async function updateDatePickerRange() {
         // Global TOU calculation function (used by multiple functions)
         function calculateTouFromHourlyData(date, hourlyData) {
             const tou = { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
-            const dateObj = new Date(date);
-            const dayOfWeek = dateObj.getDay(); // 0=Sunday, 6=Saturday
-            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-            const month = parseInt(date.split('-')[1]);
-            const isSummer = month >= 9 || month <= 4; // Sept-April (low demand)
             
             hourlyData.forEach((hourData, hour) => {
                 // The field is generation_kw (in kW) - need to convert to kWh
@@ -5344,27 +5358,15 @@ async function updateDatePickerRange() {
                 const intervals = hourData.intervals || 12;
                 const generation_kwh = generation_kw * (intervals * 5 / 60); // Convert to kWh
                 
-                if (isWeekend) {
-                    // Weekends: All off-peak
-                    tou.off_peak_kwh += generation_kwh;
-                } else if (isSummer) {
-                    // Summer weekdays (Sept-April, low demand): 7-9am and 6-8pm is peak
-                    if ((hour >= 7 && hour < 9) || (hour >= 18 && hour < 20)) {
-                        tou.peak_kwh += generation_kwh;
-                    } else if ((hour >= 6 && hour < 7) || (hour >= 9 && hour < 18) || (hour >= 20 && hour < 22)) {
-                        tou.standard_kwh += generation_kwh;
-                    } else {
-                        tou.off_peak_kwh += generation_kwh;
-                    }
+                // Use the corrected getTOUPeriod function
+                const period = getTOUPeriod(date, hour, 0);
+                
+                if (period === 'peak') {
+                    tou.peak_kwh += generation_kwh;
+                } else if (period === 'standard') {
+                    tou.standard_kwh += generation_kwh;
                 } else {
-                    // Winter weekdays (May-Aug, high demand): 6-9am and 5-7pm is peak
-                    if ((hour >= 6 && hour < 9) || (hour >= 17 && hour < 19)) {
-                        tou.peak_kwh += generation_kwh;
-                    } else if ((hour >= 9 && hour < 17) || (hour >= 19 && hour < 22)) {
-                        tou.standard_kwh += generation_kwh;
-                    } else {
-                        tou.off_peak_kwh += generation_kwh;
-                    }
+                    tou.off_peak_kwh += generation_kwh;
                 }
             });
             
