@@ -7146,20 +7146,25 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
         
         // Hide Load/Grid datasets by default
         const toggleableLabels = ['Actual Load', 'Expected Load', 'Actual Grid', 'Expected Grid'];
+        console.log('📊 Monthly Chart - Hiding Load/Grid datasets by default');
         monthlyChart.data.datasets.forEach((dataset, index) => {
             if (toggleableLabels.some(label => dataset.label.includes(label))) {
+                console.log(`   Hiding dataset ${index}: ${dataset.label}`);
                 monthlyChart.setDatasetVisibility(index, false);
             }
         });
         monthlyChart.update('none'); // Update without animation
+        console.log('   ✓ Datasets hidden, chart updated');
         
         // Populate custom toggleable legend
         const toggleList = document.getElementById('monthlyChartToggleList');
         if (toggleList) {
+            console.log('📊 Creating toggleable legend items');
             toggleList.innerHTML = '';
             
             monthlyChart.data.datasets.forEach((dataset, index) => {
                 if (toggleableLabels.some(label => dataset.label.includes(label))) {
+                    console.log(`   Adding toggleable for dataset ${index}: ${dataset.label} (visible: ${monthlyChart.isDatasetVisible(index)})`);
                     const legendItem = document.createElement('div');
                     legendItem.style.cssText = `
                         display: flex;
@@ -7197,10 +7202,17 @@ function createMonthlyChartWithLoadGrid(ctx, records, avgPredictionLine, actualA
                     legendItem.appendChild(labelText);
                     
                     legendItem.onclick = () => {
-                        monthlyChart.setDatasetVisibility(index, !monthlyChart.isDatasetVisible(index));
+                        const wasVisible = monthlyChart.isDatasetVisible(index);
+                        console.log(`🔄 Toggling dataset ${index} (${dataset.label}): ${wasVisible} -> ${!wasVisible}`);
+                        
+                        monthlyChart.setDatasetVisibility(index, !wasVisible);
                         monthlyChart.update();
-                        labelText.style.color = monthlyChart.isDatasetVisible(index) ? '#fff' : '#999';
-                        labelText.style.textDecoration = monthlyChart.isDatasetVisible(index) ? 'none' : 'line-through';
+                        
+                        const isNowVisible = monthlyChart.isDatasetVisible(index);
+                        console.log(`   ✓ Dataset ${index} is now: ${isNowVisible ? 'VISIBLE' : 'HIDDEN'}`);
+                        
+                        labelText.style.color = isNowVisible ? '#fff' : '#999';
+                        labelText.style.textDecoration = isNowVisible ? 'none' : 'line-through';
                     };
                     
                     toggleList.appendChild(legendItem);
