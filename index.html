@@ -1716,7 +1716,7 @@
                     <!-- Daily Generation -->
                     <div class="stat-card">
                         <div class="label" style="font-size: 18px; margin-bottom: 15px;">Today</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;" id="overview-daily-gen">--</div>
+                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-daily-gen">--</span> <span style="font-size: 28px;">kWh</span></div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
@@ -1733,7 +1733,7 @@
                     <!-- Monthly Generation -->
                     <div class="stat-card">
                         <div class="label" style="font-size: 18px; margin-bottom: 15px;">This Month</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;" id="overview-monthly-gen">--</div>
+                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-monthly-gen">--</span> <span style="font-size: 28px;">kWh</span></div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
@@ -1750,7 +1750,7 @@
                     <!-- Lifetime Generation -->
                     <div class="stat-card">
                         <div class="label" style="font-size: 18px; margin-bottom: 15px;">Lifetime</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;" id="overview-lifetime-gen">--</div>
+                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-lifetime-gen">--</span> <span style="font-size: 28px;">MWh</span></div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
@@ -3106,19 +3106,19 @@
                 });
                 
                 // ===== UPDATE DISPLAYS =====
-                document.getElementById('overview-daily-gen').textContent = formatKwh(dailyGen);
+                document.getElementById('overview-daily-gen').textContent = formatNumber(dailyGen, 0);
                 document.getElementById('overview-daily-perf').textContent = dailyPerf.toFixed(1) + '%';
                 document.getElementById('overview-daily-perf').style.color = dailyPerf >= 90 ? '#4ade80' : dailyPerf >= 70 ? '#fbbf24' : '#ef4444';
                 document.getElementById('overview-daily-coverage').textContent = dailyCoverage.toFixed(1) + '%';
                 document.getElementById('overview-daily-expected').textContent = formatNumber(dailyExpected, 0);
                 
-                document.getElementById('overview-monthly-gen').textContent = formatKwh(monthlyGen);
+                document.getElementById('overview-monthly-gen').textContent = formatNumber(monthlyGen, 0);
                 document.getElementById('overview-monthly-perf').textContent = monthlyPerf.toFixed(1) + '%';
                 document.getElementById('overview-monthly-perf').style.color = monthlyPerf >= 90 ? '#4ade80' : monthlyPerf >= 70 ? '#fbbf24' : '#ef4444';
                 document.getElementById('overview-monthly-coverage').textContent = monthlyCoverage.toFixed(1) + '%';
                 document.getElementById('overview-monthly-expected').textContent = formatNumber(monthlyExpected, 0);
                 
-                document.getElementById('overview-lifetime-gen').textContent = formatNumber(lifetimeGen / 1000, 1) + ' MWh';
+                document.getElementById('overview-lifetime-gen').textContent = formatNumber(lifetimeGen / 1000, 1);
                 document.getElementById('overview-lifetime-perf').textContent = lifetimePerf.toFixed(1) + '%';
                 document.getElementById('overview-lifetime-perf').style.color = lifetimePerf >= 90 ? '#4ade80' : lifetimePerf >= 70 ? '#fbbf24' : '#ef4444';
                 document.getElementById('overview-lifetime-coverage').textContent = lifetimeCoverage.toFixed(1) + '%';
