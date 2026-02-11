@@ -1649,13 +1649,63 @@
             <div id="overview-tab" class="tab-content active">
                 <h2 style="color: #fff; margin-bottom: 30px; text-align: center;">System Overview</h2>
                 
-                <!-- UNDER CONSTRUCTION - Left Side -->
-                <div style="position: fixed; left: 10px; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: center; z-index: 1000; font-size: 24px; font-weight: bold; color: rgba(255, 193, 7, 0.3); letter-spacing: 8px; white-space: nowrap;">
+                <!-- CSS for animated glowing UNDER CONSTRUCTION -->
+                <style>
+                    @keyframes scrollDown {
+                        0% {
+                            transform: translateY(-50%) translateX(-50%) rotate(-90deg) translateX(-100vh);
+                        }
+                        100% {
+                            transform: translateY(-50%) translateX(-50%) rotate(-90deg) translateX(100vh);
+                        }
+                    }
+                    
+                    @keyframes scrollUp {
+                        0% {
+                            transform: translateY(-50%) translateX(-50%) rotate(90deg) translateX(100vh);
+                        }
+                        100% {
+                            transform: translateY(-50%) translateX(-50%) rotate(90deg) translateX(-100vh);
+                        }
+                    }
+                    
+                    .construction-text {
+                        position: fixed;
+                        top: 50%;
+                        z-index: 1000;
+                        font-size: 28px;
+                        font-weight: bold;
+                        color: #ffc107;
+                        letter-spacing: 12px;
+                        white-space: nowrap;
+                        text-shadow: 
+                            0 0 10px rgba(255, 193, 7, 0.8),
+                            0 0 20px rgba(255, 193, 7, 0.6),
+                            0 0 30px rgba(255, 193, 7, 0.4),
+                            0 0 40px rgba(255, 193, 7, 0.2);
+                        animation-duration: 20s;
+                        animation-timing-function: linear;
+                        animation-iteration-count: infinite;
+                    }
+                    
+                    .construction-left {
+                        left: 50%;
+                        animation-name: scrollDown;
+                    }
+                    
+                    .construction-right {
+                        right: 50%;
+                        animation-name: scrollUp;
+                    }
+                </style>
+                
+                <!-- UNDER CONSTRUCTION - Left Side (scrolls down) -->
+                <div class="construction-text construction-left">
                     UNDER CONSTRUCTION
                 </div>
                 
-                <!-- UNDER CONSTRUCTION - Right Side -->
-                <div style="position: fixed; right: 10px; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: center; z-index: 1000; font-size: 24px; font-weight: bold; color: rgba(255, 193, 7, 0.3); letter-spacing: 8px; white-space: nowrap;">
+                <!-- UNDER CONSTRUCTION - Right Side (scrolls up) -->
+                <div class="construction-text construction-right">
                     UNDER CONSTRUCTION
                 </div>
                 
@@ -3101,18 +3151,28 @@
                 document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(lifetimeSavings.off_peak_savings_zar || 0, 2);
                 document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(lifetimeSavings.total_savings_zar || 0, 2);
                 
-                // ===== ENVIRONMENTAL IMPACT (from generation values) =====
-                // Daily
-                document.getElementById('overview-daily-co2').textContent = formatNumber(dailyGen * 0.001, 0);
-                document.getElementById('overview-daily-trees').textContent = formatNumber(dailyGen * 0.045, 0);
-                document.getElementById('overview-daily-homes').textContent = formatNumber(dailyGen * 0.102, 1);
+                // ===== ENVIRONMENTAL IMPACT (from dashboardData) =====
+                // Daily - get from today's record
+                const dailyEnv = todayRecord?.env_impact || {};
+                document.getElementById('overview-daily-co2').textContent = formatNumber(dailyEnv.co2_offset_kg || 0, 0);
+                document.getElementById('overview-daily-trees').textContent = formatNumber(dailyEnv.trees_equivalent || 0, 0);
+                document.getElementById('overview-daily-homes').textContent = formatNumber(dailyEnv.households_offset || 0, 1);
                 
-                // Monthly
-                document.getElementById('overview-monthly-co2').textContent = formatNumber(monthlyGen * 0.001, 0);
-                document.getElementById('overview-monthly-trees').textContent = formatNumber(monthlyGen * 0.045, 0);
-                document.getElementById('overview-monthly-homes').textContent = formatNumber(monthlyGen * 0.102, 0);
+                // Monthly - aggregate from daily records
+                const monthlyEnv = monthRecords.reduce((acc, r) => {
+                    if (r.env_impact) {
+                        acc.co2 += r.env_impact.co2_offset_kg || 0;
+                        acc.trees += r.env_impact.trees_equivalent || 0;
+                        acc.homes += r.env_impact.households_offset || 0;
+                    }
+                    return acc;
+                }, { co2: 0, trees: 0, homes: 0 });
                 
-                // Lifetime
+                document.getElementById('overview-monthly-co2').textContent = formatNumber(monthlyEnv.co2, 0);
+                document.getElementById('overview-monthly-trees').textContent = formatNumber(monthlyEnv.trees, 0);
+                document.getElementById('overview-monthly-homes').textContent = formatNumber(monthlyEnv.homes, 0);
+                
+                // Lifetime - from lifetime data
                 const lifetimeEnv = lifetimeData.env_impact || {};
                 document.getElementById('overview-lifetime-co2').textContent = formatNumber(lifetimeEnv.co2_offset_tons || 0, 2);
                 document.getElementById('overview-lifetime-trees').textContent = formatNumber(lifetimeEnv.trees_equivalent || 0, 0);
@@ -3166,7 +3226,7 @@
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: true,
-                    devicePixelRatio: window.devicePixelRatio || 2, // Fix blurry text
+                    devicePixelRatio: window.devicePixelRatio * 2 || 4, // Higher resolution for crisp text
                     scales: {
                         x: {
                             stacked: true,
@@ -3174,8 +3234,8 @@
                             ticks: {
                                 color: '#ffffff',
                                 font: {
-                                    size: 12,
-                                    weight: '500'
+                                    size: 14,
+                                    weight: '600'
                                 },
                                 callback: function(value) {
                                     if (value >= 1000) {
@@ -3191,8 +3251,8 @@
                             ticks: { 
                                 color: '#ffffff',
                                 font: {
-                                    size: 12,
-                                    weight: '500'
+                                    size: 14,
+                                    weight: '600'
                                 }
                             },
                             grid: { display: false }
@@ -3206,8 +3266,8 @@
                                 color: '#ffffff', 
                                 padding: 15, 
                                 font: { 
-                                    size: 12,
-                                    weight: '500'
+                                    size: 14,
+                                    weight: '600'
                                 } 
                             }
                         },
