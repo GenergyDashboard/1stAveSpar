@@ -1653,48 +1653,50 @@
                 <style>
                     @keyframes scrollDown {
                         0% {
-                            transform: translateY(-50%) translateX(-50%) rotate(-90deg) translateX(-100vh);
+                            top: -150px;
                         }
                         100% {
-                            transform: translateY(-50%) translateX(-50%) rotate(-90deg) translateX(100vh);
+                            top: calc(100% + 150px);
                         }
                     }
                     
                     @keyframes scrollUp {
                         0% {
-                            transform: translateY(-50%) translateX(-50%) rotate(90deg) translateX(100vh);
+                            top: calc(100% + 150px);
                         }
                         100% {
-                            transform: translateY(-50%) translateX(-50%) rotate(90deg) translateX(-100vh);
+                            top: -150px;
                         }
                     }
                     
                     .construction-text {
                         position: fixed;
-                        top: 50%;
                         z-index: 1000;
-                        font-size: 28px;
+                        font-size: 24px;
                         font-weight: bold;
                         color: #ffc107;
-                        letter-spacing: 12px;
+                        letter-spacing: 10px;
                         white-space: nowrap;
                         text-shadow: 
                             0 0 10px rgba(255, 193, 7, 0.8),
                             0 0 20px rgba(255, 193, 7, 0.6),
                             0 0 30px rgba(255, 193, 7, 0.4),
                             0 0 40px rgba(255, 193, 7, 0.2);
-                        animation-duration: 20s;
+                        animation-duration: 15s;
                         animation-timing-function: linear;
                         animation-iteration-count: infinite;
+                        transform-origin: center;
                     }
                     
                     .construction-left {
-                        left: 50%;
+                        left: 20px;
+                        transform: rotate(-90deg);
                         animation-name: scrollDown;
                     }
                     
                     .construction-right {
-                        right: 50%;
+                        right: 20px;
+                        transform: rotate(90deg);
                         animation-name: scrollUp;
                     }
                 </style>
@@ -3002,44 +3004,54 @@
                 const currentYear = new Date().getFullYear();
                 const currentMonthYear = `${currentYear}-${currentMonth}`;
                 
-                // ===== DAILY DATA (from today's daily_record) =====
+                // ===== DAILY DATA =====
                 const todayRecord = dashboardData.daily_records?.find(r => r.date === today);
                 
                 if (!todayRecord) {
                     console.warn('⚠️ No data for today:', today);
+                    return;
                 }
                 
-                const dailyGen = todayRecord?.generation_kwh || 0;
-                const dailyLoad = todayRecord?.actual_load_kwh || 0;
-                const dailyGrid = todayRecord?.actual_grid_kwh || 0;
+                const dailyGen = todayRecord.generation_kwh || 0;
+                const dailyLoad = todayRecord.actual_load_kwh || 0;
+                const dailyGrid = todayRecord.actual_grid_kwh || 0;
                 
-                // Calculate daily expected (same as Daily Generation tab)
-                const monthKey = currentMonth;
+                // Calculate expected EXACTLY like Daily Generation tab (partial day!)
+                const hoursWithData = todayRecord.hourly_data?.length || 0;
                 let dailyExpected = 0;
-                if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
-                    const baseDailyKwh = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh;
+                
+                if (hoursWithData > 0 && dashboardData.monthly_predictions_base) {
+                    const monthKey = currentMonth;
+                    const baseDailyKwh = dashboardData.monthly_predictions_base[monthKey]?.avg_daily_kwh;
                     
-                    // Apply degradation
-                    const commissioningDate = new Date(dashboardData.system.commissioning_date);
-                    const targetDate = new Date();
-                    const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
-                    const yearsActive = daysActive / 365.25;
-                    
-                    let degradationPercent;
-                    if (yearsActive < 1) {
-                        degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
-                    } else {
-                        degradationPercent = (dashboardData.system.degradation_year_1 + 
-                            (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                    if (baseDailyKwh) {
+                        // Apply degradation
+                        const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                        const targetDate = new Date();
+                        const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                        const yearsActive = daysActive / 365.25;
+                        
+                        let degradationPercent;
+                        if (yearsActive < 1) {
+                            degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                        } else {
+                            degradationPercent = (dashboardData.system.degradation_year_1 + 
+                                (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                        }
+                        const degradationFactor = 1 - (degradationPercent / 100);
+                        
+                        // Expected for PARTIAL day (hours so far, not full 24 hours)
+                        const hourlyAvg = (baseDailyKwh * degradationFactor) / 24;
+                        dailyExpected = hourlyAvg * hoursWithData;
+                        
+                        console.log(`📊 [OVERVIEW] Daily expected: ${hoursWithData} hours × ${hourlyAvg.toFixed(2)} kWh/h = ${dailyExpected.toFixed(1)} kWh`);
                     }
-                    const degradationFactor = 1 - (degradationPercent / 100);
-                    dailyExpected = baseDailyKwh * degradationFactor;
                 }
                 
                 const dailyPerf = dailyExpected > 0 ? ((dailyGen / dailyExpected) * 100) : 0;
                 const dailyCoverage = dailyLoad > 0 ? ((dailyGen / dailyLoad) * 100) : 0;
                 
-                // ===== MONTHLY DATA (EXACT logic from Monthly Overview tab) =====
+                // ===== MONTHLY DATA =====
                 const monthRecords = dashboardData.daily_records?.filter(record => 
                     record.date.startsWith(currentMonthYear)
                 ) || [];
@@ -3049,14 +3061,15 @@
                 const monthlyGrid = monthRecords.reduce((sum, day) => sum + (day.actual_grid_kwh || 0), 0);
                 const daysWithData = monthRecords.length;
                 
-                // Calculate monthly expected (MTD - same logic as Monthly Overview)
+                // Calculate monthly expected (MTD)
                 let monthlyExpected = 0;
-                if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+                if (dashboardData.monthly_predictions_base) {
+                    const monthKey = currentMonth;
                     const year = parseInt(currentYear);
                     const month = parseInt(currentMonth);
                     
                     const commissioningDate = new Date(dashboardData.system.commissioning_date);
-                    const targetDate = new Date(year, month - 1, 15);  // Middle of month
+                    const targetDate = new Date(year, month - 1, 15);
                     
                     const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
                     const yearsActive = daysActive / 365.25;
@@ -3070,15 +3083,14 @@
                     }
                     const degradationFactor = 1 - (degradationPercent / 100);
                     
-                    // MTD expected (for days with data only)
-                    const avgDailyPrediction = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh * degradationFactor;
+                    const avgDailyPrediction = dashboardData.monthly_predictions_base[monthKey]?.avg_daily_kwh * degradationFactor;
                     monthlyExpected = avgDailyPrediction * daysWithData;
                 }
                 
                 const monthlyPerf = monthlyExpected > 0 ? ((monthlyGen / monthlyExpected) * 100) : 0;
                 const monthlyCoverage = monthlyLoad > 0 ? ((monthlyGen / monthlyLoad) * 100) : 0;
                 
-                // ===== LIFETIME DATA (from dashboardData.lifetime) =====
+                // ===== LIFETIME DATA =====
                 const lifetimeData = dashboardData.lifetime || {};
                 const lifetimeGen = lifetimeData.total_generation_kwh || 0;
                 const lifetimeExpected = lifetimeData.expected_generation_kwh || 0;
@@ -3087,13 +3099,13 @@
                 const lifetimeCoverage = lifetimeLoad > 0 ? ((lifetimeGen / lifetimeLoad) * 100) : 0;
                 const lifetimeGrid = lifetimeData.actual_grid_kwh || 0;
                 
-                console.log('📊 [OVERVIEW] Calculated values:', {
-                    daily: { gen: dailyGen.toFixed(1), expected: dailyExpected.toFixed(1), perf: dailyPerf.toFixed(1) },
-                    monthly: { gen: monthlyGen.toFixed(1), expected: monthlyExpected.toFixed(1), perf: monthlyPerf.toFixed(1), days: daysWithData },
-                    lifetime: { gen: lifetimeGen.toFixed(1), expected: lifetimeExpected.toFixed(1), perf: lifetimePerf.toFixed(1) }
+                console.log('📊 [OVERVIEW] Calculated:', {
+                    daily: { gen: dailyGen.toFixed(1), exp: dailyExpected.toFixed(1), perf: dailyPerf.toFixed(1) + '%', hours: hoursWithData },
+                    monthly: { gen: monthlyGen.toFixed(1), exp: monthlyExpected.toFixed(1), perf: monthlyPerf.toFixed(1) + '%', days: daysWithData },
+                    lifetime: { gen: lifetimeGen.toFixed(1), exp: lifetimeExpected.toFixed(1), perf: lifetimePerf.toFixed(1) + '%' }
                 });
                 
-                // ===== UPDATE GENERATION DISPLAYS (with units via formatKwh) =====
+                // ===== UPDATE DISPLAYS =====
                 document.getElementById('overview-daily-gen').textContent = formatKwh(dailyGen);
                 document.getElementById('overview-daily-perf').textContent = dailyPerf.toFixed(1) + '%';
                 document.getElementById('overview-daily-perf').style.color = dailyPerf >= 90 ? '#4ade80' : dailyPerf >= 70 ? '#fbbf24' : '#ef4444';
@@ -3112,8 +3124,7 @@
                 document.getElementById('overview-lifetime-coverage').textContent = lifetimeCoverage.toFixed(1) + '%';
                 document.getElementById('overview-lifetime-expected').textContent = formatNumber(lifetimeExpected / 1000, 1);
                 
-                // ===== CALCULATE SAVINGS (EXACT logic from updateTouBreakdown) =====
-                // Daily
+                // ===== SAVINGS =====
                 if (todayRecord && todayRecord.tou_breakdown) {
                     const dailyFinancials = calculateTOUFinancials(todayRecord.tou_breakdown, today);
                     document.getElementById('overview-daily-savings-peak').textContent = formatNumber(dailyFinancials.savings.peak || 0, 2);
@@ -3121,13 +3132,11 @@
                     document.getElementById('overview-daily-savings-off-peak').textContent = formatNumber(dailyFinancials.savings.off_peak || 0, 2);
                     document.getElementById('overview-daily-savings-total').textContent = formatNumber(dailyFinancials.savings.total || 0, 2);
                 } else {
-                    document.getElementById('overview-daily-savings-peak').textContent = '0.00';
-                    document.getElementById('overview-daily-savings-standard').textContent = '0.00';
-                    document.getElementById('overview-daily-savings-off-peak').textContent = '0.00';
-                    document.getElementById('overview-daily-savings-total').textContent = '0.00';
+                    ['peak', 'standard', 'off-peak', 'total'].forEach(p => {
+                        document.getElementById(`overview-daily-savings-${p.replace('_', '-')}`).textContent = '0.00';
+                    });
                 }
                 
-                // Monthly
                 const monthlyTOU = monthRecords.reduce((acc, r) => {
                     if (r.tou_breakdown) {
                         acc.peak_kwh += r.tou_breakdown.peak_kwh || 0;
@@ -3143,7 +3152,6 @@
                 document.getElementById('overview-monthly-savings-off-peak').textContent = formatNumber(monthlyFinancials.savings.off_peak || 0, 2);
                 document.getElementById('overview-monthly-savings-total').textContent = formatNumber(monthlyFinancials.savings.total || 0, 2);
                 
-                // Lifetime
                 const lifetimeFinancials = lifetimeData.financial || {};
                 const lifetimeSavings = lifetimeFinancials.savings || {};
                 document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(lifetimeSavings.peak_savings_zar || 0, 2);
@@ -3151,14 +3159,19 @@
                 document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(lifetimeSavings.off_peak_savings_zar || 0, 2);
                 document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(lifetimeSavings.total_savings_zar || 0, 2);
                 
-                // ===== ENVIRONMENTAL IMPACT (from dashboardData) =====
-                // Daily - get from today's record
-                const dailyEnv = todayRecord?.env_impact || {};
-                document.getElementById('overview-daily-co2').textContent = formatNumber(dailyEnv.co2_offset_kg || 0, 0);
-                document.getElementById('overview-daily-trees').textContent = formatNumber(dailyEnv.trees_equivalent || 0, 0);
-                document.getElementById('overview-daily-homes').textContent = formatNumber(dailyEnv.households_offset || 0, 1);
+                // ===== ENVIRONMENTAL (use actual data from dashboard_data.json) =====
+                // Daily
+                if (todayRecord.env_impact) {
+                    document.getElementById('overview-daily-co2').textContent = formatNumber(todayRecord.env_impact.co2_offset_kg || 0, 0);
+                    document.getElementById('overview-daily-trees').textContent = formatNumber(todayRecord.env_impact.trees_equivalent || 0, 0);
+                    document.getElementById('overview-daily-homes').textContent = formatNumber(todayRecord.env_impact.households_offset || 0, 1);
+                } else {
+                    document.getElementById('overview-daily-co2').textContent = '0';
+                    document.getElementById('overview-daily-trees').textContent = '0';
+                    document.getElementById('overview-daily-homes').textContent = '0.0';
+                }
                 
-                // Monthly - aggregate from daily records
+                // Monthly (aggregate from daily records)
                 const monthlyEnv = monthRecords.reduce((acc, r) => {
                     if (r.env_impact) {
                         acc.co2 += r.env_impact.co2_offset_kg || 0;
@@ -3172,13 +3185,13 @@
                 document.getElementById('overview-monthly-trees').textContent = formatNumber(monthlyEnv.trees, 0);
                 document.getElementById('overview-monthly-homes').textContent = formatNumber(monthlyEnv.homes, 0);
                 
-                // Lifetime - from lifetime data
+                // Lifetime
                 const lifetimeEnv = lifetimeData.env_impact || {};
                 document.getElementById('overview-lifetime-co2').textContent = formatNumber(lifetimeEnv.co2_offset_tons || 0, 2);
                 document.getElementById('overview-lifetime-trees').textContent = formatNumber(lifetimeEnv.trees_equivalent || 0, 0);
                 document.getElementById('overview-lifetime-homes').textContent = formatNumber(lifetimeEnv.households_offset || 0, 0);
                 
-                // ===== CREATE STACKED BAR CHARTS =====
+                // ===== CHARTS =====
                 createOverviewStackedChart('overviewDailyStackedChart', 'Today', dailyGen, dailyGrid, dailyLoad);
                 createOverviewStackedChart('overviewMonthlyStackedChart', 'This Month', monthlyGen, monthlyGrid, monthlyLoad);
                 createOverviewStackedChart('overviewLifetimeStackedChart', 'Lifetime', lifetimeGen, lifetimeGrid, lifetimeLoad);
