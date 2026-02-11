@@ -1654,7 +1654,7 @@
                     <!-- Daily Generation -->
                     <div class="stat-card">
                         <div class="label" style="font-size: 18px; margin-bottom: 15px;">Today</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;" id="overview-daily-gen">--</div>
+                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-daily-gen">--</span> <span style="font-size: 24px;">kWh</span></div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
@@ -1671,7 +1671,7 @@
                     <!-- Monthly Generation -->
                     <div class="stat-card">
                         <div class="label" style="font-size: 18px; margin-bottom: 15px;">This Month</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;" id="overview-monthly-gen">--</div>
+                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-monthly-gen">--</span> <span style="font-size: 24px;">kWh</span></div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
@@ -1688,7 +1688,7 @@
                     <!-- Lifetime Generation -->
                     <div class="stat-card">
                         <div class="label" style="font-size: 18px; margin-bottom: 15px;">Lifetime</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;" id="overview-lifetime-gen">--</div>
+                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-lifetime-gen">--</span> <span style="font-size: 24px;">MWh</span></div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
@@ -2937,149 +2937,102 @@
             console.log('📊 Updating Overview Tab');
             
             try {
-                // Get today's date
-                const today = new Date().toISOString().split('T')[0];
-                const currentMonth = today.substring(0, 7); // YYYY-MM
-                
-                // Find today's data
-                const todayData = dashboardData.daily_records?.find(r => r.date === today) || {};
-                
-                // Get monthly data (current month records)
-                const monthRecords = dashboardData.daily_records?.filter(r => r.date.startsWith(currentMonth)) || [];
-                const monthlyGen = monthRecords.reduce((sum, r) => sum + (r.generation_kwh || 0), 0);
-                const monthlyLoad = monthRecords.reduce((sum, r) => sum + (r.actual_load_kwh || 0), 0);
-                const monthlyGrid = monthRecords.reduce((sum, r) => sum + (r.actual_grid_kwh || 0), 0);
-                
-                // Calculate monthly TOU
-                const monthlyTOU = monthRecords.reduce((acc, r) => {
-                    if (r.tou_breakdown) {
-                        acc.peak_kwh += r.tou_breakdown.peak_kwh || 0;
-                        acc.standard_kwh += r.tou_breakdown.standard_kwh || 0;
-                        acc.off_peak_kwh += r.tou_breakdown.off_peak_kwh || 0;
-                    }
-                    return acc;
-                }, { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 });
-                
-                // Get lifetime data
-                const lifetimeData = dashboardData.lifetime || {};
-                
-                // Get expected values from predictions
-                const monthlyPredictions = dashboardData.monthly_predictions_base || {};
-                const monthKey = today.split('-')[1]; // Month as "01", "02", etc.
-                const expectedDailyGen = monthlyPredictions[monthKey]?.avg_daily_kwh || 0;
-                const expectedMonthlyGen = dashboardData.monthly_summaries?.[currentMonth]?.expected_generation_kwh || 0;
-                const expectedLifetimeGen = lifetimeData.expected_generation_kwh || 0;
+                // Use existing data from dashboard - don't recalculate!
+                const today = dashboardData.today || {};
+                const monthly = dashboardData.month || {};
+                const lifetime = dashboardData.lifetime || {};
                 
                 // ===== UPDATE GENERATION SLABS =====
-                // Daily
-                const dailyGen = todayData.generation_kwh || 0;
-                const dailyLoad = todayData.actual_load_kwh || 0;
-                const dailyPerf = expectedDailyGen > 0 ? (dailyGen / expectedDailyGen * 100) : 0;
+                // Daily - use existing today data
+                const dailyGen = today.generation_kwh || 0;
+                const dailyExpected = today.expected_generation_kwh || 0;
+                const dailyPerf = dailyExpected > 0 ? (dailyGen / dailyExpected * 100) : 0;
+                const dailyLoad = today.actual_load_kwh || 0;
                 const dailyCoverage = dailyLoad > 0 ? (dailyGen / dailyLoad * 100) : 0;
                 
-                document.getElementById('overview-daily-gen').textContent = dailyGen.toFixed(1) + ' kWh';
+                document.getElementById('overview-daily-gen').textContent = formatNumber(dailyGen, 0);
                 document.getElementById('overview-daily-perf').textContent = dailyPerf.toFixed(1) + '%';
                 document.getElementById('overview-daily-perf').style.color = dailyPerf >= 90 ? '#4ade80' : dailyPerf >= 70 ? '#fbbf24' : '#ef4444';
                 document.getElementById('overview-daily-coverage').textContent = dailyCoverage.toFixed(1) + '%';
-                document.getElementById('overview-daily-expected').textContent = expectedDailyGen.toFixed(1);
+                document.getElementById('overview-daily-expected').textContent = formatNumber(dailyExpected, 0);
                 
-                // Monthly
-                const monthlyPerf = expectedMonthlyGen > 0 ? (monthlyGen / expectedMonthlyGen * 100) : 0;
+                // Monthly - use existing month data
+                const monthlyGen = monthly.total_generation_kwh || 0;
+                const monthlyExpected = monthly.expected_generation_kwh || 0;
+                const monthlyPerf = monthlyExpected > 0 ? (monthlyGen / monthlyExpected * 100) : 0;
+                const monthlyLoad = monthly.actual_load_kwh || 0;
                 const monthlyCoverage = monthlyLoad > 0 ? (monthlyGen / monthlyLoad * 100) : 0;
                 
-                document.getElementById('overview-monthly-gen').textContent = monthlyGen.toFixed(1) + ' kWh';
+                document.getElementById('overview-monthly-gen').textContent = formatNumber(monthlyGen, 0);
                 document.getElementById('overview-monthly-perf').textContent = monthlyPerf.toFixed(1) + '%';
                 document.getElementById('overview-monthly-perf').style.color = monthlyPerf >= 90 ? '#4ade80' : monthlyPerf >= 70 ? '#fbbf24' : '#ef4444';
                 document.getElementById('overview-monthly-coverage').textContent = monthlyCoverage.toFixed(1) + '%';
-                document.getElementById('overview-monthly-expected').textContent = expectedMonthlyGen.toFixed(1);
+                document.getElementById('overview-monthly-expected').textContent = formatNumber(monthlyExpected, 0);
                 
-                // Lifetime
-                const lifetimeGen = lifetimeData.total_generation_kwh || 0;
-                const lifetimeLoad = lifetimeData.actual_load_kwh || 0;
-                const lifetimePerf = expectedLifetimeGen > 0 ? (lifetimeGen / expectedLifetimeGen * 100) : 0;
+                // Lifetime - use existing lifetime data
+                const lifetimeGen = lifetime.total_generation_kwh || 0;
+                const lifetimeExpected = lifetime.expected_generation_kwh || 0;
+                const lifetimePerf = lifetimeExpected > 0 ? (lifetimeGen / lifetimeExpected * 100) : 0;
+                const lifetimeLoad = lifetime.actual_load_kwh || 0;
                 const lifetimeCoverage = lifetimeLoad > 0 ? (lifetimeGen / lifetimeLoad * 100) : 0;
                 
-                document.getElementById('overview-lifetime-gen').textContent = (lifetimeGen / 1000).toFixed(1) + ' MWh';
+                document.getElementById('overview-lifetime-gen').textContent = formatNumber(lifetimeGen / 1000, 1); // MWh with 1 decimal
                 document.getElementById('overview-lifetime-perf').textContent = lifetimePerf.toFixed(1) + '%';
                 document.getElementById('overview-lifetime-perf').style.color = lifetimePerf >= 90 ? '#4ade80' : lifetimePerf >= 70 ? '#fbbf24' : '#ef4444';
                 document.getElementById('overview-lifetime-coverage').textContent = lifetimeCoverage.toFixed(1) + '%';
-                document.getElementById('overview-lifetime-expected').textContent = (expectedLifetimeGen / 1000).toFixed(1);
+                document.getElementById('overview-lifetime-expected').textContent = formatNumber(lifetimeExpected / 1000, 1); // MWh with 1 decimal
                 
                 // ===== UPDATE SAVINGS BREAKDOWN =====
-                // Daily
-                const dailyTOU = todayData.tou_breakdown || { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
-                const dailyFinancials = calculateTOUFinancials(dailyTOU, today);
+                // Use existing financial data from each period
+                const dailyFinancials = today.financial || {};
+                const dailySavings = dailyFinancials.savings || {};
                 
-                // Safe access with fallbacks
-                const dailyPeakSavings = dailyFinancials?.savings?.peak_savings_zar ?? 0;
-                const dailyStdSavings = dailyFinancials?.savings?.standard_savings_zar ?? 0;
-                const dailyOffSavings = dailyFinancials?.savings?.off_peak_savings_zar ?? 0;
-                const dailyTotalSavings = dailyFinancials?.savings?.total_savings_zar ?? 0;
+                document.getElementById('overview-daily-savings-peak').textContent = formatNumber(dailySavings.peak_savings_zar || 0, 2);
+                document.getElementById('overview-daily-savings-standard').textContent = formatNumber(dailySavings.standard_savings_zar || 0, 2);
+                document.getElementById('overview-daily-savings-off-peak').textContent = formatNumber(dailySavings.off_peak_savings_zar || 0, 2);
+                document.getElementById('overview-daily-savings-total').textContent = formatNumber(dailySavings.total_savings_zar || 0, 2);
                 
-                document.getElementById('overview-daily-savings-peak').textContent = dailyPeakSavings.toFixed(2);
-                document.getElementById('overview-daily-savings-standard').textContent = dailyStdSavings.toFixed(2);
-                document.getElementById('overview-daily-savings-off-peak').textContent = dailyOffSavings.toFixed(2);
-                document.getElementById('overview-daily-savings-total').textContent = dailyTotalSavings.toFixed(2);
+                const monthlyFinancials = monthly.financial || {};
+                const monthlySavings = monthlyFinancials.savings || {};
                 
-                // Monthly
-                const monthlyFinancials = calculateTOUFinancials(monthlyTOU, currentMonth + '-01');
+                document.getElementById('overview-monthly-savings-peak').textContent = formatNumber(monthlySavings.peak_savings_zar || 0, 2);
+                document.getElementById('overview-monthly-savings-standard').textContent = formatNumber(monthlySavings.standard_savings_zar || 0, 2);
+                document.getElementById('overview-monthly-savings-off-peak').textContent = formatNumber(monthlySavings.off_peak_savings_zar || 0, 2);
+                document.getElementById('overview-monthly-savings-total').textContent = formatNumber(monthlySavings.total_savings_zar || 0, 2);
                 
-                const monthlyPeakSavings = monthlyFinancials?.savings?.peak_savings_zar ?? 0;
-                const monthlyStdSavings = monthlyFinancials?.savings?.standard_savings_zar ?? 0;
-                const monthlyOffSavings = monthlyFinancials?.savings?.off_peak_savings_zar ?? 0;
-                const monthlyTotalSavings = monthlyFinancials?.savings?.total_savings_zar ?? 0;
+                const lifetimeFinancials = lifetime.financial || {};
+                const lifetimeSavings = lifetimeFinancials.savings || {};
                 
-                document.getElementById('overview-monthly-savings-peak').textContent = monthlyPeakSavings.toFixed(2);
-                document.getElementById('overview-monthly-savings-standard').textContent = monthlyStdSavings.toFixed(2);
-                document.getElementById('overview-monthly-savings-off-peak').textContent = monthlyOffSavings.toFixed(2);
-                document.getElementById('overview-monthly-savings-total').textContent = monthlyTotalSavings.toFixed(2);
-                
-                // Lifetime
-                const lifetimeTOU = lifetimeData.tou_breakdown || { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 };
-                const lifetimeFinancials = calculateTOUFinancials(lifetimeTOU, null); // Use weighted average rates
-                
-                const lifetimePeakSavings = lifetimeFinancials?.savings?.peak_savings_zar ?? 0;
-                const lifetimeStdSavings = lifetimeFinancials?.savings?.standard_savings_zar ?? 0;
-                const lifetimeOffSavings = lifetimeFinancials?.savings?.off_peak_savings_zar ?? 0;
-                const lifetimeTotalSavings = lifetimeFinancials?.savings?.total_savings_zar ?? 0;
-                
-                document.getElementById('overview-lifetime-savings-peak').textContent = lifetimePeakSavings.toFixed(2);
-                document.getElementById('overview-lifetime-savings-standard').textContent = lifetimeStdSavings.toFixed(2);
-                document.getElementById('overview-lifetime-savings-off-peak').textContent = lifetimeOffSavings.toFixed(2);
-                document.getElementById('overview-lifetime-savings-total').textContent = lifetimeTotalSavings.toFixed(2);
+                document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(lifetimeSavings.peak_savings_zar || 0, 2);
+                document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(lifetimeSavings.standard_savings_zar || 0, 2);
+                document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(lifetimeSavings.off_peak_savings_zar || 0, 2);
+                document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(lifetimeSavings.total_savings_zar || 0, 2);
                 
                 // ===== UPDATE ENVIRONMENTAL IMPACT =====
-                // Daily
-                const dailyCO2 = dailyGen * 0.001; // kg
-                const dailyTrees = dailyGen * 0.045;
-                const dailyHomes = dailyGen / 30; // Average 30 kWh per home per day
+                // Use existing environmental data
+                const dailyEnv = today.env_impact || {};
+                document.getElementById('overview-daily-co2').textContent = formatNumber((dailyEnv.co2_offset_tons || 0) * 1000, 0); // Convert to kg
+                document.getElementById('overview-daily-trees').textContent = formatNumber(dailyEnv.trees_equivalent || 0, 0);
+                document.getElementById('overview-daily-homes').textContent = formatNumber(dailyEnv.households_offset || 0, 1);
                 
-                document.getElementById('overview-daily-co2').textContent = dailyCO2.toFixed(1);
-                document.getElementById('overview-daily-trees').textContent = dailyTrees.toFixed(1);
-                document.getElementById('overview-daily-homes').textContent = dailyHomes.toFixed(2);
+                const monthlyEnv = monthly.env_impact || {};
+                document.getElementById('overview-monthly-co2').textContent = formatNumber((monthlyEnv.co2_offset_tons || 0) * 1000, 0); // Convert to kg
+                document.getElementById('overview-monthly-trees').textContent = formatNumber(monthlyEnv.trees_equivalent || 0, 0);
+                document.getElementById('overview-monthly-homes').textContent = formatNumber(monthlyEnv.households_offset || 0, 0);
                 
-                // Monthly
-                const monthlyCO2 = monthlyGen * 0.001; // kg
-                const monthlyTrees = monthlyGen * 0.045;
-                const monthlyHomes = monthlyGen / 30;
-                
-                document.getElementById('overview-monthly-co2').textContent = monthlyCO2.toFixed(1);
-                document.getElementById('overview-monthly-trees').textContent = monthlyTrees.toFixed(1);
-                document.getElementById('overview-monthly-homes').textContent = monthlyHomes.toFixed(1);
-                
-                // Lifetime
-                const lifetimeCO2 = lifetimeGen * 0.001 / 1000; // tons
-                const lifetimeTrees = lifetimeGen * 0.045;
-                const lifetimeHomes = lifetimeGen / 30;
-                
-                document.getElementById('overview-lifetime-co2').textContent = lifetimeCO2.toFixed(2);
-                document.getElementById('overview-lifetime-trees').textContent = lifetimeTrees.toFixed(0);
-                document.getElementById('overview-lifetime-homes').textContent = lifetimeHomes.toFixed(0);
+                const lifetimeEnv = lifetime.env_impact || {};
+                document.getElementById('overview-lifetime-co2').textContent = formatNumber(lifetimeEnv.co2_offset_tons || 0, 2);
+                document.getElementById('overview-lifetime-trees').textContent = formatNumber(lifetimeEnv.trees_equivalent || 0, 0);
+                document.getElementById('overview-lifetime-homes').textContent = formatNumber(lifetimeEnv.households_offset || 0, 0);
                 
                 // ===== CREATE STACKED BAR CHARTS =====
-                createOverviewStackedChart('overviewDailyStackedChart', 'Daily', dailyGen, todayData.actual_grid_kwh || 0, dailyLoad);
-                createOverviewStackedChart('overviewMonthlyStackedChart', 'Monthly', monthlyGen, monthlyGrid, monthlyLoad);
-                createOverviewStackedChart('overviewLifetimeStackedChart', 'Lifetime', lifetimeGen, lifetimeData.actual_grid_kwh || 0, lifetimeLoad);
+                const dailyGrid = today.actual_grid_kwh || 0;
+                const monthlyGrid = monthly.actual_grid_kwh || 0;
+                const lifetimeGrid = lifetime.actual_grid_kwh || 0;
+                
+                createOverviewStackedChart('overviewDailyStackedChart', 'Today', dailyGen, dailyGrid, dailyLoad);
+                createOverviewStackedChart('overviewMonthlyStackedChart', 'This Month', monthlyGen, monthlyGrid, monthlyLoad);
+                createOverviewStackedChart('overviewLifetimeStackedChart', 'Lifetime', lifetimeGen, lifetimeGrid, lifetimeLoad);
                 
                 console.log('✅ Overview Tab Updated');
                 
@@ -3124,13 +3077,21 @@
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: true,
+                    devicePixelRatio: window.devicePixelRatio || 2, // Fix blurry text
                     scales: {
                         x: {
                             stacked: true,
                             beginAtZero: true,
                             ticks: {
                                 color: '#ffffff',
+                                font: {
+                                    size: 12,
+                                    weight: '500'
+                                },
                                 callback: function(value) {
+                                    if (value >= 1000) {
+                                        return (value / 1000).toFixed(0) + 'k kWh';
+                                    }
                                     return value.toFixed(0) + ' kWh';
                                 }
                             },
@@ -3138,7 +3099,13 @@
                         },
                         y: {
                             stacked: true,
-                            ticks: { color: '#ffffff' },
+                            ticks: { 
+                                color: '#ffffff',
+                                font: {
+                                    size: 12,
+                                    weight: '500'
+                                }
+                            },
                             grid: { display: false }
                         }
                     },
@@ -3146,7 +3113,14 @@
                         legend: {
                             display: true,
                             position: 'bottom',
-                            labels: { color: '#ffffff', padding: 15, font: { size: 12 } }
+                            labels: { 
+                                color: '#ffffff', 
+                                padding: 15, 
+                                font: { 
+                                    size: 12,
+                                    weight: '500'
+                                } 
+                            }
                         },
                         tooltip: {
                             callbacks: {
@@ -3154,12 +3128,12 @@
                                     const label = context.dataset.label || '';
                                     const value = context.parsed.x;
                                     const percent = loadKwh > 0 ? (value / loadKwh * 100).toFixed(1) : 0;
-                                    return `${label}: ${value.toFixed(1)} kWh (${percent}%)`;
+                                    return `${label}: ${formatNumber(value, 0)} kWh (${percent}%)`;
                                 },
                                 afterBody: function() {
                                     return [
                                         '',
-                                        `Total Load: ${loadKwh.toFixed(1)} kWh`,
+                                        `Total Load: ${formatNumber(loadKwh, 0)} kWh`,
                                         `PV Coverage: ${pvCoverage.toFixed(1)}%`
                                     ];
                                 }
@@ -3171,7 +3145,10 @@
         }
         
         function formatNumber(num, decimals = 0) {
-            return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+            const fixed = Number(num).toFixed(decimals);
+            const parts = fixed.split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+            return parts.join('.');
         }
         
         function formatKwh(num, decimals = 0) {
