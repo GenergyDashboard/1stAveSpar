@@ -3336,13 +3336,13 @@
                 // ===== SAVINGS =====
                 if (todayRecord && todayRecord.tou_breakdown) {
                     const dailyFinancials = calculateTOUFinancials(todayRecord.tou_breakdown, today);
-                    document.getElementById('overview-daily-savings-peak').textContent = formatNumber(dailyFinancials.savings.peak || 0, 2);
-                    document.getElementById('overview-daily-savings-standard').textContent = formatNumber(dailyFinancials.savings.standard || 0, 2);
-                    document.getElementById('overview-daily-savings-off-peak').textContent = formatNumber(dailyFinancials.savings.off_peak || 0, 2);
-                    document.getElementById('overview-daily-savings-total').textContent = formatNumber(dailyFinancials.savings.total || 0, 2);
+                    document.getElementById('overview-daily-savings-peak').textContent = formatNumber(dailyFinancials.savings.peak || 0, 0);
+                    document.getElementById('overview-daily-savings-standard').textContent = formatNumber(dailyFinancials.savings.standard || 0, 0);
+                    document.getElementById('overview-daily-savings-off-peak').textContent = formatNumber(dailyFinancials.savings.off_peak || 0, 0);
+                    document.getElementById('overview-daily-savings-total').textContent = formatNumber(dailyFinancials.savings.total || 0, 0);
                 } else {
                     ['peak', 'standard', 'off-peak', 'total'].forEach(p => {
-                        document.getElementById(`overview-daily-savings-${p.replace('_', '-')}`).textContent = '0.00';
+                        document.getElementById(`overview-daily-savings-${p.replace('_', '-')}`).textContent = '0';
                     });
                 }
                 
@@ -3356,10 +3356,10 @@
                 }, { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 });
                 
                 const monthlyFinancials = calculateTOUFinancials(monthlyTOU, currentMonthYear + '-01');
-                document.getElementById('overview-monthly-savings-peak').textContent = formatNumber(monthlyFinancials.savings.peak || 0, 2);
-                document.getElementById('overview-monthly-savings-standard').textContent = formatNumber(monthlyFinancials.savings.standard || 0, 2);
-                document.getElementById('overview-monthly-savings-off-peak').textContent = formatNumber(monthlyFinancials.savings.off_peak || 0, 2);
-                document.getElementById('overview-monthly-savings-total').textContent = formatNumber(monthlyFinancials.savings.total || 0, 2);
+                document.getElementById('overview-monthly-savings-peak').textContent = formatNumber(monthlyFinancials.savings.peak || 0, 0);
+                document.getElementById('overview-monthly-savings-standard').textContent = formatNumber(monthlyFinancials.savings.standard || 0, 0);
+                document.getElementById('overview-monthly-savings-off-peak').textContent = formatNumber(monthlyFinancials.savings.off_peak || 0, 0);
+                document.getElementById('overview-monthly-savings-total').textContent = formatNumber(monthlyFinancials.savings.total || 0, 0);
                 
                 // Lifetime savings - calculate from TOU breakdown
                 if (lifetimeData.tou_breakdown) {
@@ -3386,17 +3386,17 @@
                         ltTotal = ltFinancials.savings.total || 0;
                     }
                     
-                    document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(ltPeak, 2);
-                    document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(ltStandard, 2);
-                    document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(ltOffPeak, 2);
-                    document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(ltTotal, 2);
+                    document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(ltPeak, 0);
+                    document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(ltStandard, 0);
+                    document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(ltOffPeak, 0);
+                    document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(ltTotal, 0);
                 } else {
                     const lifetimeFinancials = lifetimeData.financial || {};
                     const lifetimeSavings = lifetimeFinancials.savings || {};
-                    document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(lifetimeSavings.peak_savings_zar || 0, 2);
-                    document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(lifetimeSavings.standard_savings_zar || 0, 2);
-                    document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(lifetimeSavings.off_peak_savings_zar || 0, 2);
-                    document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(lifetimeSavings.total_savings_zar || 0, 2);
+                    document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(lifetimeSavings.peak_savings_zar || 0, 0);
+                    document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(lifetimeSavings.standard_savings_zar || 0, 0);
+                    document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(lifetimeSavings.off_peak_savings_zar || 0, 0);
+                    document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(lifetimeSavings.total_savings_zar || 0, 0);
                 }
                 
                 // ===== ENVIRONMENTAL (use actual data from dashboard_data.json) =====
@@ -3408,9 +3408,9 @@
                     water_saved_litres: dailyGen * 1.4
                 };
                 document.getElementById('overview-daily-trees').textContent = formatNumber(dailyEnv.trees_equivalent || (dailyGen * 0.045), 0);
-                document.getElementById('overview-daily-homes').textContent = formatNumber(dailyEnv.households_offset || (dailyGen * 0.102), 1);
-                document.getElementById('overview-daily-coal').textContent = formatNumber(dailyEnv.coal_saved_kg || (dailyGen * 0.548), 1);
-                document.getElementById('overview-daily-water').textContent = formatNumber(dailyEnv.water_saved_litres || (dailyGen * 1.4), 1);
+                document.getElementById('overview-daily-homes').textContent = formatNumber(dailyEnv.households_offset || (dailyGen * 0.102), 0);
+                document.getElementById('overview-daily-coal').textContent = formatNumber(dailyEnv.coal_saved_kg || (dailyGen * 0.548), 0);
+                document.getElementById('overview-daily-water').textContent = formatNumber(dailyEnv.water_saved_litres || (dailyGen * 1.4), 0);
                 
                 // Monthly (aggregate from daily records, calculate if env_impact missing)
                 const monthlyEnv = monthRecords.reduce((acc, r) => {
@@ -3501,9 +3501,11 @@
                                     size: 14,
                                     weight: '600'
                                 },
+                                maxTicksLimit: 6,
                                 callback: function(value) {
                                     if (value >= 1000) {
-                                        return (value / 1000).toFixed(0) + 'k kWh';
+                                        const k = value / 1000;
+                                        return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'k kWh';
                                     }
                                     return value.toFixed(0) + ' kWh';
                                 }
