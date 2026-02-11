@@ -1649,12 +1649,22 @@
             <div id="overview-tab" class="tab-content active">
                 <h2 style="color: #fff; margin-bottom: 30px; text-align: center;">System Overview</h2>
                 
+                <!-- UNDER CONSTRUCTION - Left Side -->
+                <div style="position: fixed; left: 10px; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: center; z-index: 1000; font-size: 24px; font-weight: bold; color: rgba(255, 193, 7, 0.3); letter-spacing: 8px; white-space: nowrap;">
+                    UNDER CONSTRUCTION
+                </div>
+                
+                <!-- UNDER CONSTRUCTION - Right Side -->
+                <div style="position: fixed; right: 10px; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: center; z-index: 1000; font-size: 24px; font-weight: bold; color: rgba(255, 193, 7, 0.3); letter-spacing: 8px; white-space: nowrap;">
+                    UNDER CONSTRUCTION
+                </div>
+                
                 <!-- GENERATION SLABS -->
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
                     <!-- Daily Generation -->
                     <div class="stat-card">
                         <div class="label" style="font-size: 18px; margin-bottom: 15px;">Today</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-daily-gen">--</span> <span style="font-size: 24px;">kWh</span></div>
+                        <div class="value" style="font-size: 42px; margin-bottom: 10px;" id="overview-daily-gen">--</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
@@ -1671,7 +1681,7 @@
                     <!-- Monthly Generation -->
                     <div class="stat-card">
                         <div class="label" style="font-size: 18px; margin-bottom: 15px;">This Month</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-monthly-gen">--</span> <span style="font-size: 24px;">kWh</span></div>
+                        <div class="value" style="font-size: 42px; margin-bottom: 10px;" id="overview-monthly-gen">--</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
@@ -1688,7 +1698,7 @@
                     <!-- Lifetime Generation -->
                     <div class="stat-card">
                         <div class="label" style="font-size: 18px; margin-bottom: 15px;">Lifetime</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-lifetime-gen">--</span> <span style="font-size: 24px;">MWh</span></div>
+                        <div class="value" style="font-size: 42px; margin-bottom: 10px;" id="overview-lifetime-gen">--</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
@@ -3033,20 +3043,20 @@
                     lifetime: { gen: lifetimeGen.toFixed(1), expected: lifetimeExpected.toFixed(1), perf: lifetimePerf.toFixed(1) }
                 });
                 
-                // ===== UPDATE GENERATION DISPLAYS (numbers only - HTML has units) =====
-                document.getElementById('overview-daily-gen').textContent = formatNumber(dailyGen, 0);
+                // ===== UPDATE GENERATION DISPLAYS (with units via formatKwh) =====
+                document.getElementById('overview-daily-gen').textContent = formatKwh(dailyGen);
                 document.getElementById('overview-daily-perf').textContent = dailyPerf.toFixed(1) + '%';
                 document.getElementById('overview-daily-perf').style.color = dailyPerf >= 90 ? '#4ade80' : dailyPerf >= 70 ? '#fbbf24' : '#ef4444';
                 document.getElementById('overview-daily-coverage').textContent = dailyCoverage.toFixed(1) + '%';
                 document.getElementById('overview-daily-expected').textContent = formatNumber(dailyExpected, 0);
                 
-                document.getElementById('overview-monthly-gen').textContent = formatNumber(monthlyGen, 0);
+                document.getElementById('overview-monthly-gen').textContent = formatKwh(monthlyGen);
                 document.getElementById('overview-monthly-perf').textContent = monthlyPerf.toFixed(1) + '%';
                 document.getElementById('overview-monthly-perf').style.color = monthlyPerf >= 90 ? '#4ade80' : monthlyPerf >= 70 ? '#fbbf24' : '#ef4444';
                 document.getElementById('overview-monthly-coverage').textContent = monthlyCoverage.toFixed(1) + '%';
                 document.getElementById('overview-monthly-expected').textContent = formatNumber(monthlyExpected, 0);
                 
-                document.getElementById('overview-lifetime-gen').textContent = formatNumber(lifetimeGen / 1000, 1);
+                document.getElementById('overview-lifetime-gen').textContent = formatNumber(lifetimeGen / 1000, 1) + ' MWh';
                 document.getElementById('overview-lifetime-perf').textContent = lifetimePerf.toFixed(1) + '%';
                 document.getElementById('overview-lifetime-perf').style.color = lifetimePerf >= 90 ? '#4ade80' : lifetimePerf >= 70 ? '#fbbf24' : '#ef4444';
                 document.getElementById('overview-lifetime-coverage').textContent = lifetimeCoverage.toFixed(1) + '%';
