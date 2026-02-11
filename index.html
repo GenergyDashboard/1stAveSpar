@@ -2934,36 +2934,48 @@
                 return;
             }
             
-            console.log('📊 Updating Overview Tab - Reading from existing tab values');
+            console.log('📊 Updating Overview Tab - Calculating from dashboardData');
             
             try {
-                // ===== MIRROR DAILY GENERATION TAB =====
-                // Read values directly from Daily Generation tab DOM elements
-                const dailyGenText = document.getElementById('daily-gen')?.textContent || '0 kWh';
-                const dailyGenValue = parseFloat(dailyGenText.replace(/[^\d.]/g, '')) || 0;
-                
-                const dailyExpectedText = document.getElementById('daily-gen-expected')?.textContent || '0';
-                const dailyExpectedValue = parseFloat(dailyExpectedText.replace(/\s/g, '')) || 0;
-                
-                const dailyPerfText = document.getElementById('daily-gen-perf')?.textContent || '0%';
-                const dailyPerfValue = parseFloat(dailyPerfText.replace(/[^\d.]/g, '')) || 0;
-                
-                const pvCoverageText = document.getElementById('pv-coverage')?.textContent || '0%';
-                const pvCoverageValue = parseFloat(pvCoverageText.replace(/[^\d.]/g, '')) || 0;
-                
-                // Daily Load/Grid for charts
-                const dailyLoadText = document.getElementById('daily-load')?.textContent || '0 kWh';
-                const dailyLoadValue = parseFloat(dailyLoadText.replace(/[^\d.]/g, '')) || 0;
-                
-                const dailyGridText = document.getElementById('daily-grid')?.textContent || '0 kWh';
-                const dailyGridValue = parseFloat(dailyGridText.replace(/[^\d.]/g, '')) || 0;
-                
-                // ===== CALCULATE MONTHLY FROM DAILY_RECORDS (same as Monthly Overview) =====
-                const now = new Date();
-                const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-                const currentYear = now.getFullYear();
+                const today = new Date().toISOString().split('T')[0];
+                const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+                const currentYear = new Date().getFullYear();
                 const currentMonthYear = `${currentYear}-${currentMonth}`;
                 
+                // ===== DAILY DATA (from daily_records for today) =====
+                const todayRecord = dashboardData.daily_records?.find(r => r.date === today);
+                
+                const dailyGen = todayRecord?.generation_kwh || 0;
+                const dailyLoad = todayRecord?.actual_load_kwh || 0;
+                const dailyGrid = todayRecord?.actual_grid_kwh || 0;
+                
+                // Calculate daily expected using monthly average pattern (same as Daily tab does)
+                const monthKey = currentMonth;
+                let dailyExpected = 0;
+                if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+                    dailyExpected = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh;
+                    
+                    // Apply degradation
+                    const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                    const targetDate = new Date();
+                    const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
+                    const yearsActive = daysActive / 365.25;
+                    
+                    let degradationPercent;
+                    if (yearsActive < 1) {
+                        degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                    } else {
+                        degradationPercent = (dashboardData.system.degradation_year_1 + 
+                            (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                    }
+                    const degradationFactor = 1 - (degradationPercent / 100);
+                    dailyExpected = dailyExpected * degradationFactor;
+                }
+                
+                const dailyPerf = dailyExpected > 0 ? (dailyGen / dailyExpected * 100) : 0;
+                const dailyCoverage = dailyLoad > 0 ? (dailyGen / dailyLoad * 100) : 0;
+                
+                // ===== MONTHLY DATA (from daily_records for current month) =====
                 const monthRecords = dashboardData.daily_records?.filter(record => 
                     record.date.startsWith(currentMonthYear)
                 ) || [];
@@ -2972,10 +2984,12 @@
                 const monthlyLoad = monthRecords.reduce((sum, day) => sum + (day.actual_load_kwh || 0), 0);
                 const monthlyGrid = monthRecords.reduce((sum, day) => sum + (day.actual_grid_kwh || 0), 0);
                 
-                // Calculate monthly expected (same logic as Monthly Overview)
-                const monthKey = currentMonth;
+                // Calculate monthly expected (MTD - multiply daily average by number of days with data)
                 let monthlyExpected = 0;
                 if (dashboardData.monthly_predictions_base && dashboardData.monthly_predictions_base[monthKey]) {
+                    const baseDailyKwh = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh;
+                    
+                    // Apply degradation (same calculation as daily)
                     const commissioningDate = new Date(dashboardData.system.commissioning_date);
                     const targetDate = new Date(currentYear, parseInt(currentMonth) - 1, 15);
                     const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
@@ -2990,7 +3004,6 @@
                     }
                     const degradationFactor = 1 - (degradationPercent / 100);
                     
-                    const baseDailyKwh = dashboardData.monthly_predictions_base[monthKey].avg_daily_kwh;
                     const expectedDailyKwh = baseDailyKwh * degradationFactor;
                     monthlyExpected = expectedDailyKwh * monthRecords.length; // MTD
                 }
@@ -2998,7 +3011,7 @@
                 const monthlyPerf = monthlyExpected > 0 ? (monthlyGen / monthlyExpected * 100) : 0;
                 const monthlyCoverage = monthlyLoad > 0 ? (monthlyGen / monthlyLoad * 100) : 0;
                 
-                // ===== MIRROR LIFETIME TAB =====
+                // ===== LIFETIME DATA (from dashboardData.lifetime) =====
                 const lifetimeData = dashboardData.lifetime || {};
                 const lifetimeGen = lifetimeData.total_generation_kwh || 0;
                 const lifetimeExpected = lifetimeData.expected_generation_kwh || 0;
@@ -3007,18 +3020,18 @@
                 const lifetimeCoverage = lifetimeLoad > 0 ? (lifetimeGen / lifetimeLoad * 100) : 0;
                 const lifetimeGrid = lifetimeData.actual_grid_kwh || 0;
                 
-                console.log('Overview values:', { 
-                    daily: { gen: dailyGenValue, expected: dailyExpectedValue, perf: dailyPerfValue },
-                    monthly: { gen: monthlyGen, expected: monthlyExpected, perf: monthlyPerf.toFixed(1) },
-                    lifetime: { gen: lifetimeGen, expected: lifetimeExpected, perf: lifetimePerf.toFixed(1) }
+                console.log('Overview calculated values:', { 
+                    daily: { gen: dailyGen, expected: dailyExpected.toFixed(1), perf: dailyPerf.toFixed(1) + '%' },
+                    monthly: { gen: monthlyGen.toFixed(1), expected: monthlyExpected.toFixed(1), perf: monthlyPerf.toFixed(1) + '%', records: monthRecords.length },
+                    lifetime: { gen: lifetimeGen.toFixed(1), expected: lifetimeExpected.toFixed(1), perf: lifetimePerf.toFixed(1) + '%' }
                 });
                 
-                // ===== UPDATE GENERATION SLABS =====
-                document.getElementById('overview-daily-gen').textContent = formatNumber(dailyGenValue, 0);
-                document.getElementById('overview-daily-perf').textContent = dailyPerfValue.toFixed(1) + '%';
-                document.getElementById('overview-daily-perf').style.color = dailyPerfValue >= 90 ? '#4ade80' : dailyPerfValue >= 70 ? '#fbbf24' : '#ef4444';
-                document.getElementById('overview-daily-coverage').textContent = pvCoverageValue.toFixed(1) + '%';
-                document.getElementById('overview-daily-expected').textContent = formatNumber(dailyExpectedValue, 0);
+                // ===== UPDATE GENERATION SLABS (numbers only - HTML has units) =====
+                document.getElementById('overview-daily-gen').textContent = formatNumber(dailyGen, 0);
+                document.getElementById('overview-daily-perf').textContent = dailyPerf.toFixed(1) + '%';
+                document.getElementById('overview-daily-perf').style.color = dailyPerf >= 90 ? '#4ade80' : dailyPerf >= 70 ? '#fbbf24' : '#ef4444';
+                document.getElementById('overview-daily-coverage').textContent = dailyCoverage.toFixed(1) + '%';
+                document.getElementById('overview-daily-expected').textContent = formatNumber(dailyExpected, 0);
                 
                 document.getElementById('overview-monthly-gen').textContent = formatNumber(monthlyGen, 0);
                 document.getElementById('overview-monthly-perf').textContent = monthlyPerf.toFixed(1) + '%';
@@ -3032,33 +3045,42 @@
                 document.getElementById('overview-lifetime-coverage').textContent = lifetimeCoverage.toFixed(1) + '%';
                 document.getElementById('overview-lifetime-expected').textContent = formatNumber(lifetimeExpected / 1000, 1);
                 
-                // ===== MIRROR FINANCIAL TAB - READ SAVINGS VALUES =====
-                // Daily savings from Financial Overview (TOU Monthly section)
-                const dailyPeakText = document.getElementById('monthly-savings-peak')?.textContent || '0';
-                const dailyStdText = document.getElementById('monthly-savings-standard')?.textContent || '0';
-                const dailyOffText = document.getElementById('monthly-savings-off-peak')?.textContent || '0';
-                const dailyTotalText = document.getElementById('monthly-total-savings')?.textContent || '0';
-                
-                // Parse and display (these are already month-to-date, we'll use them as monthly)
-                document.getElementById('overview-monthly-savings-peak').textContent = dailyPeakText;
-                document.getElementById('overview-monthly-savings-standard').textContent = dailyStdText;
-                document.getElementById('overview-monthly-savings-off-peak').textContent = dailyOffText;
-                document.getElementById('overview-monthly-savings-total').textContent = dailyTotalText;
-                
-                // Calculate daily TOU savings
-                const todayDate = new Date().toISOString().split('T')[0];
-                const todayRecord = dashboardData.daily_records?.find(r => r.date === todayDate);
+                // ===== CALCULATE SAVINGS (TOU breakdown) =====
+                // Daily
                 if (todayRecord && todayRecord.tou_breakdown) {
-                    const dailyFinancials = calculateTOUFinancials(todayRecord.tou_breakdown, todayDate);
+                    const dailyFinancials = calculateTOUFinancials(todayRecord.tou_breakdown, today);
                     if (dailyFinancials && dailyFinancials.savings) {
                         document.getElementById('overview-daily-savings-peak').textContent = formatNumber(dailyFinancials.savings.peak_savings_zar || 0, 2);
                         document.getElementById('overview-daily-savings-standard').textContent = formatNumber(dailyFinancials.savings.standard_savings_zar || 0, 2);
                         document.getElementById('overview-daily-savings-off-peak').textContent = formatNumber(dailyFinancials.savings.off_peak_savings_zar || 0, 2);
                         document.getElementById('overview-daily-savings-total').textContent = formatNumber(dailyFinancials.savings.total_savings_zar || 0, 2);
                     }
+                } else {
+                    document.getElementById('overview-daily-savings-peak').textContent = '0.00';
+                    document.getElementById('overview-daily-savings-standard').textContent = '0.00';
+                    document.getElementById('overview-daily-savings-off-peak').textContent = '0.00';
+                    document.getElementById('overview-daily-savings-total').textContent = '0.00';
                 }
                 
-                // Lifetime savings
+                // Monthly
+                const monthlyTOU = monthRecords.reduce((acc, r) => {
+                    if (r.tou_breakdown) {
+                        acc.peak_kwh += r.tou_breakdown.peak_kwh || 0;
+                        acc.standard_kwh += r.tou_breakdown.standard_kwh || 0;
+                        acc.off_peak_kwh += r.tou_breakdown.off_peak_kwh || 0;
+                    }
+                    return acc;
+                }, { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 });
+                
+                const monthlyFinancials = calculateTOUFinancials(monthlyTOU, currentMonthYear + '-01');
+                if (monthlyFinancials && monthlyFinancials.savings) {
+                    document.getElementById('overview-monthly-savings-peak').textContent = formatNumber(monthlyFinancials.savings.peak_savings_zar || 0, 2);
+                    document.getElementById('overview-monthly-savings-standard').textContent = formatNumber(monthlyFinancials.savings.standard_savings_zar || 0, 2);
+                    document.getElementById('overview-monthly-savings-off-peak').textContent = formatNumber(monthlyFinancials.savings.off_peak_savings_zar || 0, 2);
+                    document.getElementById('overview-monthly-savings-total').textContent = formatNumber(monthlyFinancials.savings.total_savings_zar || 0, 2);
+                }
+                
+                // Lifetime
                 const lifetimeFinancials = lifetimeData.financial || {};
                 const lifetimeSavings = lifetimeFinancials.savings || {};
                 document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(lifetimeSavings.peak_savings_zar || 0, 2);
@@ -3068,9 +3090,9 @@
                 
                 // ===== ENVIRONMENTAL IMPACT (calculate from generation) =====
                 // Daily
-                document.getElementById('overview-daily-co2').textContent = formatNumber(dailyGenValue * 0.001, 0);
-                document.getElementById('overview-daily-trees').textContent = formatNumber(dailyGenValue * 0.045, 0);
-                document.getElementById('overview-daily-homes').textContent = formatNumber(dailyGenValue * 0.102, 1);
+                document.getElementById('overview-daily-co2').textContent = formatNumber(dailyGen * 0.001, 0);
+                document.getElementById('overview-daily-trees').textContent = formatNumber(dailyGen * 0.045, 0);
+                document.getElementById('overview-daily-homes').textContent = formatNumber(dailyGen * 0.102, 1);
                 
                 // Monthly
                 document.getElementById('overview-monthly-co2').textContent = formatNumber(monthlyGen * 0.001, 0);
@@ -3084,11 +3106,11 @@
                 document.getElementById('overview-lifetime-homes').textContent = formatNumber(lifetimeEnv.households_offset || 0, 0);
                 
                 // ===== CREATE STACKED BAR CHARTS =====
-                createOverviewStackedChart('overviewDailyStackedChart', 'Today', dailyGenValue, dailyGridValue, dailyLoadValue);
+                createOverviewStackedChart('overviewDailyStackedChart', 'Today', dailyGen, dailyGrid, dailyLoad);
                 createOverviewStackedChart('overviewMonthlyStackedChart', 'This Month', monthlyGen, monthlyGrid, monthlyLoad);
                 createOverviewStackedChart('overviewLifetimeStackedChart', 'Lifetime', lifetimeGen, lifetimeGrid, lifetimeLoad);
                 
-                console.log('✅ Overview Tab Updated');
+                console.log('✅ Overview Tab Updated Successfully');
                 
             } catch (error) {
                 console.error('❌ Error updating overview tab:', error);
