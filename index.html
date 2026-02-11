@@ -1733,6 +1733,7 @@
                             </div>
                         </div>
                         <div class="subvalue" style="margin-top: 15px; font-size: 14px;">Expected: <span id="overview-daily-expected">--</span> kWh</div>
+                        <div id="overview-daily-target-status" style="margin-top: 8px; font-size: 14px; font-weight: 600;"></div>
                     </div>
                     
                     <!-- Monthly Generation -->
@@ -1750,6 +1751,7 @@
                             </div>
                         </div>
                         <div class="subvalue" style="margin-top: 15px; font-size: 14px;">Expected: <span id="overview-monthly-expected">--</span> kWh</div>
+                        <div id="overview-monthly-target-status" style="margin-top: 8px; font-size: 14px; font-weight: 600;"></div>
                     </div>
                     
                     <!-- Lifetime Generation -->
@@ -1767,6 +1769,7 @@
                             </div>
                         </div>
                         <div class="subvalue" style="margin-top: 15px; font-size: 14px;">Expected: <span id="overview-lifetime-expected">--</span> kWh</div>
+                        <div id="overview-lifetime-target-status" style="margin-top: 8px; font-size: 14px; font-weight: 600;"></div>
                     </div>
                 </div>
                 
@@ -3151,23 +3154,42 @@
                 });
                 
                 // ===== UPDATE DISPLAYS =====
+                // Helper to set target status
+                function setTargetStatus(elementId, actual, expected) {
+                    const el = document.getElementById(elementId);
+                    if (!el) return;
+                    if (expected <= 0) { el.textContent = ''; return; }
+                    const diff = actual - expected;
+                    const absDiff = Math.abs(diff);
+                    if (diff >= 0) {
+                        el.innerHTML = `▲ <span style="color: #4ade80;">${formatNumber(absDiff, 0)} kWh Ahead of Target</span>`;
+                        el.style.color = '#4ade80';
+                    } else {
+                        el.innerHTML = `▼ <span style="color: #ef4444;">${formatNumber(absDiff, 0)} kWh Behind Target</span>`;
+                        el.style.color = '#ef4444';
+                    }
+                }
+                
                 document.getElementById('overview-daily-gen').textContent = formatNumber(dailyGen, 0);
                 document.getElementById('overview-daily-perf').textContent = dailyPerf.toFixed(1) + '%';
-                document.getElementById('overview-daily-perf').style.color = dailyPerf >= 90 ? '#4ade80' : dailyPerf >= 70 ? '#fbbf24' : '#ef4444';
+                document.getElementById('overview-daily-perf').style.color = dailyPerf >= 100 ? '#4ade80' : '#ef4444';
                 document.getElementById('overview-daily-coverage').textContent = dailyCoverage.toFixed(1) + '%';
                 document.getElementById('overview-daily-expected').textContent = formatNumber(dailyExpected, 0);
+                setTargetStatus('overview-daily-target-status', dailyGen, dailyExpected);
                 
                 document.getElementById('overview-monthly-gen').textContent = formatNumber(monthlyGen, 0);
                 document.getElementById('overview-monthly-perf').textContent = monthlyPerf.toFixed(1) + '%';
-                document.getElementById('overview-monthly-perf').style.color = monthlyPerf >= 90 ? '#4ade80' : monthlyPerf >= 70 ? '#fbbf24' : '#ef4444';
+                document.getElementById('overview-monthly-perf').style.color = monthlyPerf >= 100 ? '#4ade80' : '#ef4444';
                 document.getElementById('overview-monthly-coverage').textContent = monthlyCoverage.toFixed(1) + '%';
                 document.getElementById('overview-monthly-expected').textContent = formatNumber(monthlyExpected, 0);
+                setTargetStatus('overview-monthly-target-status', monthlyGen, monthlyExpected);
                 
                 document.getElementById('overview-lifetime-gen').textContent = formatNumber(lifetimeGen, 0);
                 document.getElementById('overview-lifetime-perf').textContent = lifetimePerf.toFixed(1) + '%';
-                document.getElementById('overview-lifetime-perf').style.color = lifetimePerf >= 90 ? '#4ade80' : lifetimePerf >= 70 ? '#fbbf24' : '#ef4444';
+                document.getElementById('overview-lifetime-perf').style.color = lifetimePerf >= 100 ? '#4ade80' : '#ef4444';
                 document.getElementById('overview-lifetime-coverage').textContent = lifetimeCoverage.toFixed(1) + '%';
                 document.getElementById('overview-lifetime-expected').textContent = formatNumber(lifetimeExpected, 0);
+                setTargetStatus('overview-lifetime-target-status', lifetimeGen, lifetimeExpected);
                 
                 // ===== SAVINGS =====
                 if (todayRecord && todayRecord.tou_breakdown) {
