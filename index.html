@@ -250,6 +250,11 @@
     content: ' days';
 }
 
+/* Remove ::after kWh from overview slabs (they have inline kWh/MWh spans) */
+#overview-tab .stat-card .value::after {
+    content: '' !important;
+}
+
 #lifetime-perf::after,
 #monthly-target-perf::after {
     content: '%';
@@ -3093,7 +3098,35 @@
                 // ===== LIFETIME DATA =====
                 const lifetimeData = dashboardData.lifetime || {};
                 const lifetimeGen = lifetimeData.total_generation_kwh || 0;
-                const lifetimeExpected = lifetimeData.expected_generation_kwh || 0;
+                let lifetimeExpected = lifetimeData.expected_generation_kwh || 0;
+                
+                // Calculate lifetime expected from predictions base if missing
+                if (lifetimeExpected === 0 && dashboardData.monthly_predictions_base && dashboardData.daily_records) {
+                    const commissioningDate = new Date(dashboardData.system.commissioning_date);
+                    const now = new Date();
+                    const yearsActive = (now - commissioningDate) / (365.25 * 24 * 60 * 60 * 1000);
+                    
+                    let degradationPercent;
+                    if (yearsActive < 1) {
+                        degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
+                    } else {
+                        degradationPercent = (dashboardData.system.degradation_year_1 + 
+                            (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                    }
+                    const degradationFactor = 1 - (degradationPercent / 100);
+                    
+                    // Sum expected for each day based on its month's avg_daily_kwh
+                    dashboardData.daily_records.forEach(r => {
+                        const monthKey = r.date.substring(5, 7);
+                        const pred = dashboardData.monthly_predictions_base[monthKey];
+                        if (pred) {
+                            lifetimeExpected += pred.avg_daily_kwh * degradationFactor;
+                        }
+                    });
+                    
+                    console.log(`📊 [OVERVIEW] Calculated lifetime expected: ${lifetimeExpected.toFixed(1)} kWh from ${dashboardData.daily_records.length} days`);
+                }
+                
                 const lifetimePerf = lifetimeExpected > 0 ? ((lifetimeGen / lifetimeExpected) * 100) : 0;
                 const lifetimeLoad = lifetimeData.actual_load_kwh || 0;
                 const lifetimeCoverage = lifetimeLoad > 0 ? ((lifetimeGen / lifetimeLoad) * 100) : 0;
@@ -3152,31 +3185,67 @@
                 document.getElementById('overview-monthly-savings-off-peak').textContent = formatNumber(monthlyFinancials.savings.off_peak || 0, 2);
                 document.getElementById('overview-monthly-savings-total').textContent = formatNumber(monthlyFinancials.savings.total || 0, 2);
                 
-                const lifetimeFinancials = lifetimeData.financial || {};
-                const lifetimeSavings = lifetimeFinancials.savings || {};
-                document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(lifetimeSavings.peak_savings_zar || 0, 2);
-                document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(lifetimeSavings.standard_savings_zar || 0, 2);
-                document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(lifetimeSavings.off_peak_savings_zar || 0, 2);
-                document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(lifetimeSavings.total_savings_zar || 0, 2);
-                
-                // ===== ENVIRONMENTAL (use actual data from dashboard_data.json) =====
-                // Daily
-                if (todayRecord.env_impact) {
-                    document.getElementById('overview-daily-co2').textContent = formatNumber(todayRecord.env_impact.co2_offset_kg || 0, 0);
-                    document.getElementById('overview-daily-trees').textContent = formatNumber(todayRecord.env_impact.trees_equivalent || 0, 0);
-                    document.getElementById('overview-daily-homes').textContent = formatNumber(todayRecord.env_impact.households_offset || 0, 1);
+                // Lifetime savings - calculate from TOU breakdown
+                if (lifetimeData.tou_breakdown) {
+                    // For lifetime, we need to aggregate savings across all daily records
+                    // since rates vary by season. Calculate per-day and sum.
+                    let ltPeak = 0, ltStandard = 0, ltOffPeak = 0, ltTotal = 0;
+                    
+                    if (dashboardData.daily_records) {
+                        dashboardData.daily_records.forEach(r => {
+                            if (r.tou_breakdown) {
+                                const dayFinancials = calculateTOUFinancials(r.tou_breakdown, r.date);
+                                ltPeak += dayFinancials.savings.peak || 0;
+                                ltStandard += dayFinancials.savings.standard || 0;
+                                ltOffPeak += dayFinancials.savings.off_peak || 0;
+                                ltTotal += dayFinancials.savings.total || 0;
+                            }
+                        });
+                    } else {
+                        // Fallback: use aggregate TOU with current rates
+                        const ltFinancials = calculateTOUFinancials(lifetimeData.tou_breakdown, null);
+                        ltPeak = ltFinancials.savings.peak || 0;
+                        ltStandard = ltFinancials.savings.standard || 0;
+                        ltOffPeak = ltFinancials.savings.off_peak || 0;
+                        ltTotal = ltFinancials.savings.total || 0;
+                    }
+                    
+                    document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(ltPeak, 2);
+                    document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(ltStandard, 2);
+                    document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(ltOffPeak, 2);
+                    document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(ltTotal, 2);
                 } else {
-                    document.getElementById('overview-daily-co2').textContent = '0';
-                    document.getElementById('overview-daily-trees').textContent = '0';
-                    document.getElementById('overview-daily-homes').textContent = '0.0';
+                    const lifetimeFinancials = lifetimeData.financial || {};
+                    const lifetimeSavings = lifetimeFinancials.savings || {};
+                    document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(lifetimeSavings.peak_savings_zar || 0, 2);
+                    document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(lifetimeSavings.standard_savings_zar || 0, 2);
+                    document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(lifetimeSavings.off_peak_savings_zar || 0, 2);
+                    document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(lifetimeSavings.total_savings_zar || 0, 2);
                 }
                 
-                // Monthly (aggregate from daily records)
+                // ===== ENVIRONMENTAL (use actual data from dashboard_data.json) =====
+                // Daily - calculate from generation if env_impact not on record
+                const dailyEnv = todayRecord.env_impact || {
+                    co2_offset_kg: dailyGen * 1.0,
+                    trees_equivalent: dailyGen * 0.045,
+                    households_offset: dailyGen * 0.102
+                };
+                document.getElementById('overview-daily-co2').textContent = formatNumber(dailyEnv.co2_offset_kg || (dailyGen * 1.0), 0);
+                document.getElementById('overview-daily-trees').textContent = formatNumber(dailyEnv.trees_equivalent || (dailyGen * 0.045), 0);
+                document.getElementById('overview-daily-homes').textContent = formatNumber(dailyEnv.households_offset || (dailyGen * 0.102), 1);
+                
+                // Monthly (aggregate from daily records, calculate if env_impact missing)
                 const monthlyEnv = monthRecords.reduce((acc, r) => {
                     if (r.env_impact) {
                         acc.co2 += r.env_impact.co2_offset_kg || 0;
                         acc.trees += r.env_impact.trees_equivalent || 0;
                         acc.homes += r.env_impact.households_offset || 0;
+                    } else {
+                        // Calculate from generation
+                        const gen = r.generation_kwh || 0;
+                        acc.co2 += gen * 1.0;
+                        acc.trees += gen * 0.045;
+                        acc.homes += gen * 0.102;
                     }
                     return acc;
                 }, { co2: 0, trees: 0, homes: 0 });
@@ -9371,9 +9440,35 @@ async function loadPast30Days() {
                     const lifetimeLoadKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.actual_load_kwh || 0), 0);
                     const lifetimeGridKwh = dashboardData.daily_records.reduce((sum, r) => sum + (r.actual_grid_kwh || 0), 0);
                     
+                    // CALCULATE lifetime expected from predictions base
+                    let lifetimeExpectedKwh = 0;
+                    if (dashboardData.monthly_predictions_base && dashboardData.system) {
+                        const commDate = new Date(dashboardData.system.commissioning_date);
+                        const nowDate = new Date();
+                        const yrsActive = (nowDate - commDate) / (365.25 * 24 * 60 * 60 * 1000);
+                        let degPct;
+                        if (yrsActive < 1) {
+                            degPct = dashboardData.system.degradation_year_1 * yrsActive * 100;
+                        } else {
+                            degPct = (dashboardData.system.degradation_year_1 + 
+                                (dashboardData.system.degradation_subsequent_years * (yrsActive - 1))) * 100;
+                        }
+                        const degFactor = 1 - (degPct / 100);
+                        
+                        dashboardData.daily_records.forEach(r => {
+                            const mk = r.date.substring(5, 7);
+                            const pred = dashboardData.monthly_predictions_base[mk];
+                            if (pred) {
+                                lifetimeExpectedKwh += pred.avg_daily_kwh * degFactor;
+                            }
+                        });
+                        console.log(`✓ [Compatibility] Lifetime expected: ${lifetimeExpectedKwh.toFixed(1)} kWh`);
+                    }
+                    
                     dashboardData.lifetime = {
                         total_generation_kwh: lifetimeTotalKwh,
                         total_generation_mwh: lifetimeTotalKwh / 1000,
+                        expected_generation_kwh: lifetimeExpectedKwh,
                         days_active: dashboardData.daily_records.length,
                         actual_load_kwh: lifetimeLoadKwh,
                         actual_grid_kwh: lifetimeGridKwh,
