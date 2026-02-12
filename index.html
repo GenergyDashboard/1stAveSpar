@@ -394,6 +394,43 @@
             animation: spin 1s linear infinite;
         }
         
+        .font-size-controls {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .font-size-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            opacity: 0.5;
+            color: #ccc;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: Arial, sans-serif;
+        }
+        
+        .font-size-btn:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 215, 0, 0.5);
+            color: #FFD700;
+        }
+        
+        .font-size-btn.active {
+            opacity: 1;
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+        
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -1540,7 +1577,12 @@
 <body>
     <div class="container">
         <div class="info-dropdown">
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="font-size-controls" title="Adjust text size">
+                    <div class="font-size-btn" onclick="changeFontSize('small')" id="fs-small" title="Small text">A</div>
+                    <div class="font-size-btn active" onclick="changeFontSize('medium')" id="fs-medium" title="Default text" style="font-size: 16px;">A</div>
+                    <div class="font-size-btn" onclick="changeFontSize('large')" id="fs-large" title="Large text" style="font-size: 20px;">A</div>
+                </div>
                 <div class="refresh-button" onclick="manualRefresh()" title="Refresh data">
                     🔄
                 </div>
@@ -2889,6 +2931,41 @@
             infoContent.classList.toggle('show');
         }
         
+        // Font size scaling
+        const FONT_SIZES = {
+            small: { base: 14, xs: 11, sm: 12, lg: 18, xl: 24 },
+            medium: { base: 16, xs: 12, sm: 14, lg: 20, xl: 28 },
+            large: { base: 20, xs: 15, sm: 17, lg: 26, xl: 36 }
+        };
+        
+        function changeFontSize(size) {
+            const fs = FONT_SIZES[size];
+            if (!fs) return;
+            
+            document.documentElement.style.setProperty('--font-base', fs.base + 'px');
+            document.documentElement.style.setProperty('--font-xs', fs.xs + 'px');
+            document.documentElement.style.setProperty('--font-sm', fs.sm + 'px');
+            document.documentElement.style.setProperty('--font-lg', fs.lg + 'px');
+            document.documentElement.style.setProperty('--font-xl', fs.xl + 'px');
+            
+            // Update active state
+            document.querySelectorAll('.font-size-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('fs-' + size)?.classList.add('active');
+            
+            // Save preference
+            localStorage.setItem('preferredFontSize', size);
+            
+            console.log(`🔤 Font size changed to ${size}`);
+        }
+        
+        // Restore saved font size preference
+        (function() {
+            const saved = localStorage.getItem('preferredFontSize');
+            if (saved && FONT_SIZES[saved]) {
+                changeFontSize(saved);
+            }
+        })();
+        
         async function manualRefresh() {
             const button = document.querySelector('.refresh-button');
             button.classList.add('spinning');
@@ -3058,7 +3135,7 @@
         let overviewMonthlyChart = null;
         let overviewLifetimeChart = null;
         
-        function updateOverviewTab() {
+        async function updateOverviewTab() {
             if (!dashboardData) {
                 console.log('No dashboard data available for overview');
                 return;
@@ -3084,35 +3161,71 @@
                 const dailyLoad = todayRecord.actual_load_kwh || 0;
                 const dailyGrid = todayRecord.actual_grid_kwh || 0;
                 
-                // Calculate expected EXACTLY like Daily Generation tab (partial day!)
-                const hoursWithData = todayRecord.hourly_data?.length || 0;
+                // Calculate expected using SAME method as Daily Generation tab:
+                // Load predictions_2025_2044.min.json → monthly avg hourly pattern → sum up to last hour
                 let dailyExpected = 0;
                 
-                if (hoursWithData > 0 && dashboardData.monthly_predictions_base) {
-                    const monthKey = currentMonth;
-                    const baseDailyKwh = dashboardData.monthly_predictions_base[monthKey]?.avg_daily_kwh;
+                try {
+                    const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+                    const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+                    const predResponse = await fetch(predictionsPath);
                     
-                    if (baseDailyKwh) {
-                        // Apply degradation
-                        const commissioningDate = new Date(dashboardData.system.commissioning_date);
-                        const targetDate = new Date();
-                        const daysActive = Math.floor((targetDate - commissioningDate) / (1000 * 60 * 60 * 24));
-                        const yearsActive = daysActive / 365.25;
+                    if (predResponse.ok) {
+                        const predictionsData = await predResponse.json();
                         
-                        let degradationPercent;
-                        if (yearsActive < 1) {
-                            degradationPercent = dashboardData.system.degradation_year_1 * yearsActive * 100;
-                        } else {
-                            degradationPercent = (dashboardData.system.degradation_year_1 + 
-                                (dashboardData.system.degradation_subsequent_years * (yearsActive - 1))) * 100;
+                        if (predictionsData.daily_predictions) {
+                            const monthKey = `${currentYear}-${currentMonth}`;
+                            
+                            // Calculate monthly average for each hour (same as daily tab)
+                            const monthlyAvgPV = new Array(24).fill(0);
+                            const hourlyCounts = new Array(24).fill(0);
+                            
+                            Object.keys(predictionsData.daily_predictions)
+                                .filter(date => date.startsWith(monthKey))
+                                .forEach(date => {
+                                    const dayPred = predictionsData.daily_predictions[date];
+                                    if (dayPred.pv_kw && Array.isArray(dayPred.pv_kw)) {
+                                        dayPred.pv_kw.forEach((val, hour) => {
+                                            monthlyAvgPV[hour] += val;
+                                            hourlyCounts[hour]++;
+                                        });
+                                    }
+                                });
+                            
+                            // Calculate averages
+                            for (let h = 0; h < 24; h++) {
+                                if (hourlyCounts[h] > 0) monthlyAvgPV[h] /= hourlyCounts[h];
+                            }
+                            
+                            // Find last hour with data (same as daily tab)
+                            let lastHourWithData = -1;
+                            if (todayRecord.hourly_data) {
+                                todayRecord.hourly_data.forEach(h => {
+                                    const hr = parseInt((h.time || '00:00').split(':')[0]);
+                                    if (h.generation_kw || h.pv_kw || h.load_kw) {
+                                        lastHourWithData = Math.max(lastHourWithData, hr);
+                                    }
+                                });
+                            }
+                            
+                            // Sum up to lastHourWithData (same as daily tab)
+                            const hoursToSum = lastHourWithData >= 0 ? lastHourWithData + 1 : 24;
+                            for (let h = 0; h < hoursToSum && h < 24; h++) {
+                                dailyExpected += monthlyAvgPV[h];
+                            }
+                            
+                            console.log(`📊 [OVERVIEW] Daily expected (predictions file, monthly avg): ${hoursToSum} hours summed = ${dailyExpected.toFixed(1)} kWh (matches Daily tab method)`);
                         }
-                        const degradationFactor = 1 - (degradationPercent / 100);
-                        
-                        // Expected for PARTIAL day (hours so far, not full 24 hours)
-                        const hourlyAvg = (baseDailyKwh * degradationFactor) / 24;
-                        dailyExpected = hourlyAvg * hoursWithData;
-                        
-                        console.log(`📊 [OVERVIEW] Daily expected: ${hoursWithData} hours × ${hourlyAvg.toFixed(2)} kWh/h = ${dailyExpected.toFixed(1)} kWh`);
+                    }
+                } catch (predError) {
+                    console.warn('⚠️ [OVERVIEW] Could not load predictions file, falling back to base calc');
+                    // Fallback: use monthly_predictions_base with flat hourly
+                    if (todayRecord.hourly_data?.length > 0 && dashboardData.monthly_predictions_base) {
+                        const baseDailyKwh = dashboardData.monthly_predictions_base[currentMonth]?.avg_daily_kwh;
+                        if (baseDailyKwh) {
+                            const hourlyAvg = baseDailyKwh / 24;
+                            dailyExpected = hourlyAvg * todayRecord.hourly_data.length;
+                        }
                     }
                 }
                 
@@ -3653,15 +3766,15 @@
             console.log(`[updateTouBreakdown] TOU breakdown:`, tou);
             
             // Display kWh values
-            document.getElementById(`${prefix}-tou-peak`).textContent = formatNumber(tou.peak_kwh, 1) + ' kWh';
-            document.getElementById(`${prefix}-tou-standard`).textContent = formatNumber(tou.standard_kwh, 1) + ' kWh';
-            document.getElementById(`${prefix}-tou-off-peak`).textContent = formatNumber(tou.off_peak_kwh, 1) + ' kWh';
+            document.getElementById(`${prefix}-tou-peak`).textContent = formatNumber(tou.peak_kwh, 0) + ' kWh';
+            document.getElementById(`${prefix}-tou-standard`).textContent = formatNumber(tou.standard_kwh, 0) + ' kWh';
+            document.getElementById(`${prefix}-tou-off-peak`).textContent = formatNumber(tou.off_peak_kwh, 0) + ' kWh';
             
             // Calculate and display total generation
             const totalGen = tou.peak_kwh + tou.standard_kwh + tou.off_peak_kwh;
             const totalGenEl = document.getElementById(`${prefix}-tou-total`);
             if (totalGenEl) {
-                totalGenEl.textContent = formatNumber(totalGen, 1) + ' kWh';
+                totalGenEl.textContent = formatNumber(totalGen, 0) + ' kWh';
             }
             
             // Validation: Check if TOU total matches lifetime generation for lifetime prefix
@@ -3701,22 +3814,22 @@
             console.log(`[updateTouBreakdown] financials:`, financials);
             
             // Update Utility Cost section
-            document.getElementById(`${prefix}-utility-peak`).textContent = formatNumber(financials.utility.peak, 2);
-            document.getElementById(`${prefix}-utility-standard`).textContent = formatNumber(financials.utility.standard, 2);
-            document.getElementById(`${prefix}-utility-off-peak`).textContent = formatNumber(financials.utility.off_peak, 2);
-            document.getElementById(`${prefix}-utility-total`).textContent = formatNumber(financials.utility.total, 2);
+            document.getElementById(`${prefix}-utility-peak`).textContent = formatNumber(financials.utility.peak, 0);
+            document.getElementById(`${prefix}-utility-standard`).textContent = formatNumber(financials.utility.standard, 0);
+            document.getElementById(`${prefix}-utility-off-peak`).textContent = formatNumber(financials.utility.off_peak, 0);
+            document.getElementById(`${prefix}-utility-total`).textContent = formatNumber(financials.utility.total, 0);
             
             // Update PPA Cost section
-            document.getElementById(`${prefix}-ppa-peak`).textContent = formatNumber(financials.ppa.peak, 2);
-            document.getElementById(`${prefix}-ppa-standard`).textContent = formatNumber(financials.ppa.standard, 2);
-            document.getElementById(`${prefix}-ppa-off-peak`).textContent = formatNumber(financials.ppa.off_peak, 2);
-            document.getElementById(`${prefix}-ppa-total`).textContent = formatNumber(financials.ppa.total, 2);
+            document.getElementById(`${prefix}-ppa-peak`).textContent = formatNumber(financials.ppa.peak, 0);
+            document.getElementById(`${prefix}-ppa-standard`).textContent = formatNumber(financials.ppa.standard, 0);
+            document.getElementById(`${prefix}-ppa-off-peak`).textContent = formatNumber(financials.ppa.off_peak, 0);
+            document.getElementById(`${prefix}-ppa-total`).textContent = formatNumber(financials.ppa.total, 0);
             
             // Update Savings section
-            document.getElementById(`${prefix}-savings-peak`).textContent = formatNumber(financials.savings.peak, 2);
-            document.getElementById(`${prefix}-savings-standard`).textContent = formatNumber(financials.savings.standard, 2);
-            document.getElementById(`${prefix}-savings-off-peak`).textContent = formatNumber(financials.savings.off_peak, 2);
-            document.getElementById(`${prefix}-total-savings`).textContent = formatNumber(financials.savings.total, 2);
+            document.getElementById(`${prefix}-savings-peak`).textContent = formatNumber(financials.savings.peak, 0);
+            document.getElementById(`${prefix}-savings-standard`).textContent = formatNumber(financials.savings.standard, 0);
+            document.getElementById(`${prefix}-savings-off-peak`).textContent = formatNumber(financials.savings.off_peak, 0);
+            document.getElementById(`${prefix}-total-savings`).textContent = formatNumber(financials.savings.total, 0);
         }
         
         // Financial savings now calculated in updateTouBreakdown
@@ -3750,18 +3863,18 @@
             });
             
             // Update hero card
-            document.getElementById('financial-lifetime-savings').textContent = formatNumber(financials.savings.total, 2);
+            document.getElementById('financial-lifetime-savings').textContent = formatNumber(financials.savings.total, 0);
             
             // Update TOU breakdown stats (SAVINGS in ZAR only)
             const total = financials.savings.total;
             
-            document.getElementById('financial-peak-savings').textContent = formatNumber(financials.savings.peak, 2);
+            document.getElementById('financial-peak-savings').textContent = formatNumber(financials.savings.peak, 0);
             document.getElementById('financial-peak-pct').textContent = formatNumber((financials.savings.peak / total) * 100, 1);
             
-            document.getElementById('financial-standard-savings').textContent = formatNumber(financials.savings.standard, 2);
+            document.getElementById('financial-standard-savings').textContent = formatNumber(financials.savings.standard, 0);
             document.getElementById('financial-standard-pct').textContent = formatNumber((financials.savings.standard / total) * 100, 1);
             
-            document.getElementById('financial-off-peak-savings').textContent = formatNumber(financials.savings.off_peak, 2);
+            document.getElementById('financial-off-peak-savings').textContent = formatNumber(financials.savings.off_peak, 0);
             document.getElementById('financial-off-peak-pct').textContent = formatNumber((financials.savings.off_peak / total) * 100, 1);
             
             // Load charts
@@ -3902,7 +4015,7 @@
                             padding: 15,
                             callbacks: {
                                 label: function(context) {
-                                    return context.dataset.label + ': R ' + formatNumber(context.parsed.y, 2);
+                                    return context.dataset.label + ': R ' + formatNumber(context.parsed.y, 0);
                                 }
                             }
                         }
@@ -4123,7 +4236,7 @@
                                     const value = context.parsed || 0;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percentage = ((value / total) * 100).toFixed(1);
-                                    return label + ': ' + formatNumber(value, 1) + ' kWh (' + percentage + '%)';
+                                    return label + ': ' + formatNumber(value, 0) + ' kWh (' + percentage + '%)';
                                 }
                             }
                         }
@@ -4295,8 +4408,8 @@
                 const hourNum = parseInt(hour.time.split(':')[0]);
                 const minuteNum = parseInt(hour.time.split(':')[1]);
                 
-                // Only check daylight hours (6 AM to 7 PM)
-                if (hourNum < 6 || hourNum >= 19) continue;
+                // Only check daylight hours (6 AM to 6 PM)
+                if (hourNum < 6 || hourNum >= 18) continue;
                 
                 const generation = hour.generation_kw || 0;
                 
@@ -4355,11 +4468,12 @@
                 }
             }
             
-            // Close any ongoing downtime at end of day
+            // Close any ongoing downtime at end of daylight window
             if (currentDowntime) {
-                currentDowntime.endTime = hourlyData[hourlyData.length - 1].time;
-                currentDowntime.endHour = parseInt(currentDowntime.endTime.split(':')[0]);
-                currentDowntime.endMinute = parseInt(currentDowntime.endTime.split(':')[1]);
+                // Cap end time at daylight boundary (18:00), not last data point
+                currentDowntime.endTime = '18:00';
+                currentDowntime.endHour = 18;
+                currentDowntime.endMinute = 0;
                 
                 // Calculate actual duration from start and end times
                 currentDowntime.durationMinutes = calculateActualDuration(
@@ -4581,7 +4695,7 @@
             document.getElementById('downtime-lost-generation').textContent = 
                 `${lostGen.toFixed(1)} kWh`;
             document.getElementById('downtime-financial-loss').textContent = 
-                `R ${formatNumber(financialLoss, 2)}`;
+                `R ${formatNumber(financialLoss, 0)}`;
             
             // Update table
             const tbody = document.getElementById('downtime-table-body');
@@ -6024,13 +6138,13 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
             
             // Households
             document.getElementById('pub-env-yesterday-homes').innerHTML = 
-                `${formatNumber(yesterdayData.households_offset, 2)}`;
+                `${formatNumber(yesterdayData.households_offset, 0)}`;
             document.getElementById('pub-env-today-homes').innerHTML = 
-                `${formatNumber(todayData.households_offset, 2)}`;
+                `${formatNumber(todayData.households_offset, 0)}`;
             document.getElementById('pub-env-month-homes').innerHTML = 
-                `${formatNumber(monthData.households_offset, 2)}`;
+                `${formatNumber(monthData.households_offset, 0)}`;
             document.getElementById('pub-env-lifetime-homes').innerHTML = 
-                `${formatNumber(lifetimeData.households_offset, 2)}`;
+                `${formatNumber(lifetimeData.households_offset, 0)}`;
             
             // Coal
             document.getElementById('pub-env-yesterday-coal').innerHTML = 
@@ -6071,7 +6185,7 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                         <div class="env-icon">🏠</div>
                         <div class="env-label">HOUSEHOLDS POWERED</div>
                     </div>
-                    <div class="env-value">${formatNumber(data.households_offset, 2)} <span style="font-weight: 500;">homes</span></div>
+                    <div class="env-value">${formatNumber(data.households_offset, 0)} <span style="font-weight: 500;">homes</span></div>
                 </div>
                 <div class="env-card">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
