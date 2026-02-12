@@ -4400,7 +4400,6 @@
             
             if (!hourlyData || hourlyData.length === 0) return downtimeEvents;
             
-            // Analyze 5-minute intervals
             let currentDowntime = null;
             
             for (let i = 0; i < hourlyData.length; i++) {
@@ -4408,20 +4407,21 @@
                 const hourNum = parseInt(hour.time.split(':')[0]);
                 const minuteNum = parseInt(hour.time.split(':')[1]);
                 
-                // Only check daylight hours (6 AM to 6 PM)
-                if (hourNum < 6 || hourNum >= 18) continue;
+                // Only check solar generation hours (7 AM to 5 PM)
+                // Before 7 and after 17 production is negligible/zero normally
+                if (hourNum < 7 || hourNum >= 17) continue;
                 
                 const generation = hour.generation_kw || 0;
                 
-                // Calculate expected generation from same-time averages across the month
-                const expectedGen = getExpectedFromMonthAverage(allRecords, record.date, hourNum, minuteNum);
-                
-                // Consider it downtime if generation is 0 or <5% of expected during daylight
-                const isDowntime = generation < (expectedGen * 0.05) && expectedGen > 1;
+                // Downtime = system producing nothing (zero or near-zero)
+                // If PV is generating anything above 0.1 kW, system is working
+                const isDowntime = generation < 0.1;
                 
                 if (isDowntime) {
+                    // Get expected for lost generation calculation
+                    const expectedGen = getExpectedFromMonthAverage(allRecords, record.date, hourNum, minuteNum);
+                    
                     if (!currentDowntime) {
-                        // Start new downtime event
                         currentDowntime = {
                             date: record.date,
                             startTime: hour.time,
@@ -4433,12 +4433,10 @@
                         };
                     }
                     
-                    // Calculate lost generation for this interval
-                    // Data is HOURLY (not 5-minute), so kW × 1 hour = kWh
+                    // Lost generation = what we expected to produce
                     const lostKWh = expectedGen * 1; // 1 hour interval
                     currentDowntime.lostGeneration += lostKWh;
                     
-                    // Determine TOU period for this time
                     const touPeriod = getTOUPeriod(record.date, hourNum, minuteNum);
                     currentDowntime.lostGenerationByTOU[touPeriod] += lostKWh;
                     
@@ -4468,11 +4466,11 @@
                 }
             }
             
-            // Close any ongoing downtime at end of daylight window
+            // Close any ongoing downtime at end of solar window
             if (currentDowntime) {
-                // Cap end time at daylight boundary (18:00), not last data point
-                currentDowntime.endTime = '18:00';
-                currentDowntime.endHour = 18;
+                // Cap end time at solar boundary (17:00), not last data point
+                currentDowntime.endTime = '17:00';
+                currentDowntime.endHour = 17;
                 currentDowntime.endMinute = 0;
                 
                 // Calculate actual duration from start and end times
