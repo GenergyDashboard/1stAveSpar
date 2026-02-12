@@ -3051,7 +3051,7 @@
             document.getElementById('loginSection').innerHTML = '<button class="btn btn-primary" onclick="showLoginModal()">Client Login</button>';
         }
         
-        function showClientView() {
+        async function showClientView() {
     document.getElementById('publicView').classList.remove('active');
     document.getElementById('clientView').classList.add('active');
     document.getElementById('loginSection').innerHTML = `
@@ -3065,7 +3065,7 @@
     updateDatePickerRange();
     
     // Update overview tab (default tab)
-    updateOverviewTab();
+    await updateOverviewTab();
     
     loadToday();
     
@@ -3309,7 +3309,7 @@
                 const lifetimeGrid = lifetimeData.actual_grid_kwh || 0;
                 
                 console.log('📊 [OVERVIEW] Calculated:', {
-                    daily: { gen: dailyGen.toFixed(1), exp: dailyExpected.toFixed(1), perf: dailyPerf.toFixed(1) + '%', hours: hoursWithData },
+                    daily: { gen: dailyGen.toFixed(1), exp: dailyExpected.toFixed(1), perf: dailyPerf.toFixed(1) + '%', hours: (todayRecord.hourly_data?.length || 0) },
                     monthly: { gen: monthlyGen.toFixed(1), exp: monthlyExpected.toFixed(1), perf: monthlyPerf.toFixed(1) + '%', days: daysWithData },
                     lifetime: { gen: lifetimeGen.toFixed(1), exp: lifetimeExpected.toFixed(1), perf: lifetimePerf.toFixed(1) + '%' }
                 });
@@ -4084,7 +4084,7 @@
             
             console.log(`📊 Cumulative Savings Chart - Calculated from daily_records:`, {
                 months: sortedMonths.length,
-                finalCumulative: cumulative.toFixed(2)
+                finalCumulative: formatNumber(cumulative, 0)
             });
             
             if (financialCumulativeChart) {
@@ -4691,9 +4691,9 @@
             // Update summary stats
             document.getElementById('downtime-events-count').textContent = events.length;
             document.getElementById('downtime-total-duration').textContent = 
-                `${(totalMinutes / 60).toFixed(1)} hrs`;
+                `${formatNumber(totalMinutes / 60, 1)} hrs`;
             document.getElementById('downtime-lost-generation').textContent = 
-                `${lostGen.toFixed(1)} kWh`;
+                `${formatNumber(lostGen, 0)} kWh`;
             document.getElementById('downtime-financial-loss').textContent = 
                 `R ${formatNumber(financialLoss, 0)}`;
             
@@ -4739,8 +4739,8 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                         <td style="padding: 20px; color: #ffffff; font-size: var(--font-base);">${event.startTime}</td>
                         <td style="padding: 20px; color: #ffffff; font-size: var(--font-base);">${event.endTime}</td>
                         <td style="padding: 20px; text-align: center; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);">${duration}</td>
-                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);" title="${touBreakdown}">${event.lostGeneration.toFixed(1)}</td>
-                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);" title="${touBreakdown}">R ${event.financialLoss.toFixed(2)}</td>
+                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);" title="${touBreakdown}">${formatNumber(event.lostGeneration, 0)}</td>
+                        <td style="padding: 20px; text-align: right; color: ${severityColor}; font-weight: 600; font-size: var(--font-base);" title="${touBreakdown}">R ${formatNumber(event.financialLoss, 0)}</td>
                     </tr>
                 `;
             }).join('');
@@ -6126,17 +6126,17 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
         }
         
         function populateEnvTable(yesterdayData, todayData, monthData, lifetimeData) {
-            // Trees
+            // Trees - explicit 0 decimals
             document.getElementById('pub-env-yesterday-trees').innerHTML = 
-                `${formatNumber(yesterdayData.trees_equivalent)}`;
+                `${formatNumber(yesterdayData.trees_equivalent, 0)}`;
             document.getElementById('pub-env-today-trees').innerHTML = 
-                `${formatNumber(todayData.trees_equivalent)}`;
+                `${formatNumber(todayData.trees_equivalent, 0)}`;
             document.getElementById('pub-env-month-trees').innerHTML = 
-                `${formatNumber(monthData.trees_equivalent)}`;
+                `${formatNumber(monthData.trees_equivalent, 0)}`;
             document.getElementById('pub-env-lifetime-trees').innerHTML = 
-                `${formatNumber(lifetimeData.trees_equivalent)}`;
+                `${formatNumber(lifetimeData.trees_equivalent, 0)}`;
             
-            // Households
+            // Households - explicit 0 decimals
             document.getElementById('pub-env-yesterday-homes').innerHTML = 
                 `${formatNumber(yesterdayData.households_offset, 0)}`;
             document.getElementById('pub-env-today-homes').innerHTML = 
@@ -6146,25 +6146,25 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
             document.getElementById('pub-env-lifetime-homes').innerHTML = 
                 `${formatNumber(lifetimeData.households_offset, 0)}`;
             
-            // Coal
+            // Coal - explicit 0 decimals
             document.getElementById('pub-env-yesterday-coal').innerHTML = 
-                `${formatNumber(yesterdayData.coal_saved_kg)}`;
+                `${formatNumber(yesterdayData.coal_saved_kg, 0)}`;
             document.getElementById('pub-env-today-coal').innerHTML = 
-                `${formatNumber(todayData.coal_saved_kg)}`;
+                `${formatNumber(todayData.coal_saved_kg, 0)}`;
             document.getElementById('pub-env-month-coal').innerHTML = 
-                `${formatNumber(monthData.coal_saved_kg)}`;
+                `${formatNumber(monthData.coal_saved_kg, 0)}`;
             document.getElementById('pub-env-lifetime-coal').innerHTML = 
-                `${formatNumber(lifetimeData.coal_saved_kg)}`;
+                `${formatNumber(lifetimeData.coal_saved_kg, 0)}`;
             
-            // Water
+            // Water - explicit 0 decimals
             document.getElementById('pub-env-yesterday-water').innerHTML = 
-                `${formatNumber(yesterdayData.water_saved_litres)}`;
+                `${formatNumber(yesterdayData.water_saved_litres, 0)}`;
             document.getElementById('pub-env-today-water').innerHTML = 
-                `${formatNumber(todayData.water_saved_litres)}`;
+                `${formatNumber(todayData.water_saved_litres, 0)}`;
             document.getElementById('pub-env-month-water').innerHTML = 
-                `${formatNumber(monthData.water_saved_litres)}`;
+                `${formatNumber(monthData.water_saved_litres, 0)}`;
             document.getElementById('pub-env-lifetime-water').innerHTML = 
-                `${formatNumber(lifetimeData.water_saved_litres)}`;
+                `${formatNumber(lifetimeData.water_saved_litres, 0)}`;
         }
 
         // Keep old function for backward compatibility (client view uses it)
@@ -6178,7 +6178,7 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                         <div class="env-icon">🌳</div>
                         <div class="env-label">TREES EQUIVALENT</div>
                     </div>
-                    <div class="env-value">${formatNumber(data.trees_equivalent)} <span style="font-weight: 500;">trees</span></div>
+                    <div class="env-value">${formatNumber(data.trees_equivalent, 0)} <span style="font-weight: 500;">trees</span></div>
                 </div>
                 <div class="env-card">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
@@ -6192,14 +6192,14 @@ Off-Peak: ${event.lostGenerationByTOU.off_peak.toFixed(1)} kWh @ R2.07`;
                         <div class="env-icon">⛏️</div>
                         <div class="env-label">COAL SAVED</div>
                     </div>
-                    <div class="env-value">${formatNumber(data.coal_saved_kg)} <span style="font-weight: 500;">kg</span></div>
+                    <div class="env-value">${formatNumber(data.coal_saved_kg, 0)} <span style="font-weight: 500;">kg</span></div>
                 </div>
                 <div class="env-card">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                         <div class="env-icon">💧</div>
                         <div class="env-label">WATER SAVED</div>
                     </div>
-                    <div class="env-value">${formatNumber(data.water_saved_litres)} <span style="font-weight: 500;">litres</span></div>
+                    <div class="env-value">${formatNumber(data.water_saved_litres, 0)} <span style="font-weight: 500;">litres</span></div>
                 </div>
             `;
         }
@@ -9260,7 +9260,7 @@ async function loadLifetimeTouSavingsChart() {
                         padding: 20,
                         callbacks: {
                             label: function(context) {
-                                return context.dataset.label + ': R ' + context.parsed.y.toFixed(2);
+                                return context.dataset.label + ': R ' + formatNumber(context.parsed.y, 0);
                             },
                             footer: function(tooltipItems) {
                                 // Calculate totals for actual and expected
@@ -9274,8 +9274,8 @@ async function loadLifetimeTouSavingsChart() {
                                     }
                                 });
                                 return '\n' + 
-                                       'Actual Total: R ' + actualTotal.toFixed(2) + '\n' +
-                                       'Expected Total: R ' + expectedTotal.toFixed(2);
+                                       'Actual Total: R ' + formatNumber(actualTotal, 0) + '\n' +
+                                       'Expected Total: R ' + formatNumber(expectedTotal, 0);
                             }
                         }
                     }
@@ -9305,7 +9305,7 @@ async function loadLifetimeTouSavingsChart() {
                             color: '#ffffff',
                             font: { size: 14, weight: '500' },
                             callback: function(value) {
-                                return 'R ' + value.toFixed(0);
+                                return 'R ' + formatNumber(value, 0);
                             }
                         },
                         grid: { color: 'rgba(255, 255, 255, 0.15)' }
@@ -9816,9 +9816,9 @@ async function loadPast30Days() {
                     else console.warn(`Element ${id} not found`);
                 };
                 
-                setTextIfExists('pub-yesterday-gen', formatNumber(yesterdayGen));
-                setTextIfExists('pub-today-gen', formatNumber(dashboardData.today.generation_kwh));
-                setTextIfExists('pub-month-gen', formatNumber(dashboardData.month.generation_kwh));
+                setTextIfExists('pub-yesterday-gen', formatNumber(yesterdayGen, 0));
+                setTextIfExists('pub-today-gen', formatNumber(dashboardData.today.generation_kwh, 0));
+                setTextIfExists('pub-month-gen', formatNumber(dashboardData.month.generation_kwh, 0));
                 
                 // Handle lifetime data with fallback
                 const lifetimeKwh = dashboardData.lifetime.total_generation_kwh || dashboardData.lifetime.generation_kwh || 0;
