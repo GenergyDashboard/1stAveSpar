@@ -1212,8 +1212,8 @@
             margin: 10px 0;
         }
         .slab-donut-wrap canvas {
-            max-width: 120px;
-            max-height: 120px;
+            max-width: 100px;
+            max-height: 100px;
         }
         
         /* Savings hover tooltip */
@@ -1575,7 +1575,7 @@
             .val-scalable { font-size: calc(var(--font-xl) * 1.2); }
             .val-unit { font-size: calc(var(--font-xl) * 0.6); }
             .val-rand { font-size: calc(var(--font-xl) * 0.85); }
-            .slab-donut-wrap canvas { max-width: 100px; max-height: 100px; }
+            .slab-donut-wrap canvas { max-width: 80px; max-height: 80px; }
             .savings-tooltip { min-width: 170px; font-size: 11px; }
             .chart-swap-btns { gap: 6px; }
             .chart-swap-btn { padding: 6px 10px; font-size: 11px; }
@@ -1979,31 +1979,33 @@
                 <!-- GENERATION SLABS -->
                 <div class="overview-grid-3" style="display: grid; gap: 20px; margin-bottom: 30px;">
                     <!-- Daily Generation -->
-                    <div class="stat-card">
-                        <div class="slab-header" onclick="switchClientTab('daily')">
+                    <div class="stat-card" style="cursor: pointer;" onclick="switchClientTab('daily')">
+                        <div class="slab-header">
                             <div class="label" style="font-size: 18px;">Today</div>
                             <span class="slab-arrow">▸</span>
                         </div>
                         <div style="margin-bottom: 8px;"><span class="val-scalable" id="overview-daily-gen">--</span> <span class="val-unit">kWh</span></div>
                         <div class="subvalue" style="font-size: var(--font-base); color: #94a3b8;">Expected: <span id="overview-daily-expected" style="color: #fff;">--</span> <span style="color: #FFD700;">kWh</span></div>
                         <div id="overview-daily-target-status" style="margin-top: 6px; font-size: var(--font-base); font-weight: 600;"></div>
-                        <div class="slab-donut-wrap" style="margin: 12px 0 8px;">
-                            <canvas id="slabDonutDaily"></canvas>
-                        </div>
-                        <div class="grid-2col-perf" style="margin-top: 0;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; align-items: end;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">Performance</div>
                                 <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-daily-perf">--%</div>
                             </div>
-                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
-                                <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-daily-coverage">--%</div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                                <div class="slab-donut-wrap" style="margin: 0;">
+                                    <canvas id="slabDonutDaily"></canvas>
+                                </div>
+                                <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; width: 100%; box-sizing: border-box;">
+                                    <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
+                                    <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-daily-coverage">--%</div>
+                                </div>
                             </div>
                         </div>
                         <div class="savings-hover-wrap" id="slab-savings-daily-wrap">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="color: #94a3b8; font-size: var(--font-base);">Total Savings</span>
-                                <span class="val-rand" style="color: #4ade80;">R<span id="slab-savings-daily">--</span></span>
+                                <span style="color: #94a3b8; font-size: var(--font-sm);">Total Savings</span>
+                                <span style="color: #4ade80; font-size: var(--font-lg); font-weight: bold;">R<span id="slab-savings-daily">--</span></span>
                             </div>
                             <div class="savings-tooltip" id="slab-savings-daily-tooltip">
                                 <table>
@@ -2019,31 +2021,33 @@
                     </div>
                     
                     <!-- Monthly Generation -->
-                    <div class="stat-card">
-                        <div class="slab-header" onclick="switchClientTab('monthly')">
+                    <div class="stat-card" style="cursor: pointer;" onclick="switchClientTab('monthly')">
+                        <div class="slab-header">
                             <div class="label" style="font-size: 18px;">This Month</div>
                             <span class="slab-arrow">▸</span>
                         </div>
                         <div style="margin-bottom: 8px;"><span class="val-scalable" id="overview-monthly-gen">--</span> <span class="val-unit">kWh</span></div>
                         <div class="subvalue" style="font-size: var(--font-base); color: #94a3b8;">Expected: <span id="overview-monthly-expected" style="color: #fff;">--</span> <span style="color: #FFD700;">kWh</span></div>
                         <div id="overview-monthly-target-status" style="margin-top: 6px; font-size: var(--font-base); font-weight: 600;"></div>
-                        <div class="slab-donut-wrap" style="margin: 12px 0 8px;">
-                            <canvas id="slabDonutMonthly"></canvas>
-                        </div>
-                        <div class="grid-2col-perf" style="margin-top: 0;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; align-items: end;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">Performance</div>
                                 <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-monthly-perf">--%</div>
                             </div>
-                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
-                                <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-monthly-coverage">--%</div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                                <div class="slab-donut-wrap" style="margin: 0;">
+                                    <canvas id="slabDonutMonthly"></canvas>
+                                </div>
+                                <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; width: 100%; box-sizing: border-box;">
+                                    <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
+                                    <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-monthly-coverage">--%</div>
+                                </div>
                             </div>
                         </div>
                         <div class="savings-hover-wrap" id="slab-savings-monthly-wrap">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="color: #94a3b8; font-size: var(--font-base);">Total Savings</span>
-                                <span class="val-rand" style="color: #4ade80;">R<span id="slab-savings-monthly">--</span></span>
+                                <span style="color: #94a3b8; font-size: var(--font-sm);">Total Savings</span>
+                                <span style="color: #4ade80; font-size: var(--font-lg); font-weight: bold;">R<span id="slab-savings-monthly">--</span></span>
                             </div>
                             <div class="savings-tooltip" id="slab-savings-monthly-tooltip">
                                 <table>
@@ -2059,31 +2063,33 @@
                     </div>
                     
                     <!-- Lifetime Generation -->
-                    <div class="stat-card">
-                        <div class="slab-header" onclick="switchClientTab('lifetime')">
+                    <div class="stat-card" style="cursor: pointer;" onclick="switchClientTab('lifetime')">
+                        <div class="slab-header">
                             <div class="label" style="font-size: 18px;">Lifetime</div>
                             <span class="slab-arrow">▸</span>
                         </div>
                         <div style="margin-bottom: 8px;"><span class="val-scalable" id="overview-lifetime-gen">--</span> <span class="val-unit">kWh</span></div>
                         <div class="subvalue" style="font-size: var(--font-base); color: #94a3b8;">Expected: <span id="overview-lifetime-expected" style="color: #fff;">--</span> <span style="color: #FFD700;">kWh</span></div>
                         <div id="overview-lifetime-target-status" style="margin-top: 6px; font-size: var(--font-base); font-weight: 600;"></div>
-                        <div class="slab-donut-wrap" style="margin: 12px 0 8px;">
-                            <canvas id="slabDonutLifetime"></canvas>
-                        </div>
-                        <div class="grid-2col-perf" style="margin-top: 0;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; align-items: end;">
                             <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">Performance</div>
                                 <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-lifetime-perf">--%</div>
                             </div>
-                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
-                                <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-lifetime-coverage">--%</div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                                <div class="slab-donut-wrap" style="margin: 0;">
+                                    <canvas id="slabDonutLifetime"></canvas>
+                                </div>
+                                <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; width: 100%; box-sizing: border-box;">
+                                    <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
+                                    <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-lifetime-coverage">--%</div>
+                                </div>
                             </div>
                         </div>
                         <div class="savings-hover-wrap" id="slab-savings-lifetime-wrap">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="color: #94a3b8; font-size: var(--font-base);">Total Savings</span>
-                                <span class="val-rand" style="color: #4ade80;">R<span id="slab-savings-lifetime">--</span></span>
+                                <span style="color: #94a3b8; font-size: var(--font-sm);">Total Savings</span>
+                                <span style="color: #4ade80; font-size: var(--font-lg); font-weight: bold;">R<span id="slab-savings-lifetime">--</span></span>
                             </div>
                             <div class="savings-tooltip" id="slab-savings-lifetime-tooltip">
                                 <table>
@@ -3759,7 +3765,6 @@
             const titleEl = document.getElementById('overview-chart-title');
             const ctx = document.getElementById('overviewSwapChart');
             if (!ctx) return;
-            if (overviewSwapChartInstance) overviewSwapChartInstance.destroy();
             
             if (mode === 'hourly') {
                 titleEl.textContent = 'Hourly Generation Pattern (Today)';
@@ -3773,205 +3778,104 @@
             }
         }
         
-        function drawOverviewHourlyChart(ctx) {
-            if (!dashboardData) return;
-            const today = new Date().toISOString().split('T')[0];
-            const todayRecord = dashboardData.daily_records?.find(r => r.date === today);
-            if (!todayRecord || !todayRecord.hourly_data) return;
+        // Clone a source chart to the overview canvas (exact copy from real tabs)
+        function cloneChartToOverview(sourceChart, targetCanvas) {
+            if (!sourceChart) return false;
+            if (overviewSwapChartInstance) overviewSwapChartInstance.destroy();
             
-            // Build full 24-hour arrays (matching daily tab exactly)
-            const allHours = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
-            const pvData = new Array(24).fill(0);
-            const predictedData = new Array(24).fill(0);
-            
-            todayRecord.hourly_data.forEach(d => {
-                const hour = parseInt(d.time.split(':')[0]);
-                pvData[hour] = d.generation_kw || 0;
+            const clonedDatasets = sourceChart.data.datasets.map(ds => {
+                const clone = {};
+                for (const key of Object.keys(ds)) {
+                    if (key === 'data') { clone.data = [...ds.data]; }
+                    else if (key.startsWith('_') || key === '$context') { /* skip internals */ }
+                    else { clone[key] = ds[key]; }
+                }
+                return clone;
             });
             
-            // Fetch predictions for expected line (same as daily tab)
-            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
-            const [year, month] = today.split('-');
-            const monthKey = `${year}-${month}`;
+            function deepClone(obj) {
+                if (obj === null || typeof obj !== 'object') return obj;
+                if (typeof obj === 'function') return obj;
+                if (Array.isArray(obj)) return obj.map(deepClone);
+                const c = {};
+                for (const k in obj) { if (obj.hasOwnProperty(k)) c[k] = deepClone(obj[k]); }
+                return c;
+            }
             
-            fetch(predictionsPath)
-                .then(r => r.json())
-                .then(pred => {
-                    const hourlySum = new Array(24).fill(0);
-                    const hourlyCount = new Array(24).fill(0);
-                    if (pred.daily_predictions) {
-                        Object.keys(pred.daily_predictions).filter(d => d.startsWith(monthKey)).forEach(d => {
-                            const dp = pred.daily_predictions[d];
-                            if (dp.pv_kw) dp.pv_kw.forEach((gen, h) => { hourlySum[h] += gen; if (gen > 0) hourlyCount[h]++; });
-                        });
-                    }
-                    for (let h = 0; h < 24; h++) {
-                        predictedData[h] = hourlyCount[h] > 0 ? hourlySum[h] / hourlyCount[h] : 0;
-                    }
-                    renderOverviewChart(ctx, allHours, pvData, predictedData, 'bar', 'kW', 'PV Generation (kW)', 'Predicted (Monthly Avg)');
-                })
-                .catch(() => {
-                    renderOverviewChart(ctx, allHours, pvData, null, 'bar', 'kW', 'PV Generation (kW)', null);
-                });
+            overviewSwapChartInstance = new Chart(targetCanvas, {
+                type: sourceChart.config.type,
+                data: { labels: [...sourceChart.data.labels], datasets: clonedDatasets },
+                options: deepClone(sourceChart.config.options)
+            });
+            return true;
+        }
+        
+        function drawOverviewHourlyChart(ctx) {
+            if (!cloneChartToOverview(dailyChart, ctx)) {
+                drawOverviewFallback(ctx, 'hourly');
+            }
         }
         
         function drawOverviewDailyChart(ctx) {
-            if (!dashboardData || !dashboardData.daily_records) return;
-            const now = new Date();
-            const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-            const records = dashboardData.daily_records.filter(r => r.date.startsWith(monthKey)).sort((a,b) => a.date.localeCompare(b.date));
-            if (!records.length) return;
-            
-            const labels = records.map(d => {
-                const date = new Date(d.date);
-                return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
-            });
-            const genData = records.map(r => r.generation_kwh || 0);
-            
-            // Expected PV line from predictions (same as monthly tab)
-            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
-            
-            fetch(predictionsPath)
-                .then(r => r.json())
-                .then(pred => {
-                    const expectedLine = records.map(r => {
-                        const dp = pred.daily_predictions?.[r.date];
-                        if (dp && dp.pv_kw) return dp.pv_kw.reduce((s, v) => s + v, 0);
-                        return null;
-                    });
-                    renderOverviewChart(ctx, labels, genData, expectedLine, 'bar', 'kWh', 'PV Generation (kWh)', 'Expected PV (kWh)');
-                })
-                .catch(() => {
-                    renderOverviewChart(ctx, labels, genData, null, 'bar', 'kWh', 'PV Generation (kWh)', null);
-                });
+            if (!cloneChartToOverview(monthlyChart, ctx)) {
+                drawOverviewFallback(ctx, 'daily');
+            }
         }
         
         function drawOverviewMonthlyChart(ctx) {
-            if (!dashboardData || !dashboardData.daily_records) return;
-            
-            // Aggregate actual by month
-            const monthlyActual = {};
-            dashboardData.daily_records.forEach(r => {
-                const ym = r.date.substring(0,7);
-                if (!monthlyActual[ym]) monthlyActual[ym] = 0;
-                monthlyActual[ym] += r.generation_kwh || 0;
-            });
-            
-            const sorted = Object.keys(monthlyActual).sort();
-            const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            const labels = sorted.map(ym => {
-                const [y, m] = ym.split('-');
-                return monthNames[parseInt(m)-1] + ' ' + y.substring(2);
-            });
-            const genData = sorted.map(ym => monthlyActual[ym]);
-            
-            // Expected line from predictions (same as lifetime tab)
-            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
-            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
-            
-            fetch(predictionsPath)
-                .then(r => r.json())
-                .then(pred => {
-                    const expectedLine = sorted.map(ym => {
-                        let total = 0;
-                        if (pred.daily_predictions) {
-                            Object.keys(pred.daily_predictions).filter(d => d.startsWith(ym)).forEach(d => {
-                                const dp = pred.daily_predictions[d];
-                                if (dp && dp.pv_kw) total += dp.pv_kw.reduce((s, v) => s + v, 0);
-                            });
-                        }
-                        return total > 0 ? total : null;
-                    });
-                    renderOverviewChart(ctx, labels, genData, expectedLine, 'bar', 'kWh', 'PV Generation (kWh)', 'Expected PV (kWh)');
-                })
-                .catch(() => {
-                    renderOverviewChart(ctx, labels, genData, null, 'bar', 'kWh', 'PV Generation (kWh)', null);
-                });
+            if (!cloneChartToOverview(lifetimeMonthlyChart, ctx)) {
+                drawOverviewFallback(ctx, 'monthly');
+            }
         }
         
-        // Shared renderer for overview charts (matches tab chart styling)
-        function renderOverviewChart(ctx, labels, barData, lineData, chartType, unit, barLabel, lineLabel) {
+        // Simple fallback if source tab chart hasn't rendered yet
+        function drawOverviewFallback(ctx, mode) {
+            if (!dashboardData) return;
             if (overviewSwapChartInstance) overviewSwapChartInstance.destroy();
             
-            const datasets = [{
-                label: barLabel,
-                data: barData,
-                type: 'bar',
-                backgroundColor: '#4ade80',
-                borderColor: '#22c55e',
-                borderWidth: 1,
-                borderRadius: 4,
-                yAxisID: 'y',
-                order: 2
-            }];
+            let labels, genData, unit = 'kWh', barLabel = 'PV Generation (kWh)';
             
-            if (lineData && lineLabel) {
-                datasets.push({
-                    label: lineLabel,
-                    data: lineData,
-                    type: 'line',
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    tension: 0.3,
-                    spanGaps: true,
-                    yAxisID: 'y',
-                    order: 1
-                });
+            if (mode === 'hourly') {
+                const today = new Date().toISOString().split('T')[0];
+                const rec = dashboardData.daily_records?.find(r => r.date === today);
+                if (!rec || !rec.hourly_data) return;
+                labels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+                genData = new Array(24).fill(0);
+                rec.hourly_data.forEach(d => { genData[parseInt(d.time.split(':')[0])] = d.generation_kw || 0; });
+                unit = 'kW'; barLabel = 'PV Generation (kW)';
+            } else if (mode === 'daily') {
+                const now = new Date();
+                const mk = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+                const recs = dashboardData.daily_records.filter(r => r.date.startsWith(mk)).sort((a,b) => a.date.localeCompare(b.date));
+                if (!recs.length) return;
+                labels = recs.map(d => new Date(d.date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }));
+                genData = recs.map(r => r.generation_kwh || 0);
+            } else {
+                const md = {};
+                dashboardData.daily_records.forEach(r => { const ym = r.date.substring(0,7); if (!md[ym]) md[ym] = 0; md[ym] += r.generation_kwh || 0; });
+                const sorted = Object.keys(md).sort();
+                const mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                labels = sorted.map(ym => { const [y, m] = ym.split('-'); return mn[parseInt(m)-1] + ' ' + y.substring(2); });
+                genData = sorted.map(ym => md[ym]);
             }
             
             overviewSwapChartInstance = new Chart(ctx, {
                 type: 'bar',
-                data: { labels, datasets },
+                data: { labels, datasets: [{ label: barLabel, data: genData, backgroundColor: '#4ade80', borderColor: '#22c55e', borderWidth: 1, borderRadius: 4 }] },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    devicePixelRatio: window.devicePixelRatio * 2 || 4,
-                    interaction: { mode: 'index', intersect: false },
+                    responsive: true, maintainAspectRatio: true, devicePixelRatio: window.devicePixelRatio * 2 || 4,
                     scales: {
-                        x: {
-                            ticks: { color: '#94a3b8', maxTicksLimit: 12, font: { size: 11 } },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                color: '#94a3b8',
-                                font: { size: 11 },
-                                callback: v => {
-                                    if (v >= 1000) return (v/1000).toFixed(0) + 'k ' + unit;
-                                    return v.toFixed(0) + ' ' + unit;
-                                }
-                            },
-                            grid: { color: 'rgba(255,255,255,0.08)' }
-                        }
+                        x: { ticks: { color: '#94a3b8', maxTicksLimit: 12, font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { beginAtZero: true, ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => v >= 1000 ? (v/1000).toFixed(0) + 'k ' + unit : v.toFixed(0) + ' ' + unit }, grid: { color: 'rgba(255,255,255,0.08)' } }
                     },
                     plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            labels: { color: '#fff', padding: 12, font: { size: 12 }, usePointStyle: true, pointStyle: 'rect' }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15,23,42,0.95)',
-                            titleColor: '#FFD700', bodyColor: '#fff',
-                            padding: 10, cornerRadius: 8,
-                            borderColor: 'rgba(255,215,0,0.2)', borderWidth: 1,
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${formatNumber(context.parsed.y, context.parsed.y < 10 ? 2 : 0)} ${unit}`;
-                                }
-                            }
-                        }
+                        legend: { display: true, position: 'bottom', labels: { color: '#fff', padding: 12, font: { size: 12 } } },
+                        tooltip: { backgroundColor: 'rgba(15,23,42,0.95)', titleColor: '#FFD700', bodyColor: '#fff', padding: 10, cornerRadius: 8 }
                     }
                 }
             });
         }
+        
 
         function formatNumber(num, decimals = 0) {
             const fixed = Number(num).toFixed(decimals);
@@ -10237,7 +10141,7 @@ async function loadPast30Days() {
                     dashboardData.lifetime.env_impact
                 );
                 
-                setTextIfExists('monthly-gen', formatNumber(dashboardData.month.generation_kwh) + ' kWh');
+                // monthly-gen set by loadMonthlyData with formatKwh (skip to preserve HTML)
                 
                 // Calculate expected value if missing from JSON
                 let monthlyExpectedValue = dashboardData.month.expected_kwh;
@@ -10291,7 +10195,7 @@ async function loadPast30Days() {
                 setTextIfExists('monthly-expected', formatNumber(monthlyExpectedValue || 0));
                 setTextIfExists('monthly-perf', `${monthlyPerfValue || 0}% of expected`);
                 
-                setTextIfExists('lifetime-gen', formatNumber(lifetimeKwh, 0));
+                // lifetime-gen set by updateLifetimeTab with formatKwh (skip to preserve HTML)
                 setTextIfExists('lifetime-days', formatNumber(dashboardData.lifetime.days_active || 0, 0));
                 
                 createEnvCards(dashboardData.lifetime.env_impact, 'client-env-lifetime');
