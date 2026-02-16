@@ -233,7 +233,9 @@
 #daily-gen::after,
 #daily-load::after,
 #daily-grid::after,
-#lifetime-gen::after {
+#lifetime-gen::after,
+#lifetime-load::after,
+#lifetime-grid::after {
     content: '';
 }
 /* Remove kWh from all financial/currency values */
@@ -255,9 +257,12 @@
     content: '' !important;
 }
 
+/* Remove ::after % - JS now handles these with styled spans */
 #lifetime-perf::after,
-#monthly-target-perf::after {
-    content: '%';
+#monthly-target-perf::after,
+#monthly-coverage::after,
+#lifetime-coverage::after {
+    content: '' !important;
 }
         .stat-card .subvalue {
             color: #888888;
@@ -1161,12 +1166,12 @@
         .val-scalable {
             font-size: calc(var(--font-xl) * 1.5);
             font-weight: bold;
-            color: #fff;
+            color: #FFD700;
         }
         .val-unit {
             font-size: calc(var(--font-xl) * 0.85);
-            font-weight: 400;
-            color: rgba(255,255,255,0.7);
+            font-weight: 500;
+            color: #FFD700;
         }
         .val-rand {
             font-size: calc(var(--font-xl) * 1.1);
@@ -1980,24 +1985,24 @@
                             <span class="slab-arrow">▸</span>
                         </div>
                         <div style="margin-bottom: 8px;"><span class="val-scalable" id="overview-daily-gen">--</span> <span class="val-unit">kWh</span></div>
-                        <div class="subvalue" style="font-size: 14px;">Expected: <span id="overview-daily-expected">--</span> kWh</div>
-                        <div id="overview-daily-target-status" style="margin-top: 6px; font-size: 14px; font-weight: 600;"></div>
-                        <div class="grid-2col-perf" style="margin-top: 12px;">
-                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Performance</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-daily-perf">--<span style="font-size: 20px;">%</span></div>
-                            </div>
-                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-daily-coverage">--<span style="font-size: 20px;">%</span></div>
-                            </div>
-                        </div>
-                        <div class="slab-donut-wrap">
+                        <div class="subvalue" style="font-size: var(--font-base); color: #94a3b8;">Expected: <span id="overview-daily-expected" style="color: #fff;">--</span> <span style="color: #FFD700;">kWh</span></div>
+                        <div id="overview-daily-target-status" style="margin-top: 6px; font-size: var(--font-base); font-weight: 600;"></div>
+                        <div class="slab-donut-wrap" style="margin: 12px 0 8px;">
                             <canvas id="slabDonutDaily"></canvas>
+                        </div>
+                        <div class="grid-2col-perf" style="margin-top: 0;">
+                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">Performance</div>
+                                <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-daily-perf">--%</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
+                                <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-daily-coverage">--%</div>
+                            </div>
                         </div>
                         <div class="savings-hover-wrap" id="slab-savings-daily-wrap">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="color: #94a3b8; font-size: 12px;">Total Savings</span>
+                                <span style="color: #94a3b8; font-size: var(--font-base);">Total Savings</span>
                                 <span class="val-rand" style="color: #4ade80;">R<span id="slab-savings-daily">--</span></span>
                             </div>
                             <div class="savings-tooltip" id="slab-savings-daily-tooltip">
@@ -2020,24 +2025,24 @@
                             <span class="slab-arrow">▸</span>
                         </div>
                         <div style="margin-bottom: 8px;"><span class="val-scalable" id="overview-monthly-gen">--</span> <span class="val-unit">kWh</span></div>
-                        <div class="subvalue" style="font-size: 14px;">Expected: <span id="overview-monthly-expected">--</span> kWh</div>
-                        <div id="overview-monthly-target-status" style="margin-top: 6px; font-size: 14px; font-weight: 600;"></div>
-                        <div class="grid-2col-perf" style="margin-top: 12px;">
-                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Performance</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-monthly-perf">--<span style="font-size: 20px;">%</span></div>
-                            </div>
-                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-monthly-coverage">--<span style="font-size: 20px;">%</span></div>
-                            </div>
-                        </div>
-                        <div class="slab-donut-wrap">
+                        <div class="subvalue" style="font-size: var(--font-base); color: #94a3b8;">Expected: <span id="overview-monthly-expected" style="color: #fff;">--</span> <span style="color: #FFD700;">kWh</span></div>
+                        <div id="overview-monthly-target-status" style="margin-top: 6px; font-size: var(--font-base); font-weight: 600;"></div>
+                        <div class="slab-donut-wrap" style="margin: 12px 0 8px;">
                             <canvas id="slabDonutMonthly"></canvas>
+                        </div>
+                        <div class="grid-2col-perf" style="margin-top: 0;">
+                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">Performance</div>
+                                <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-monthly-perf">--%</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
+                                <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-monthly-coverage">--%</div>
+                            </div>
                         </div>
                         <div class="savings-hover-wrap" id="slab-savings-monthly-wrap">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="color: #94a3b8; font-size: 12px;">Total Savings</span>
+                                <span style="color: #94a3b8; font-size: var(--font-base);">Total Savings</span>
                                 <span class="val-rand" style="color: #4ade80;">R<span id="slab-savings-monthly">--</span></span>
                             </div>
                             <div class="savings-tooltip" id="slab-savings-monthly-tooltip">
@@ -2060,24 +2065,24 @@
                             <span class="slab-arrow">▸</span>
                         </div>
                         <div style="margin-bottom: 8px;"><span class="val-scalable" id="overview-lifetime-gen">--</span> <span class="val-unit">kWh</span></div>
-                        <div class="subvalue" style="font-size: 14px;">Expected: <span id="overview-lifetime-expected">--</span> kWh</div>
-                        <div id="overview-lifetime-target-status" style="margin-top: 6px; font-size: 14px; font-weight: 600;"></div>
-                        <div class="grid-2col-perf" style="margin-top: 12px;">
-                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Performance</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-lifetime-perf">--<span style="font-size: 20px;">%</span></div>
-                            </div>
-                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-lifetime-coverage">--<span style="font-size: 20px;">%</span></div>
-                            </div>
-                        </div>
-                        <div class="slab-donut-wrap">
+                        <div class="subvalue" style="font-size: var(--font-base); color: #94a3b8;">Expected: <span id="overview-lifetime-expected" style="color: #fff;">--</span> <span style="color: #FFD700;">kWh</span></div>
+                        <div id="overview-lifetime-target-status" style="margin-top: 6px; font-size: var(--font-base); font-weight: 600;"></div>
+                        <div class="slab-donut-wrap" style="margin: 12px 0 8px;">
                             <canvas id="slabDonutLifetime"></canvas>
+                        </div>
+                        <div class="grid-2col-perf" style="margin-top: 0;">
+                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">Performance</div>
+                                <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-lifetime-perf">--%</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: var(--font-sm); color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
+                                <div style="font-size: var(--font-lg); font-weight: bold;" id="overview-lifetime-coverage">--%</div>
+                            </div>
                         </div>
                         <div class="savings-hover-wrap" id="slab-savings-lifetime-wrap">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="color: #94a3b8; font-size: 12px;">Total Savings</span>
+                                <span style="color: #94a3b8; font-size: var(--font-base);">Total Savings</span>
                                 <span class="val-rand" style="color: #4ade80;">R<span id="slab-savings-lifetime">--</span></span>
                             </div>
                             <div class="savings-tooltip" id="slab-savings-lifetime-tooltip">
@@ -3704,22 +3709,22 @@
                         legend: { display: false },
                         tooltip: {
                             backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            titleColor: '#fff',
+                            titleColor: '#FFD700',
                             bodyColor: '#fff',
                             titleFont: { size: 13, weight: 'bold' },
                             bodyFont: { size: 12 },
                             padding: 10,
                             cornerRadius: 8,
-                            borderColor: 'rgba(255,255,255,0.15)',
+                            borderColor: 'rgba(255,215,0,0.3)',
                             borderWidth: 1,
                             callbacks: {
-                                label: function(context) {
-                                    const val = context.parsed;
-                                    const pct = total > 0 ? (val / total * 100).toFixed(1) : 0;
-                                    return `${context.label}: ${formatNumber(val, 0)} kWh (${pct}%)`;
-                                },
+                                title: function() { return 'Energy Breakdown'; },
+                                label: function() { return null; },
                                 afterBody: function() {
-                                    return [`Total: ${formatNumber(total, 0)} kWh`];
+                                    return [
+                                        `PV  -  ${formatNumber(pvKwh, 0)} kWh  -  ${pvPct}%`,
+                                        `Grid  -  ${formatNumber(gridKwh, 0)} kWh  -  ${gridPct}%`
+                                    ];
                                 }
                             }
                         }
@@ -3774,153 +3779,193 @@
             const todayRecord = dashboardData.daily_records?.find(r => r.date === today);
             if (!todayRecord || !todayRecord.hourly_data) return;
             
-            const labels = todayRecord.hourly_data.map(h => h.time?.substring(0,5) || '');
-            const genData = todayRecord.hourly_data.map(h => h.generation_kw || h.pv_kw || 0);
+            // Build full 24-hour arrays (matching daily tab exactly)
+            const allHours = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+            const pvData = new Array(24).fill(0);
+            const predictedData = new Array(24).fill(0);
             
-            overviewSwapChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Generation (kW)',
-                        data: genData,
-                        borderColor: '#4ade80',
-                        backgroundColor: 'rgba(74, 222, 128, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    devicePixelRatio: window.devicePixelRatio * 2 || 4,
-                    scales: {
-                        x: {
-                            ticks: { color: '#94a3b8', maxTicksLimit: 8, font: { size: 11 } },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => v + ' kW' },
-                            grid: { color: 'rgba(255,255,255,0.08)' }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(15,23,42,0.95)',
-                            titleColor: '#fff', bodyColor: '#fff',
-                            padding: 10, cornerRadius: 8,
-                            callbacks: {
-                                label: ctx2 => `Generation: ${ctx2.parsed.y.toFixed(2)} kW`
-                            }
-                        }
-                    }
-                }
+            todayRecord.hourly_data.forEach(d => {
+                const hour = parseInt(d.time.split(':')[0]);
+                pvData[hour] = d.generation_kw || 0;
             });
+            
+            // Fetch predictions for expected line (same as daily tab)
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            const [year, month] = today.split('-');
+            const monthKey = `${year}-${month}`;
+            
+            fetch(predictionsPath)
+                .then(r => r.json())
+                .then(pred => {
+                    const hourlySum = new Array(24).fill(0);
+                    const hourlyCount = new Array(24).fill(0);
+                    if (pred.daily_predictions) {
+                        Object.keys(pred.daily_predictions).filter(d => d.startsWith(monthKey)).forEach(d => {
+                            const dp = pred.daily_predictions[d];
+                            if (dp.pv_kw) dp.pv_kw.forEach((gen, h) => { hourlySum[h] += gen; if (gen > 0) hourlyCount[h]++; });
+                        });
+                    }
+                    for (let h = 0; h < 24; h++) {
+                        predictedData[h] = hourlyCount[h] > 0 ? hourlySum[h] / hourlyCount[h] : 0;
+                    }
+                    renderOverviewChart(ctx, allHours, pvData, predictedData, 'bar', 'kW', 'PV Generation (kW)', 'Predicted (Monthly Avg)');
+                })
+                .catch(() => {
+                    renderOverviewChart(ctx, allHours, pvData, null, 'bar', 'kW', 'PV Generation (kW)', null);
+                });
         }
         
         function drawOverviewDailyChart(ctx) {
             if (!dashboardData || !dashboardData.daily_records) return;
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-            const monthRecords = dashboardData.daily_records.filter(r => r.date.startsWith(monthKey)).sort((a,b) => a.date.localeCompare(b.date));
+            const records = dashboardData.daily_records.filter(r => r.date.startsWith(monthKey)).sort((a,b) => a.date.localeCompare(b.date));
+            if (!records.length) return;
             
-            const labels = monthRecords.map(r => r.date.substring(8));
-            const genData = monthRecords.map(r => r.generation_kwh || 0);
-            
-            overviewSwapChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Generation (kWh)',
-                        data: genData,
-                        backgroundColor: '#4ade80',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    devicePixelRatio: window.devicePixelRatio * 2 || 4,
-                    scales: {
-                        x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
-                        y: {
-                            beginAtZero: true,
-                            ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => formatNumber(v,0) },
-                            grid: { color: 'rgba(255,255,255,0.08)' }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(15,23,42,0.95)',
-                            titleColor: '#fff', bodyColor: '#fff',
-                            padding: 10, cornerRadius: 8,
-                            callbacks: {
-                                title: items => monthKey + '-' + items[0].label,
-                                label: ctx2 => `Generation: ${formatNumber(ctx2.parsed.y, 0)} kWh`
-                            }
-                        }
-                    }
-                }
+            const labels = records.map(d => {
+                const date = new Date(d.date);
+                return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
             });
+            const genData = records.map(r => r.generation_kwh || 0);
+            
+            // Expected PV line from predictions (same as monthly tab)
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            
+            fetch(predictionsPath)
+                .then(r => r.json())
+                .then(pred => {
+                    const expectedLine = records.map(r => {
+                        const dp = pred.daily_predictions?.[r.date];
+                        if (dp && dp.pv_kw) return dp.pv_kw.reduce((s, v) => s + v, 0);
+                        return null;
+                    });
+                    renderOverviewChart(ctx, labels, genData, expectedLine, 'bar', 'kWh', 'PV Generation (kWh)', 'Expected PV (kWh)');
+                })
+                .catch(() => {
+                    renderOverviewChart(ctx, labels, genData, null, 'bar', 'kWh', 'PV Generation (kWh)', null);
+                });
         }
         
         function drawOverviewMonthlyChart(ctx) {
             if (!dashboardData || !dashboardData.daily_records) return;
             
-            // Aggregate by month
-            const monthlyData = {};
+            // Aggregate actual by month
+            const monthlyActual = {};
             dashboardData.daily_records.forEach(r => {
                 const ym = r.date.substring(0,7);
-                if (!monthlyData[ym]) monthlyData[ym] = 0;
-                monthlyData[ym] += r.generation_kwh || 0;
+                if (!monthlyActual[ym]) monthlyActual[ym] = 0;
+                monthlyActual[ym] += r.generation_kwh || 0;
             });
             
-            const sorted = Object.keys(monthlyData).sort();
+            const sorted = Object.keys(monthlyActual).sort();
             const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             const labels = sorted.map(ym => {
                 const [y, m] = ym.split('-');
                 return monthNames[parseInt(m)-1] + ' ' + y.substring(2);
             });
-            const genData = sorted.map(ym => monthlyData[ym]);
+            const genData = sorted.map(ym => monthlyActual[ym]);
+            
+            // Expected line from predictions (same as lifetime tab)
+            const basePath = window.location.pathname.includes('1stAveSpar') ? '/1stAveSpar/' : '/';
+            const predictionsPath = `${basePath}predictions_2025_2044.min.json`.replace('//', '/');
+            
+            fetch(predictionsPath)
+                .then(r => r.json())
+                .then(pred => {
+                    const expectedLine = sorted.map(ym => {
+                        let total = 0;
+                        if (pred.daily_predictions) {
+                            Object.keys(pred.daily_predictions).filter(d => d.startsWith(ym)).forEach(d => {
+                                const dp = pred.daily_predictions[d];
+                                if (dp && dp.pv_kw) total += dp.pv_kw.reduce((s, v) => s + v, 0);
+                            });
+                        }
+                        return total > 0 ? total : null;
+                    });
+                    renderOverviewChart(ctx, labels, genData, expectedLine, 'bar', 'kWh', 'PV Generation (kWh)', 'Expected PV (kWh)');
+                })
+                .catch(() => {
+                    renderOverviewChart(ctx, labels, genData, null, 'bar', 'kWh', 'PV Generation (kWh)', null);
+                });
+        }
+        
+        // Shared renderer for overview charts (matches tab chart styling)
+        function renderOverviewChart(ctx, labels, barData, lineData, chartType, unit, barLabel, lineLabel) {
+            if (overviewSwapChartInstance) overviewSwapChartInstance.destroy();
+            
+            const datasets = [{
+                label: barLabel,
+                data: barData,
+                type: 'bar',
+                backgroundColor: '#4ade80',
+                borderColor: '#22c55e',
+                borderWidth: 1,
+                borderRadius: 4,
+                yAxisID: 'y',
+                order: 2
+            }];
+            
+            if (lineData && lineLabel) {
+                datasets.push({
+                    label: lineLabel,
+                    data: lineData,
+                    type: 'line',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    tension: 0.3,
+                    spanGaps: true,
+                    yAxisID: 'y',
+                    order: 1
+                });
+            }
             
             overviewSwapChartInstance = new Chart(ctx, {
                 type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Generation (kWh)',
-                        data: genData,
-                        backgroundColor: '#4ade80',
-                        borderRadius: 4
-                    }]
-                },
+                data: { labels, datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
                     devicePixelRatio: window.devicePixelRatio * 2 || 4,
+                    interaction: { mode: 'index', intersect: false },
                     scales: {
-                        x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+                        x: {
+                            ticks: { color: '#94a3b8', maxTicksLimit: 12, font: { size: 11 } },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
                         y: {
                             beginAtZero: true,
-                            ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => { if (v >= 1000) return (v/1000).toFixed(0) + 'k'; return v; } },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 11 },
+                                callback: v => {
+                                    if (v >= 1000) return (v/1000).toFixed(0) + 'k ' + unit;
+                                    return v.toFixed(0) + ' ' + unit;
+                                }
+                            },
                             grid: { color: 'rgba(255,255,255,0.08)' }
                         }
                     },
                     plugins: {
-                        legend: { display: false },
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: { color: '#fff', padding: 12, font: { size: 12 }, usePointStyle: true, pointStyle: 'rect' }
+                        },
                         tooltip: {
                             backgroundColor: 'rgba(15,23,42,0.95)',
-                            titleColor: '#fff', bodyColor: '#fff',
+                            titleColor: '#FFD700', bodyColor: '#fff',
                             padding: 10, cornerRadius: 8,
+                            borderColor: 'rgba(255,215,0,0.2)', borderWidth: 1,
                             callbacks: {
-                                label: ctx2 => `Generation: ${formatNumber(ctx2.parsed.y, 0)} kWh`
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${formatNumber(context.parsed.y, context.parsed.y < 10 ? 2 : 0)} ${unit}`;
+                                }
                             }
                         }
                     }
@@ -7738,8 +7783,8 @@ async function loadMonthlyData() {
         document.getElementById('monthly-expected').textContent = formatNumber(expectedForDaysWithData);  // MTD not full month
         document.getElementById('monthly-days-count').textContent = daysWithData;
         document.getElementById('monthly-target-perf').innerHTML = formatNumber(targetProgress) + '<span class="val-unit">%</span>';
-        document.getElementById('monthly-actual-gen').textContent = monthlyGen.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        document.getElementById('monthly-target-gen').textContent = expectedForDaysWithData.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        document.getElementById('monthly-actual-gen').textContent = formatNumber(monthlyGen, 0);
+        document.getElementById('monthly-target-gen').textContent = formatNumber(expectedForDaysWithData, 0);
         
         const perfEl = document.getElementById('monthly-perf');
         perfEl.textContent = `${targetProgress}% of expected`;  // Use MTD performance
