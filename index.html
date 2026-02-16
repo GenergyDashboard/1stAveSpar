@@ -1138,6 +1138,160 @@
            ============================================ */
         
         /* Tablet and below (< 1024px) */
+
+        /* P95 badge */
+        .p95-badge {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #FFD700;
+            cursor: help;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .p95-badge:hover {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: #FFD700;
+        }
+        
+        /* Scalable values - respond to font size changer */
+        .val-scalable {
+            font-size: calc(var(--font-xl) * 1.5);
+            font-weight: bold;
+            color: #fff;
+        }
+        .val-unit {
+            font-size: calc(var(--font-xl) * 0.85);
+            font-weight: 400;
+            color: rgba(255,255,255,0.7);
+        }
+        .val-rand {
+            font-size: calc(var(--font-xl) * 1.1);
+            font-weight: bold;
+        }
+        
+        /* Overview slab clickable header */
+        .slab-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 4px 0;
+            margin-bottom: 12px;
+            transition: color 0.2s;
+        }
+        .slab-header:hover {
+            color: #FFD700;
+        }
+        .slab-header .label {
+            margin-bottom: 0 !important;
+        }
+        .slab-header .slab-arrow {
+            font-size: 14px;
+            color: #94a3b8;
+            transition: color 0.2s;
+        }
+        .slab-header:hover .slab-arrow {
+            color: #FFD700;
+        }
+        
+        /* Mini donut container */
+        .slab-donut-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        .slab-donut-wrap canvas {
+            max-width: 120px;
+            max-height: 120px;
+        }
+        
+        /* Savings hover tooltip */
+        .savings-hover-wrap {
+            position: relative;
+            cursor: pointer;
+            padding: 8px 12px;
+            background: rgba(74, 222, 128, 0.08);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+            border-radius: 8px;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+        .savings-hover-wrap:hover {
+            background: rgba(74, 222, 128, 0.15);
+            border-color: rgba(74, 222, 128, 0.3);
+        }
+        .savings-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 105%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px 15px;
+            min-width: 200px;
+            z-index: 50;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+        }
+        .savings-hover-wrap:hover .savings-tooltip {
+            display: block;
+        }
+        .savings-tooltip table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .savings-tooltip th {
+            color: #94a3b8;
+            text-align: left;
+            padding: 4px 6px;
+            font-weight: 600;
+        }
+        .savings-tooltip td {
+            padding: 4px 6px;
+            color: #fff;
+        }
+        .savings-tooltip td:last-child {
+            text-align: right;
+            color: #4ade80;
+            font-weight: 600;
+        }
+        
+        /* Overview chart swap buttons */
+        .chart-swap-btns {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .chart-swap-btn {
+            padding: 8px 16px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            background: rgba(255, 255, 255, 0.03);
+            color: #94a3b8;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .chart-swap-btn:hover {
+            background: rgba(255, 215, 0, 0.08);
+            color: #FFD700;
+        }
+        .chart-swap-btn.active {
+            background: rgba(255, 215, 0, 0.12);
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+
         /* ========================================
            GRID/FLEX UTILITY CLASSES
            (replacing inline styles for mobile control)
@@ -1412,6 +1566,16 @@
             /* Pie chart */
             #financialTouPieChart { max-width: 100% !important; }
             
+            /* New slab elements */
+            .val-scalable { font-size: calc(var(--font-xl) * 1.2); }
+            .val-unit { font-size: calc(var(--font-xl) * 0.6); }
+            .val-rand { font-size: calc(var(--font-xl) * 0.85); }
+            .slab-donut-wrap canvas { max-width: 100px; max-height: 100px; }
+            .savings-tooltip { min-width: 170px; font-size: 11px; }
+            .chart-swap-btns { gap: 6px; }
+            .chart-swap-btn { padding: 6px 10px; font-size: 11px; }
+            .p95-badge { padding: 3px 8px; font-size: 10px; }
+            
             /* --- Data mode toggle --- */
             .data-mode-toggle {
                 flex-direction: column;
@@ -1578,6 +1742,7 @@
     <div class="container">
         <div class="info-dropdown">
             <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="p95-badge" title="Performance data based on P95 confidence level from PVSyst simulation">P95</div>
                 <div class="font-size-controls" title="Adjust text size">
                     <div class="font-size-btn" onclick="changeFontSize('small')" id="fs-small" title="Small text">A</div>
                     <div class="font-size-btn active" onclick="changeFontSize('medium')" id="fs-medium" title="Default text" style="font-size: 16px;">A</div>
@@ -1810,156 +1975,124 @@
                 <div class="overview-grid-3" style="display: grid; gap: 20px; margin-bottom: 30px;">
                     <!-- Daily Generation -->
                     <div class="stat-card">
-                        <div class="label" style="font-size: 18px; margin-bottom: 15px;">Today</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-daily-gen">--</span> <span style="font-size: 28px;">kWh</span></div>
-                        <div class="grid-2col-perf" style="margin-top: 15px;">
-                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-daily-perf">--%</div>
+                        <div class="slab-header" onclick="switchClientTab('daily')">
+                            <div class="label" style="font-size: 18px;">Today</div>
+                            <span class="slab-arrow">▸</span>
+                        </div>
+                        <div style="margin-bottom: 8px;"><span class="val-scalable" id="overview-daily-gen">--</span> <span class="val-unit">kWh</span></div>
+                        <div class="subvalue" style="font-size: 14px;">Expected: <span id="overview-daily-expected">--</span> kWh</div>
+                        <div id="overview-daily-target-status" style="margin-top: 6px; font-size: 14px; font-weight: 600;"></div>
+                        <div class="grid-2col-perf" style="margin-top: 12px;">
+                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Performance</div>
+                                <div style="font-size: 20px; font-weight: bold;" id="overview-daily-perf">--<span style="font-size: 20px;">%</span></div>
                             </div>
-                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">PV Coverage</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-daily-coverage">--%</div>
+                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
+                                <div style="font-size: 20px; font-weight: bold;" id="overview-daily-coverage">--<span style="font-size: 20px;">%</span></div>
                             </div>
                         </div>
-                        <div class="subvalue" style="margin-top: 15px; font-size: 14px;">Expected: <span id="overview-daily-expected">--</span> kWh</div>
-                        <div id="overview-daily-target-status" style="margin-top: 8px; font-size: 14px; font-weight: 600;"></div>
+                        <div class="slab-donut-wrap">
+                            <canvas id="slabDonutDaily"></canvas>
+                        </div>
+                        <div class="savings-hover-wrap" id="slab-savings-daily-wrap">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #94a3b8; font-size: 12px;">Total Savings</span>
+                                <span class="val-rand" style="color: #4ade80;">R<span id="slab-savings-daily">--</span></span>
+                            </div>
+                            <div class="savings-tooltip" id="slab-savings-daily-tooltip">
+                                <table>
+                                    <thead><tr><th>Period</th><th style="text-align:right;">Savings</th></tr></thead>
+                                    <tbody>
+                                        <tr><td><span class="tou-label peak">Peak</span></td><td>R<span id="slab-sv-daily-peak">--</span></td></tr>
+                                        <tr><td><span class="tou-label standard">Std</span></td><td>R<span id="slab-sv-daily-std">--</span></td></tr>
+                                        <tr><td><span class="tou-label off-peak">Off-Pk</span></td><td>R<span id="slab-sv-daily-offpk">--</span></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Monthly Generation -->
                     <div class="stat-card">
-                        <div class="label" style="font-size: 18px; margin-bottom: 15px;">This Month</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-monthly-gen">--</span> <span style="font-size: 28px;">kWh</span></div>
-                        <div class="grid-2col-perf" style="margin-top: 15px;">
-                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-monthly-perf">--%</div>
+                        <div class="slab-header" onclick="switchClientTab('monthly')">
+                            <div class="label" style="font-size: 18px;">This Month</div>
+                            <span class="slab-arrow">▸</span>
+                        </div>
+                        <div style="margin-bottom: 8px;"><span class="val-scalable" id="overview-monthly-gen">--</span> <span class="val-unit">kWh</span></div>
+                        <div class="subvalue" style="font-size: 14px;">Expected: <span id="overview-monthly-expected">--</span> kWh</div>
+                        <div id="overview-monthly-target-status" style="margin-top: 6px; font-size: 14px; font-weight: 600;"></div>
+                        <div class="grid-2col-perf" style="margin-top: 12px;">
+                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Performance</div>
+                                <div style="font-size: 20px; font-weight: bold;" id="overview-monthly-perf">--<span style="font-size: 20px;">%</span></div>
                             </div>
-                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">PV Coverage</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-monthly-coverage">--%</div>
+                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
+                                <div style="font-size: 20px; font-weight: bold;" id="overview-monthly-coverage">--<span style="font-size: 20px;">%</span></div>
                             </div>
                         </div>
-                        <div class="subvalue" style="margin-top: 15px; font-size: 14px;">Expected: <span id="overview-monthly-expected">--</span> kWh</div>
-                        <div id="overview-monthly-target-status" style="margin-top: 8px; font-size: 14px; font-weight: 600;"></div>
+                        <div class="slab-donut-wrap">
+                            <canvas id="slabDonutMonthly"></canvas>
+                        </div>
+                        <div class="savings-hover-wrap" id="slab-savings-monthly-wrap">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #94a3b8; font-size: 12px;">Total Savings</span>
+                                <span class="val-rand" style="color: #4ade80;">R<span id="slab-savings-monthly">--</span></span>
+                            </div>
+                            <div class="savings-tooltip" id="slab-savings-monthly-tooltip">
+                                <table>
+                                    <thead><tr><th>Period</th><th style="text-align:right;">Savings</th></tr></thead>
+                                    <tbody>
+                                        <tr><td><span class="tou-label peak">Peak</span></td><td>R<span id="slab-sv-monthly-peak">--</span></td></tr>
+                                        <tr><td><span class="tou-label standard">Std</span></td><td>R<span id="slab-sv-monthly-std">--</span></td></tr>
+                                        <tr><td><span class="tou-label off-peak">Off-Pk</span></td><td>R<span id="slab-sv-monthly-offpk">--</span></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Lifetime Generation -->
                     <div class="stat-card">
-                        <div class="label" style="font-size: 18px; margin-bottom: 15px;">Lifetime</div>
-                        <div class="value" style="font-size: 42px; margin-bottom: 10px;"><span id="overview-lifetime-gen">--</span> <span style="font-size: 28px;">kWh</span></div>
-                        <div class="grid-2col-perf" style="margin-top: 15px;">
-                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">Performance</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-lifetime-perf">--%</div>
+                        <div class="slab-header" onclick="switchClientTab('lifetime')">
+                            <div class="label" style="font-size: 18px;">Lifetime</div>
+                            <span class="slab-arrow">▸</span>
+                        </div>
+                        <div style="margin-bottom: 8px;"><span class="val-scalable" id="overview-lifetime-gen">--</span> <span class="val-unit">kWh</span></div>
+                        <div class="subvalue" style="font-size: 14px;">Expected: <span id="overview-lifetime-expected">--</span> kWh</div>
+                        <div id="overview-lifetime-target-status" style="margin-top: 6px; font-size: 14px; font-weight: 600;"></div>
+                        <div class="grid-2col-perf" style="margin-top: 12px;">
+                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Performance</div>
+                                <div style="font-size: 20px; font-weight: bold;" id="overview-lifetime-perf">--<span style="font-size: 20px;">%</span></div>
                             </div>
-                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">PV Coverage</div>
-                                <div style="font-size: 20px; font-weight: bold;" id="overview-lifetime-coverage">--%</div>
+                            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">PV Coverage</div>
+                                <div style="font-size: 20px; font-weight: bold;" id="overview-lifetime-coverage">--<span style="font-size: 20px;">%</span></div>
                             </div>
                         </div>
-                        <div class="subvalue" style="margin-top: 15px; font-size: 14px;">Expected: <span id="overview-lifetime-expected">--</span> kWh</div>
-                        <div id="overview-lifetime-target-status" style="margin-top: 8px; font-size: 14px; font-weight: 600;"></div>
+                        <div class="slab-donut-wrap">
+                            <canvas id="slabDonutLifetime"></canvas>
+                        </div>
+                        <div class="savings-hover-wrap" id="slab-savings-lifetime-wrap">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #94a3b8; font-size: 12px;">Total Savings</span>
+                                <span class="val-rand" style="color: #4ade80;">R<span id="slab-savings-lifetime">--</span></span>
+                            </div>
+                            <div class="savings-tooltip" id="slab-savings-lifetime-tooltip">
+                                <table>
+                                    <thead><tr><th>Period</th><th style="text-align:right;">Savings</th></tr></thead>
+                                    <tbody>
+                                        <tr><td><span class="tou-label peak">Peak</span></td><td>R<span id="slab-sv-lifetime-peak">--</span></td></tr>
+                                        <tr><td><span class="tou-label standard">Std</span></td><td>R<span id="slab-sv-lifetime-std">--</span></td></tr>
+                                        <tr><td><span class="tou-label off-peak">Off-Pk</span></td><td>R<span id="slab-sv-lifetime-offpk">--</span></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <!-- SAVINGS BREAKDOWN -->
-                <h3 style="color: #fff; margin-bottom: 20px;">Financial Savings (TOU Breakdown)</h3>
-                <div class="overview-grid-3" style="display: grid; gap: 20px; margin-bottom: 30px;">
-                    <!-- Daily Savings -->
-                    <div class="stat-card">
-                        <div class="label" style="font-size: 16px; margin-bottom: 15px;">Today</div>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
-                                    <th style="padding: 8px; text-align: left; color: #94a3b8;">Period</th>
-                                    <th style="padding: 8px; text-align: right; color: #94a3b8;">Savings</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <td style="padding: 8px;"><span class="tou-label peak">Peak</span></td>
-                                    <td style="padding: 8px; text-align: right; color: #4ade80; font-weight: 600;">R<span id="overview-daily-savings-peak">--</span></td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <td style="padding: 8px;"><span class="tou-label standard">Standard</span></td>
-                                    <td style="padding: 8px; text-align: right; color: #4ade80; font-weight: 600;">R<span id="overview-daily-savings-standard">--</span></td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <td style="padding: 8px;"><span class="tou-label off-peak">Off-Peak</span></td>
-                                    <td style="padding: 8px; text-align: right; color: #4ade80; font-weight: 600;">R<span id="overview-daily-savings-off-peak">--</span></td>
-                                </tr>
-                                <tr style="border-top: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05);">
-                                    <td style="padding: 10px; font-weight: bold; color: #FFD700;">TOTAL</td>
-                                    <td style="padding: 10px; text-align: right; font-weight: bold; color: #4ade80; font-size: 16px;">R<span id="overview-daily-savings-total">--</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Monthly Savings -->
-                    <div class="stat-card">
-                        <div class="label" style="font-size: 16px; margin-bottom: 15px;">This Month</div>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
-                                    <th style="padding: 8px; text-align: left; color: #94a3b8;">Period</th>
-                                    <th style="padding: 8px; text-align: right; color: #94a3b8;">Savings</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <td style="padding: 8px;"><span class="tou-label peak">Peak</span></td>
-                                    <td style="padding: 8px; text-align: right; color: #4ade80; font-weight: 600;">R<span id="overview-monthly-savings-peak">--</span></td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <td style="padding: 8px;"><span class="tou-label standard">Standard</span></td>
-                                    <td style="padding: 8px; text-align: right; color: #4ade80; font-weight: 600;">R<span id="overview-monthly-savings-standard">--</span></td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <td style="padding: 8px;"><span class="tou-label off-peak">Off-Peak</span></td>
-                                    <td style="padding: 8px; text-align: right; color: #4ade80; font-weight: 600;">R<span id="overview-monthly-savings-off-peak">--</span></td>
-                                </tr>
-                                <tr style="border-top: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05);">
-                                    <td style="padding: 10px; font-weight: bold; color: #FFD700;">TOTAL</td>
-                                    <td style="padding: 10px; text-align: right; font-weight: bold; color: #4ade80; font-size: 16px;">R<span id="overview-monthly-savings-total">--</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Lifetime Savings -->
-                    <div class="stat-card">
-                        <div class="label" style="font-size: 16px; margin-bottom: 15px;">Lifetime</div>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
-                                    <th style="padding: 8px; text-align: left; color: #94a3b8;">Period</th>
-                                    <th style="padding: 8px; text-align: right; color: #94a3b8;">Savings</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <td style="padding: 8px;"><span class="tou-label peak">Peak</span></td>
-                                    <td style="padding: 8px; text-align: right; color: #4ade80; font-weight: 600;">R<span id="overview-lifetime-savings-peak">--</span></td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <td style="padding: 8px;"><span class="tou-label standard">Standard</span></td>
-                                    <td style="padding: 8px; text-align: right; color: #4ade80; font-weight: 600;">R<span id="overview-lifetime-savings-standard">--</span></td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <td style="padding: 8px;"><span class="tou-label off-peak">Off-Peak</span></td>
-                                    <td style="padding: 8px; text-align: right; color: #4ade80; font-weight: 600;">R<span id="overview-lifetime-savings-off-peak">--</span></td>
-                                </tr>
-                                <tr style="border-top: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05);">
-                                    <td style="padding: 10px; font-weight: bold; color: #FFD700;">TOTAL</td>
-                                    <td style="padding: 10px; text-align: right; font-weight: bold; color: #4ade80; font-size: 16px;">R<span id="overview-lifetime-savings-total">--</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
                 <!-- ENVIRONMENTAL IMPACT -->
                 <h3 style="color: #fff; margin-bottom: 20px;">Environmental Impact</h3>
                 <div class="overview-grid-3" style="display: grid; gap: 20px; margin-bottom: 30px;">
@@ -2033,27 +2166,19 @@
                     </div>
                 </div>
                 
-                <!-- GRID & PV STACKED BAR CHARTS -->
-                <h3 style="color: #fff; margin-bottom: 20px;">Energy Breakdown (Grid + PV)</h3>
-                <div class="overview-grid-3" style="display: grid; gap: 20px; margin-bottom: 30px;">
-                    <!-- Daily Chart -->
-                    <div class="stat-card">
-                        <div class="label" style="font-size: 16px; margin-bottom: 15px;">Today</div>
-                        <canvas id="overviewDailyStackedChart" style="max-height: 300px;"></canvas>
+                <!-- OVERVIEW GENERATION CHART (swappable) -->
+                <div class="chart-container" style="margin-bottom: 30px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                        <h3 class="chart-title" id="overview-chart-title" style="margin: 0;">Hourly Generation Pattern</h3>
+                        <div class="chart-swap-btns">
+                            <button class="chart-swap-btn active" onclick="swapOverviewChart('hourly', this)">Hourly (Today)</button>
+                            <button class="chart-swap-btn" onclick="swapOverviewChart('daily', this)">Daily (Month)</button>
+                            <button class="chart-swap-btn" onclick="swapOverviewChart('monthly', this)">Monthly (Lifetime)</button>
+                        </div>
                     </div>
-                    
-                    <!-- Monthly Chart -->
-                    <div class="stat-card">
-                        <div class="label" style="font-size: 16px; margin-bottom: 15px;">This Month</div>
-                        <canvas id="overviewMonthlyStackedChart" style="max-height: 300px;"></canvas>
-                    </div>
-                    
-                    <!-- Lifetime Chart -->
-                    <div class="stat-card">
-                        <div class="label" style="font-size: 16px; margin-bottom: 15px;">Lifetime</div>
-                        <canvas id="overviewLifetimeStackedChart" style="max-height: 300px;"></canvas>
-                    </div>
+                    <canvas id="overviewSwapChart" style="max-height: 350px;"></canvas>
                 </div>
+                
             </div>
             
             <div id="daily-tab" class="tab-content">
@@ -2075,6 +2200,7 @@
                         <div class="value" id="daily-gen">--</div>
                         <div class="subvalue">Expected: <span id="daily-gen-expected">--</span> kWh</div>
                         <div class="performance" id="daily-gen-perf">--</div>
+                        <div id="daily-gen-target-status" style="margin-top: 6px; font-size: 13px; font-weight: 600;"></div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Grid</div>
@@ -2229,6 +2355,7 @@
                         <div class="value" id="monthly-gen">--</div>
                         <div class="subvalue">Expected: <span id="monthly-expected">--</span> kWh</div>
                         <div class="performance" id="monthly-perf">--</div>
+                        <div id="monthly-gen-target-status" style="margin-top: 6px; font-size: 13px; font-weight: 600;"></div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Grid</div>
@@ -2382,6 +2509,7 @@
                         <div class="value" id="lifetime-gen">--</div>
                         <div class="subvalue">Expected: <span id="lifetime-gen-expected">--</span> kWh</div>
                         <div class="performance" id="lifetime-gen-perf">--</div>
+                        <div id="lifetime-gen-target-status" style="margin-top: 6px; font-size: 13px; font-weight: 600;"></div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Grid</div>
@@ -2933,9 +3061,9 @@
         
         // Font size scaling
         const FONT_SIZES = {
-            small: { base: 14, xs: 11, sm: 12, lg: 18, xl: 24 },
+            small: { base: 14, xs: 11, sm: 12, lg: 18, xl: 22 },
             medium: { base: 16, xs: 12, sm: 14, lg: 20, xl: 28 },
-            large: { base: 20, xs: 15, sm: 17, lg: 26, xl: 36 }
+            large: { base: 22, xs: 16, sm: 18, lg: 28, xl: 40 }
         };
         
         function changeFontSize(size) {
@@ -3315,21 +3443,6 @@
                 });
                 
                 // ===== UPDATE DISPLAYS =====
-                // Helper to set target status
-                function setTargetStatus(elementId, actual, expected) {
-                    const el = document.getElementById(elementId);
-                    if (!el) return;
-                    if (expected <= 0) { el.textContent = ''; return; }
-                    const diff = actual - expected;
-                    const absDiff = Math.abs(diff);
-                    if (diff >= 0) {
-                        el.innerHTML = `▲ <span style="color: #4ade80;">${formatNumber(absDiff, 0)} kWh Ahead of Target</span>`;
-                        el.style.color = '#4ade80';
-                    } else {
-                        el.innerHTML = `▼ <span style="color: #ef4444;">${formatNumber(absDiff, 0)} kWh Behind Target</span>`;
-                        el.style.color = '#ef4444';
-                    }
-                }
                 
                 document.getElementById('overview-daily-gen').textContent = formatNumber(dailyGen, 0);
                 document.getElementById('overview-daily-perf').textContent = dailyPerf.toFixed(1) + '%';
@@ -3352,19 +3465,14 @@
                 document.getElementById('overview-lifetime-expected').textContent = formatNumber(lifetimeExpected, 0);
                 setTargetStatus('overview-lifetime-target-status', lifetimeGen, lifetimeExpected);
                 
-                // ===== SAVINGS =====
+                // ===== SAVINGS (populated via slab) =====
+                // Populate slab savings displays
                 if (todayRecord && todayRecord.tou_breakdown) {
-                    const dailyFinancials = calculateTOUFinancials(todayRecord.tou_breakdown, today);
-                    document.getElementById('overview-daily-savings-peak').textContent = formatNumber(dailyFinancials.savings.peak || 0, 0);
-                    document.getElementById('overview-daily-savings-standard').textContent = formatNumber(dailyFinancials.savings.standard || 0, 0);
-                    document.getElementById('overview-daily-savings-off-peak').textContent = formatNumber(dailyFinancials.savings.off_peak || 0, 0);
-                    document.getElementById('overview-daily-savings-total').textContent = formatNumber(dailyFinancials.savings.total || 0, 0);
-                } else {
-                    ['peak', 'standard', 'off-peak', 'total'].forEach(p => {
-                        document.getElementById(`overview-daily-savings-${p.replace('_', '-')}`).textContent = '0';
-                    });
+                    const ds = calculateTOUFinancials(todayRecord.tou_breakdown, today);
+                    updateSlabSavings('daily', ds);
                 }
                 
+                // Calculate monthly TOU for savings
                 const monthlyTOU = monthRecords.reduce((acc, r) => {
                     if (r.tou_breakdown) {
                         acc.peak_kwh += r.tou_breakdown.peak_kwh || 0;
@@ -3373,49 +3481,23 @@
                     }
                     return acc;
                 }, { peak_kwh: 0, standard_kwh: 0, off_peak_kwh: 0 });
-                
                 const monthlyFinancials = calculateTOUFinancials(monthlyTOU, currentMonthYear + '-01');
-                document.getElementById('overview-monthly-savings-peak').textContent = formatNumber(monthlyFinancials.savings.peak || 0, 0);
-                document.getElementById('overview-monthly-savings-standard').textContent = formatNumber(monthlyFinancials.savings.standard || 0, 0);
-                document.getElementById('overview-monthly-savings-off-peak').textContent = formatNumber(monthlyFinancials.savings.off_peak || 0, 0);
-                document.getElementById('overview-monthly-savings-total').textContent = formatNumber(monthlyFinancials.savings.total || 0, 0);
-                
-                // Lifetime savings - calculate from TOU breakdown
-                if (lifetimeData.tou_breakdown) {
-                    // For lifetime, we need to aggregate savings across all daily records
-                    // since rates vary by season. Calculate per-day and sum.
-                    let ltPeak = 0, ltStandard = 0, ltOffPeak = 0, ltTotal = 0;
-                    
+                updateSlabSavings('monthly', monthlyFinancials);
+                // Lifetime slab savings
+                {
+                    let ltSv = { peak: 0, standard: 0, off_peak: 0, total: 0 };
                     if (dashboardData.daily_records) {
                         dashboardData.daily_records.forEach(r => {
                             if (r.tou_breakdown) {
-                                const dayFinancials = calculateTOUFinancials(r.tou_breakdown, r.date);
-                                ltPeak += dayFinancials.savings.peak || 0;
-                                ltStandard += dayFinancials.savings.standard || 0;
-                                ltOffPeak += dayFinancials.savings.off_peak || 0;
-                                ltTotal += dayFinancials.savings.total || 0;
+                                const df = calculateTOUFinancials(r.tou_breakdown, r.date);
+                                ltSv.peak += df.savings.peak || 0;
+                                ltSv.standard += df.savings.standard || 0;
+                                ltSv.off_peak += df.savings.off_peak || 0;
+                                ltSv.total += df.savings.total || 0;
                             }
                         });
-                    } else {
-                        // Fallback: use aggregate TOU with current rates
-                        const ltFinancials = calculateTOUFinancials(lifetimeData.tou_breakdown, null);
-                        ltPeak = ltFinancials.savings.peak || 0;
-                        ltStandard = ltFinancials.savings.standard || 0;
-                        ltOffPeak = ltFinancials.savings.off_peak || 0;
-                        ltTotal = ltFinancials.savings.total || 0;
                     }
-                    
-                    document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(ltPeak, 0);
-                    document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(ltStandard, 0);
-                    document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(ltOffPeak, 0);
-                    document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(ltTotal, 0);
-                } else {
-                    const lifetimeFinancials = lifetimeData.financial || {};
-                    const lifetimeSavings = lifetimeFinancials.savings || {};
-                    document.getElementById('overview-lifetime-savings-peak').textContent = formatNumber(lifetimeSavings.peak_savings_zar || 0, 0);
-                    document.getElementById('overview-lifetime-savings-standard').textContent = formatNumber(lifetimeSavings.standard_savings_zar || 0, 0);
-                    document.getElementById('overview-lifetime-savings-off-peak').textContent = formatNumber(lifetimeSavings.off_peak_savings_zar || 0, 0);
-                    document.getElementById('overview-lifetime-savings-total').textContent = formatNumber(lifetimeSavings.total_savings_zar || 0, 0);
+                    updateSlabSavings('lifetime', { savings: ltSv });
                 }
                 
                 // ===== ENVIRONMENTAL (use actual data from dashboard_data.json) =====
@@ -3462,9 +3544,13 @@
                 document.getElementById('overview-lifetime-water').textContent = formatNumber(lifetimeEnv.water_saved_litres || 0, 0);
                 
                 // ===== CHARTS =====
-                createOverviewStackedChart('overviewDailyStackedChart', 'Today', dailyGen, dailyGrid, dailyLoad);
-                createOverviewStackedChart('overviewMonthlyStackedChart', 'This Month', monthlyGen, monthlyGrid, monthlyLoad);
-                createOverviewStackedChart('overviewLifetimeStackedChart', 'Lifetime', lifetimeGen, lifetimeGrid, lifetimeLoad);
+                // Slab donut charts (Energy Breakdown)
+                createSlabDonut('slabDonutDaily', dailyGen, dailyGrid);
+                createSlabDonut('slabDonutMonthly', monthlyGen, monthlyGrid);
+                createSlabDonut('slabDonutLifetime', lifetimeGen, lifetimeGrid);
+                
+                // Initialize overview swap chart (hourly by default)
+                drawOverviewHourlyChart(document.getElementById('overviewSwapChart'));
                 
                 console.log('✅ [OVERVIEW] Update complete');
                 
@@ -3587,6 +3673,261 @@
             });
         }
         
+
+        // Mini donut chart for overview slabs
+        let slabDonutCharts = {};
+        function createSlabDonut(canvasId, pvKwh, gridKwh) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            if (slabDonutCharts[canvasId]) slabDonutCharts[canvasId].destroy();
+            
+            const total = pvKwh + gridKwh;
+            const pvPct = total > 0 ? (pvKwh / total * 100).toFixed(1) : 0;
+            const gridPct = total > 0 ? (gridKwh / total * 100).toFixed(1) : 0;
+            
+            slabDonutCharts[canvasId] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Solar PV', 'Grid'],
+                    datasets: [{
+                        data: [pvKwh, gridKwh],
+                        backgroundColor: ['#4ade80', '#ef4444'],
+                        borderWidth: 0,
+                        cutout: '65%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    devicePixelRatio: window.devicePixelRatio * 2 || 4,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            titleFont: { size: 13, weight: 'bold' },
+                            bodyFont: { size: 12 },
+                            padding: 10,
+                            cornerRadius: 8,
+                            borderColor: 'rgba(255,255,255,0.15)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.parsed;
+                                    const pct = total > 0 ? (val / total * 100).toFixed(1) : 0;
+                                    return `${context.label}: ${formatNumber(val, 0)} kWh (${pct}%)`;
+                                },
+                                afterBody: function() {
+                                    return [`Total: ${formatNumber(total, 0)} kWh`];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update slab savings display
+        function updateSlabSavings(prefix, financials) {
+            if (!financials || !financials.savings) return;
+            const s = financials.savings;
+            const setEl = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = formatNumber(val || 0, 0);
+            };
+            setEl('slab-savings-' + prefix, s.total || 0);
+            setEl('slab-sv-' + prefix + '-peak', s.peak || 0);
+            setEl('slab-sv-' + prefix + '-std', s.standard || 0);
+            setEl('slab-sv-' + prefix + '-offpk', s.off_peak || 0);
+        }
+        
+        // Overview swappable chart
+        let overviewSwapChartInstance = null;
+        let overviewChartData = { hourly: null, daily: null, monthly: null };
+        
+        function swapOverviewChart(mode, btn) {
+            // Update button states
+            document.querySelectorAll('.chart-swap-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            
+            const titleEl = document.getElementById('overview-chart-title');
+            const ctx = document.getElementById('overviewSwapChart');
+            if (!ctx) return;
+            if (overviewSwapChartInstance) overviewSwapChartInstance.destroy();
+            
+            if (mode === 'hourly') {
+                titleEl.textContent = 'Hourly Generation Pattern (Today)';
+                drawOverviewHourlyChart(ctx);
+            } else if (mode === 'daily') {
+                titleEl.textContent = 'Daily Generation for Selected Month';
+                drawOverviewDailyChart(ctx);
+            } else if (mode === 'monthly') {
+                titleEl.textContent = 'Monthly Generation Breakdown';
+                drawOverviewMonthlyChart(ctx);
+            }
+        }
+        
+        function drawOverviewHourlyChart(ctx) {
+            if (!dashboardData) return;
+            const today = new Date().toISOString().split('T')[0];
+            const todayRecord = dashboardData.daily_records?.find(r => r.date === today);
+            if (!todayRecord || !todayRecord.hourly_data) return;
+            
+            const labels = todayRecord.hourly_data.map(h => h.time?.substring(0,5) || '');
+            const genData = todayRecord.hourly_data.map(h => h.generation_kw || h.pv_kw || 0);
+            
+            overviewSwapChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Generation (kW)',
+                        data: genData,
+                        borderColor: '#4ade80',
+                        backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    devicePixelRatio: window.devicePixelRatio * 2 || 4,
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8', maxTicksLimit: 8, font: { size: 11 } },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => v + ' kW' },
+                            grid: { color: 'rgba(255,255,255,0.08)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15,23,42,0.95)',
+                            titleColor: '#fff', bodyColor: '#fff',
+                            padding: 10, cornerRadius: 8,
+                            callbacks: {
+                                label: ctx2 => `Generation: ${ctx2.parsed.y.toFixed(2)} kW`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function drawOverviewDailyChart(ctx) {
+            if (!dashboardData || !dashboardData.daily_records) return;
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            const monthRecords = dashboardData.daily_records.filter(r => r.date.startsWith(monthKey)).sort((a,b) => a.date.localeCompare(b.date));
+            
+            const labels = monthRecords.map(r => r.date.substring(8));
+            const genData = monthRecords.map(r => r.generation_kwh || 0);
+            
+            overviewSwapChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Generation (kWh)',
+                        data: genData,
+                        backgroundColor: '#4ade80',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    devicePixelRatio: window.devicePixelRatio * 2 || 4,
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => formatNumber(v,0) },
+                            grid: { color: 'rgba(255,255,255,0.08)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15,23,42,0.95)',
+                            titleColor: '#fff', bodyColor: '#fff',
+                            padding: 10, cornerRadius: 8,
+                            callbacks: {
+                                title: items => monthKey + '-' + items[0].label,
+                                label: ctx2 => `Generation: ${formatNumber(ctx2.parsed.y, 0)} kWh`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function drawOverviewMonthlyChart(ctx) {
+            if (!dashboardData || !dashboardData.daily_records) return;
+            
+            // Aggregate by month
+            const monthlyData = {};
+            dashboardData.daily_records.forEach(r => {
+                const ym = r.date.substring(0,7);
+                if (!monthlyData[ym]) monthlyData[ym] = 0;
+                monthlyData[ym] += r.generation_kwh || 0;
+            });
+            
+            const sorted = Object.keys(monthlyData).sort();
+            const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const labels = sorted.map(ym => {
+                const [y, m] = ym.split('-');
+                return monthNames[parseInt(m)-1] + ' ' + y.substring(2);
+            });
+            const genData = sorted.map(ym => monthlyData[ym]);
+            
+            overviewSwapChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Generation (kWh)',
+                        data: genData,
+                        backgroundColor: '#4ade80',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    devicePixelRatio: window.devicePixelRatio * 2 || 4,
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => { if (v >= 1000) return (v/1000).toFixed(0) + 'k'; return v; } },
+                            grid: { color: 'rgba(255,255,255,0.08)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15,23,42,0.95)',
+                            titleColor: '#fff', bodyColor: '#fff',
+                            padding: 10, cornerRadius: 8,
+                            callbacks: {
+                                label: ctx2 => `Generation: ${formatNumber(ctx2.parsed.y, 0)} kWh`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         function formatNumber(num, decimals = 0) {
             const fixed = Number(num).toFixed(decimals);
             const parts = fixed.split('.');
@@ -3595,7 +3936,23 @@
         }
         
         function formatKwh(num, decimals = 0) {
-            return formatNumber(num, decimals) + ' kWh';
+            return formatNumber(num, decimals) + ' <span class="val-unit">kWh</span>';
+        }
+        
+        // Global helper to set target status (Ahead/Behind)
+        function setTargetStatus(elementId, actual, expected) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            if (expected <= 0) { el.textContent = ''; return; }
+            const diff = actual - expected;
+            const absDiff = Math.abs(diff);
+            if (diff >= 0) {
+                el.innerHTML = `▲ <span style="color: #4ade80;">${formatNumber(absDiff, 0)} kWh Ahead of Target</span>`;
+                el.style.color = '#4ade80';
+            } else {
+                el.innerHTML = `▼ <span style="color: #ef4444;">${formatNumber(absDiff, 0)} kWh Behind Target</span>`;
+                el.style.color = '#ef4444';
+            }
         }
         
         // ============================================
@@ -6473,7 +6830,7 @@ function continueUpdateDailyView(data, selectedDate, dailyRecord, pvData, predic
     totalPredicted = 0;
     
     // Display will be updated in finishDailyViewUpdate after calculating expected values
-    document.getElementById('daily-gen').textContent = formatKwh(totalGeneration);
+    document.getElementById('daily-gen').innerHTML = formatKwh(totalGeneration);
     
     // ALWAYS calculate ACTUAL Load/Grid from real data
     const actualLoadData = data.map(d => d.load_kw || 0);
@@ -6583,6 +6940,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
                 const genPerf = document.getElementById('daily-gen-perf');
                 genPerf.textContent = `${performance.toFixed(1)}% of expected`;
                 genPerf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
+                setTargetStatus('daily-gen-target-status', totalGeneration, totalPredicted);
                 
                 console.log(`✅ Expected values (monthly avg pattern, ${hoursToSum} hours):`);
                 console.log(`   PV=${totalPredicted.toFixed(2)}, Load=${expectedLoad.toFixed(2)}, Grid=${expectedGrid.toFixed(2)}, Coverage=${expectedPVCoverage.toFixed(1)}%`);
@@ -6598,14 +6956,14 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
             const pvCoveragePerf = expectedPVCoverage > 0 ? ((pvCoverage / expectedPVCoverage) * 100) : 0;
             
             // Update Load display
-            document.getElementById('daily-load').textContent = formatKwh(totalLoad);
+            document.getElementById('daily-load').innerHTML = formatKwh(totalLoad);
             document.getElementById('daily-load-expected').textContent = formatNumber(expectedLoad);
             const loadPerfEl = document.getElementById('daily-load-perf');
             loadPerfEl.textContent = `${loadPerf.toFixed(1)}% of expected`;
             loadPerfEl.className = 'performance ' + (loadPerf >= 95 && loadPerf <= 105 ? 'positive' : 'negative');
             
             // Update Grid display
-            document.getElementById('daily-grid').textContent = formatKwh(totalGrid);
+            document.getElementById('daily-grid').innerHTML = formatKwh(totalGrid);
             document.getElementById('daily-grid-expected').textContent = formatNumber(expectedGrid);
             const gridPerfEl = document.getElementById('daily-grid-perf');
             gridPerfEl.textContent = `${gridPerf.toFixed(1)}% of expected`;
@@ -6670,7 +7028,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
             genPerf.className = 'performance ' + (performance >= 100 ? 'positive' : 'negative');
             
             // Update Load display
-            document.getElementById('daily-load').textContent = formatKwh(totalLoad);
+            document.getElementById('daily-load').innerHTML = formatKwh(totalLoad);
             document.getElementById('daily-load-expected').textContent = formatNumber(expectedLoad);
             const loadPerfEl = document.getElementById('daily-load-perf');
             if (loadPerfEl) {
@@ -6679,7 +7037,7 @@ function finishDailyViewUpdate(totalLoad, totalGrid, loadData, gridData, totalGe
             }
             
             // Update Grid display
-            document.getElementById('daily-grid').textContent = formatKwh(totalGrid);
+            document.getElementById('daily-grid').innerHTML = formatKwh(totalGrid);
             document.getElementById('daily-grid-expected').textContent = formatNumber(expectedGrid);
             const gridPerfEl = document.getElementById('daily-grid-perf');
             if (gridPerfEl) {
@@ -7376,16 +7734,17 @@ async function loadMonthlyData() {
         // Target progress: performance for days with data
         const targetProgress = expectedForDaysWithData > 0 ? ((monthlyGen / expectedForDaysWithData) * 100).toFixed(1) : 0;
         
-        document.getElementById('monthly-gen').textContent = formatKwh(monthlyGen);
+        document.getElementById('monthly-gen').innerHTML = formatKwh(monthlyGen);
         document.getElementById('monthly-expected').textContent = formatNumber(expectedForDaysWithData);  // MTD not full month
         document.getElementById('monthly-days-count').textContent = daysWithData;
-        document.getElementById('monthly-target-perf').textContent = formatNumber(targetProgress);
+        document.getElementById('monthly-target-perf').innerHTML = formatNumber(targetProgress) + '<span class="val-unit">%</span>';
         document.getElementById('monthly-actual-gen').textContent = monthlyGen.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         document.getElementById('monthly-target-gen').textContent = expectedForDaysWithData.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         
         const perfEl = document.getElementById('monthly-perf');
         perfEl.textContent = `${targetProgress}% of expected`;  // Use MTD performance
         perfEl.className = 'performance ' + (targetProgress >= 100 ? 'positive' : 'negative');
+        setTargetStatus('monthly-gen-target-status', monthlyGen, expectedForDaysWithData);
         
         const targetPerfEl = document.querySelector('#monthly-target-perf').parentElement.querySelector('.performance');
         if (!targetPerfEl) {
@@ -7451,7 +7810,7 @@ async function loadMonthlyData() {
         const pvCoveragePerf = expectedPVCoverage > 0 ? ((actualPVCoverage / expectedPVCoverage) * 100) : 0;
         
         // Update Load display
-        document.getElementById('monthly-load').textContent = formatKwh(actualLoad);
+        document.getElementById('monthly-load').innerHTML = formatKwh(actualLoad);
         document.getElementById('monthly-load-expected').textContent = formatNumber(expectedLoad);
         const monthlyLoadPerfEl = document.getElementById('monthly-load-perf');
         if (monthlyLoadPerfEl) {
@@ -7460,7 +7819,7 @@ async function loadMonthlyData() {
         }
         
         // Update Grid display
-        document.getElementById('monthly-grid').textContent = formatKwh(actualGrid);
+        document.getElementById('monthly-grid').innerHTML = formatKwh(actualGrid);
         document.getElementById('monthly-grid-expected').textContent = formatNumber(expectedGrid);
         const monthlyGridPerfEl = document.getElementById('monthly-grid-perf');
         if (monthlyGridPerfEl) {
@@ -7469,7 +7828,7 @@ async function loadMonthlyData() {
         }
         
         // Update PV Coverage display
-        document.getElementById('monthly-coverage').textContent = actualPVCoverage.toFixed(1) + '%';
+        document.getElementById('monthly-coverage').innerHTML = actualPVCoverage.toFixed(1) + '<span class="val-unit">%</span>';
         document.getElementById('monthly-coverage-expected').textContent = expectedPVCoverage.toFixed(1);
         const monthlyCoveragePerfEl = document.getElementById('monthly-coverage-perf');
         if (monthlyCoveragePerfEl) {
@@ -8419,7 +8778,7 @@ async function loadLifetimeMonthlyBreakdown() {
         const coveragePerf = expectedLifetimeCoverage > 0 ? ((parseFloat(lifetimeCoverage) / parseFloat(expectedLifetimeCoverage)) * 100) : 0;
         
         // Update Load display
-        document.getElementById('lifetime-load').textContent = formatNumber(actualTotalLoad);
+        document.getElementById('lifetime-load').innerHTML = formatKwh(actualTotalLoad);
         document.getElementById('lifetime-load-expected').textContent = formatNumber(expectedTotalLoad);
         const lifetimeLoadPerfEl = document.getElementById('lifetime-load-perf');
         if (lifetimeLoadPerfEl) {
@@ -8428,7 +8787,7 @@ async function loadLifetimeMonthlyBreakdown() {
         }
         
         // Update Grid display
-        document.getElementById('lifetime-grid').textContent = formatNumber(actualTotalGrid);
+        document.getElementById('lifetime-grid').innerHTML = formatKwh(actualTotalGrid);
         document.getElementById('lifetime-grid-expected').textContent = formatNumber(expectedTotalGrid);
         const lifetimeGridPerfEl = document.getElementById('lifetime-grid-perf');
         if (lifetimeGridPerfEl) {
@@ -8437,7 +8796,7 @@ async function loadLifetimeMonthlyBreakdown() {
         }
         
         // Update PV Coverage display
-        document.getElementById('lifetime-coverage').textContent = lifetimeCoverage + '%';
+        document.getElementById('lifetime-coverage').innerHTML = lifetimeCoverage + '<span class="val-unit">%</span>';
         document.getElementById('lifetime-coverage-expected').textContent = expectedLifetimeCoverage;
         const lifetimeCoveragePerfEl = document.getElementById('lifetime-coverage-perf');
         if (lifetimeCoveragePerfEl) {
@@ -8446,15 +8805,16 @@ async function loadLifetimeMonthlyBreakdown() {
         }
         
         // Update Generation display
-        document.getElementById('lifetime-gen').textContent = formatKwh(totalGeneration);
+        document.getElementById('lifetime-gen').innerHTML = formatKwh(totalGeneration);
         document.getElementById('lifetime-gen-expected').textContent = formatNumber(totalExpected);
         const lifetimeGenPerfEl = document.getElementById('lifetime-gen-perf');
         if (lifetimeGenPerfEl) {
             lifetimeGenPerfEl.textContent = `${lifetimePerformance}% of expected`;
             lifetimeGenPerfEl.className = 'performance ' + (lifetimePerformance >= 100 ? 'positive' : 'negative');
         }
+        setTargetStatus('lifetime-gen-target-status', totalGeneration, totalExpected);
         
-        document.getElementById('lifetime-perf').textContent = formatNumber(lifetimePerformance);
+        document.getElementById('lifetime-perf').innerHTML = formatNumber(lifetimePerformance) + '<span class="val-unit">%</span>';
         document.getElementById('lifetime-perf-diff').textContent = formatNumber(Math.abs(lifetimeDifference));
         document.getElementById('lifetime-perf-status').textContent = lifetimeStatus;
         
@@ -9341,7 +9701,7 @@ async function loadPast30Days() {
         const totalGen = recentRecords.reduce((sum, day) => sum + day.generation_kwh, 0);
         
         // Clear the monthly stats cards
-        document.getElementById('monthly-gen').textContent = formatKwh(totalGen);
+        document.getElementById('monthly-gen').innerHTML = formatKwh(totalGen);
         document.getElementById('monthly-expected').textContent = '--';
         document.getElementById('monthly-days-count').textContent = recentRecords.length;
         document.getElementById('monthly-target-perf').textContent = '--';
