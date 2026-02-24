@@ -14945,8 +14945,8 @@
     {
       "date": "2026-02-24",
       "generation_kwh": 0.0,
-      "actual_load_kwh": 77.71,
-      "actual_grid_kwh": 77.71,
+      "actual_load_kwh": 173.59,
+      "actual_grid_kwh": 173.59,
       "hourly_data": [
         {
           "time": "06:00",
@@ -14958,9 +14958,16 @@
         {
           "time": "07:00",
           "generation_kw": 0.0,
-          "grid_kw": 7.013,
-          "load_kw": 7.013,
-          "intervals": 1
+          "grid_kw": 84.02,
+          "load_kw": 84.02,
+          "intervals": 12
+        },
+        {
+          "time": "08:00",
+          "generation_kw": 0.0,
+          "grid_kw": 18.88,
+          "load_kw": 18.88,
+          "intervals": 3
         }
       ],
       "tou_breakdown": {
