@@ -167,22 +167,62 @@ def scrape_solar_data():
                 human_delay(6, 9)
                 random_mouse_movement(page)
                 
-                # Click login
+                # Click login - try multiple selectors
                 print("🔐 Logging in...")
-                page.get_by_role("button", name="Login").click()
+                login_clicked = False
+                login_selectors = [
+                    'button[name="Login"]',
+                    'button:has-text("Login")',
+                    'button:has-text("Log In")',
+                    'button[type="submit"]',
+                    '.login-btn',
+                    '.login-button'
+                ]
                 
-                # Wait for navigation
+                for selector in login_selectors:
+                    try:
+                        login_btn = page.locator(selector).first
+                        if login_btn.is_visible(timeout=2000):
+                            login_btn.click()
+                            login_clicked = True
+                            print(f"  ✅ Clicked login using: {selector}")
+                            break
+                    except:
+                        continue
+                
+                if not login_clicked:
+                    # Fallback to original method
+                    try:
+                        page.get_by_role("button", name="Login").click()
+                        login_clicked = True
+                    except:
+                        page.screenshot(path="data/debug_no_login_btn.png")
+                        raise Exception("❌ Could not find login button")
+                
+                # Wait for URL to change (not just time delay)
                 print("⏳ Waiting for redirect...")
                 try:
-                    page.wait_for_url("**/station**", timeout=30000)
+                    page.wait_for_url(lambda url: "login" not in url, timeout=15000)
+                    print(f"  ✅ Redirected to: {page.url}")
                 except:
-                    # Check if we're stuck on login
-                    if "login" in page.url:
-                        page.screenshot(path="data/debug_login_failed.png")
-                        raise Exception("Login failed - still on login page. Check for captcha or wrong credentials.")
+                    current_url = page.url
+                    print(f"  ❌ Still on login page: {current_url}")
+                    
+                    # Check for error messages on page
+                    try:
+                        error_selectors = ['.error', '.alert', '[class*="error"]', '.message']
+                        for sel in error_selectors:
+                            errors = page.locator(sel).all_text_contents()
+                            if errors:
+                                print(f"  🔴 Error messages: {errors}")
+                    except:
+                        pass
+                    
+                    page.screenshot(path="data/debug_login_failed.png")
+                    raise Exception("Login failed - check credentials, CAPTCHA, or site changes")
                 
                 page.wait_for_load_state("networkidle", timeout=60000)
-                human_delay(7, 10)
+                human_delay(5, 7)
             
             # At this point we should be on the station page
             print(f"📍 Current URL: {page.url}")
