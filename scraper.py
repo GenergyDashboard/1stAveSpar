@@ -133,12 +133,45 @@ def scrape_solar_data():
                 human_delay(3, 6)
                 random_mouse_movement(page)
                 
-                # FIRST: Force check privacy policy BEFORE entering credentials
+                # Fill username
+                print("👤 Entering username...")
+                username_field = page.get_by_role("textbox", name="Username/Email")
+                username_field.click()
+                human_delay(0.5, 1)
+                
+                # CLEAR any existing content first
+                username_field.fill("")
+                human_delay(0.5, 1)
+                
+                # Type username character by character
+                for char in username:
+                    username_field.type(char, delay=random.randint(50, 150))
+                
+                human_delay(5, 8)
+                random_mouse_movement(page)
+                
+                # Fill password
+                print("🔑 Entering password...")
+                password_field = page.get_by_role("textbox", name="Password")
+                password_field.click()
+                human_delay(0.5, 1)
+                
+                # CLEAR any existing content first
+                password_field.fill("")
+                human_delay(0.5, 1)
+                
+                # Type password character by character
+                for char in password:
+                    password_field.type(char, delay=random.randint(50, 150))
+                
+                human_delay(5, 8)
+                random_mouse_movement(page)
+                
+                # Force check privacy policy checkbox RIGHT BEFORE login
                 print("✅ Forcing privacy policy checkbox...")
                 try:
                     page.wait_for_selector('.el-checkbox', timeout=5000)
                     
-                    # Use JavaScript to force-check the checkbox
                     result = page.evaluate("""
                         () => {
                             const checkbox = document.querySelector('.el-checkbox__original');
@@ -161,60 +194,15 @@ def scrape_solar_data():
                     """)
                     
                     if result.get('success'):
-                        print(f"  ✅ Privacy checkbox forced: {result}")
+                        print(f"  ✅ Privacy checkbox checked: {result}")
                     else:
-                        print(f"  ⚠️ Checkbox forcing failed: {result}")
+                        print(f"  ⚠️ Checkbox check failed: {result}")
                         
                 except Exception as e:
-                    print(f"  ⚠️ JavaScript method failed: {e}")
+                    print(f"  ⚠️ Checkbox error: {e}")
                 
                 human_delay(2, 3)
                 random_mouse_movement(page)
-                
-                # Fill username
-                print("👤 Entering username...")
-                username_field = page.get_by_role("textbox", name="Username/Email")
-                username_field.click()
-                human_delay(1, 2)
-                
-                for char in username:
-                    username_field.type(char, delay=random.randint(50, 150))
-                
-                human_delay(5, 8)
-                random_mouse_movement(page)
-                
-                # Fill password
-                print("🔑 Entering password...")
-                password_field = page.get_by_role("textbox", name="Password")
-                password_field.click()
-                human_delay(1, 2)
-                
-                for char in password:
-                    password_field.type(char, delay=random.randint(50, 150))
-                
-                human_delay(5, 8)
-                random_mouse_movement(page)
-                
-                # Double-check checkbox right before login
-                print("🔍 Verifying checkbox before login...")
-                try:
-                    page.evaluate("""
-                        () => {
-                            const checkbox = document.querySelector('.el-checkbox__original');
-                            const label = document.querySelector('.el-checkbox');
-                            const span = document.querySelector('.el-checkbox__input');
-                            
-                            if (checkbox && !checkbox.checked) {
-                                checkbox.checked = true;
-                                label.classList.add('is-checked');
-                                span.classList.add('is-checked');
-                            }
-                        }
-                    """)
-                except:
-                    pass
-                
-                human_delay(1, 2)
                 
                 # Click login
                 print("🔐 Logging in...")
@@ -224,11 +212,25 @@ def scrape_solar_data():
                 print("⏳ Waiting for redirect...")
                 try:
                     page.wait_for_url("**/station**", timeout=30000)
+                    print(f"  ✅ Redirected to: {page.url}")
                 except:
                     # Check if we're stuck on login
-                    if "login" in page.url:
+                    current_url = page.url
+                    if "login" in current_url:
+                        print(f"  ❌ Still on login page: {current_url}")
+                        
+                        # Check for privacy popup
+                        try:
+                            popup_visible = page.locator('text=Please read and agree').is_visible(timeout=2000)
+                            if popup_visible:
+                                print("  🔴 Privacy policy popup visible - checkbox didn't work")
+                        except:
+                            pass
+                        
                         page.screenshot(path="data/debug_login_failed.png")
-                        raise Exception("Login failed - still on login page. Check for captcha or wrong credentials.")
+                        raise Exception("Login failed - still on login page. Privacy checkbox or credentials issue.")
+                    else:
+                        print(f"  ⚠️ Unexpected URL: {current_url}")
                 
                 page.wait_for_load_state("networkidle", timeout=60000)
                 human_delay(7, 10)
