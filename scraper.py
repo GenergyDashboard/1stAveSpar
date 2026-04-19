@@ -82,62 +82,86 @@ def clear_and_type(page, locator, value, label="field"):
 
 def click_privacy_checkbox(page):
     """
-    Click the Element-UI privacy checkbox properly so Vue's reactive state updates.
-    Tries multiple selectors and verifies the checkbox is actually checked.
+    Click the Element-UI PRIVACY POLICY checkbox specifically (not the
+    'Remember' checkbox above it). Targets by label text so we can't pick
+    the wrong checkbox, then verifies that specific checkbox is checked.
     """
     print("✅ Clicking privacy policy checkbox...")
 
-    # Strategy 1: Click the visible checkbox inner span (Element-UI's clickable target)
-    selectors_to_try = [
-        '.el-checkbox__inner',
-        '.el-checkbox__label',
-        'label.el-checkbox',
-        '.el-checkbox',
-        'text=I have read and agree',
+    # Target the specific checkbox by its label text — Element-UI wraps the
+    # whole checkbox + label in a single <label class="el-checkbox">
+    privacy_checkbox = page.locator(
+        'label.el-checkbox:has-text("I have read and agree")'
+    ).first
+
+    try:
+        privacy_checkbox.wait_for(state="visible", timeout=10000)
+    except Exception as e:
+        print(f"  ❌ Could not find privacy checkbox: {e}")
+        return False
+
+    # Try clicking the inner span first (the actual visible square),
+    # then fall back to clicking the label itself if needed
+    click_targets = [
+        ("inner span", privacy_checkbox.locator('.el-checkbox__inner')),
+        ("label text", privacy_checkbox.locator('.el-checkbox__label')),
+        ("whole label", privacy_checkbox),
     ]
 
-    for selector in selectors_to_try:
+    for name, target in click_targets:
         try:
-            element = page.locator(selector).first
-            if element.is_visible(timeout=2000):
-                element.click(timeout=3000)
-                human_delay(1, 2)
+            target.click(timeout=3000)
+            human_delay(1, 2)
 
-                # Verify Vue actually updated the state by checking for is-checked class
-                checked_count = page.locator('.el-checkbox.is-checked').count()
-                if checked_count > 0:
-                    print(f"  ✅ Checkbox checked via selector: {selector}")
-                    return True
-                else:
-                    print(f"  ↻ Selector {selector} clicked but not checked, trying next")
+            # Verify THIS specific checkbox is checked (not just any checkbox)
+            is_checked = privacy_checkbox.evaluate(
+                "el => el.classList.contains('is-checked')"
+            )
+            if is_checked:
+                print(f"  ✅ Privacy checkbox checked via {name}")
+                return True
+            else:
+                print(f"  ↻ Clicked {name} but privacy still unchecked")
         except Exception as e:
-            print(f"  ↻ Selector {selector} failed: {str(e)[:60]}")
+            print(f"  ↻ {name} click failed: {str(e)[:60]}")
             continue
 
-    # Strategy 2: Last-resort JS click on the underlying input + dispatch proper events
-    print("  ↻ Falling back to JS click...")
+    # Last resort: dispatch click on the .el-checkbox__inner via JS,
+    # scoped to the privacy checkbox specifically
+    print("  ↻ Falling back to scoped JS click...")
     try:
-        result = page.evaluate("""
-            () => {
-                const inner = document.querySelector('.el-checkbox__inner');
+        result = privacy_checkbox.evaluate("""
+            label => {
+                const inner = label.querySelector('.el-checkbox__inner');
                 if (inner) {
                     inner.click();
-                    return { method: 'js-inner-click', success: true };
+                    return { clicked: true };
                 }
-                return { method: 'none', success: false };
+                return { clicked: false };
             }
         """)
         human_delay(1, 2)
 
-        checked_count = page.locator('.el-checkbox.is-checked').count()
-        if checked_count > 0:
-            print(f"  ✅ Checkbox checked via JS: {result}")
+        is_checked = privacy_checkbox.evaluate(
+            "el => el.classList.contains('is-checked')"
+        )
+        if is_checked:
+            print(f"  ✅ Privacy checkbox checked via JS: {result}")
             return True
     except Exception as e:
         print(f"  ⚠️ JS fallback failed: {e}")
 
     print("  ❌ Could not check privacy checkbox")
     return False
+
+
+def get_checkbox_state(page, label_text):
+    """Read the is-checked class from a specific Element-UI checkbox by label text"""
+    try:
+        cb = page.locator(f'label.el-checkbox:has-text("{label_text}")').first
+        return cb.evaluate("el => el.classList.contains('is-checked')")
+    except Exception:
+        return None
 
 
 def scrape_solar_data():
@@ -301,9 +325,19 @@ def scrape_solar_data():
                         if error_msgs:
                             print(f"  🔴 On-page messages: {error_msgs}")
 
-                        # Check checkbox state at moment of failure
-                        is_checked = page.locator('.el-checkbox.is-checked').count() > 0
-                        print(f"  📋 Privacy checkbox state at failure: {'checked' if is_checked else 'UNCHECKED'}")
+                        # Check the SPECIFIC privacy checkbox state at moment of failure
+                        privacy_checked = get_checkbox_state(page, "I have read and agree")
+                        if privacy_checked is None:
+                            print(f"  📋 Privacy checkbox: could not read state")
+                        else:
+                            mark = "checked ✅" if privacy_checked else "UNCHECKED ❌"
+                            print(f"  📋 Privacy checkbox: {mark}")
+
+                        # Also check the Remember checkbox so we know if we hit the wrong one
+                        remember_checked = get_checkbox_state(page, "Remember")
+                        if remember_checked is not None:
+                            mark = "checked" if remember_checked else "unchecked"
+                            print(f"  📋 Remember checkbox: {mark}")
 
                         # Capture username field value for diagnostics
                         try:
