@@ -133,30 +133,19 @@ def scrape_solar_data():
                 human_delay(3, 6)
                 random_mouse_movement(page)
                 
-                # FORCE CHECK privacy policy checkbox using JavaScript
+                # FIRST: Force check privacy policy BEFORE entering credentials
                 print("✅ Forcing privacy policy checkbox...")
                 try:
-                    # Wait for checkbox to be present
                     page.wait_for_selector('.el-checkbox', timeout=5000)
                     
-                    # Use JavaScript to directly manipulate the checkbox state
+                    # Use JavaScript to force-check the checkbox
                     result = page.evaluate("""
                         () => {
                             const checkbox = document.querySelector('.el-checkbox__original');
                             const label = document.querySelector('.el-checkbox');
                             const span = document.querySelector('.el-checkbox__input');
                             
-                            if (!checkbox || !label || !span) {
-                                return { success: false, reason: 'Elements not found' };
-                            }
-                            
-                            // Method 1: Try clicking the actual input
-                            if (!checkbox.checked) {
-                                checkbox.click();
-                            }
-                            
-                            // Method 2: Force the state if click didn't work
-                            if (!checkbox.checked) {
+                            if (checkbox && label && span) {
                                 checkbox.checked = true;
                                 label.classList.add('is-checked');
                                 span.classList.add('is-checked');
@@ -164,28 +153,20 @@ def scrape_solar_data():
                                 // Trigger change event
                                 const event = new Event('change', { bubbles: true });
                                 checkbox.dispatchEvent(event);
+                                
+                                return { success: true, checked: checkbox.checked };
                             }
-                            
-                            return {
-                                success: checkbox.checked,
-                                hasCheckedClass: label.classList.contains('is-checked')
-                            };
+                            return { success: false, reason: 'Elements not found' };
                         }
                     """)
                     
                     if result.get('success'):
-                        print(f"  ✅ Privacy checkbox checked (checked={result['success']}, class={result['hasCheckedClass']})")
+                        print(f"  ✅ Privacy checkbox forced: {result}")
                     else:
-                        print(f"  ⚠️ Checkbox check uncertain: {result}")
+                        print(f"  ⚠️ Checkbox forcing failed: {result}")
                         
                 except Exception as e:
                     print(f"  ⚠️ JavaScript method failed: {e}")
-                    print("  Trying fallback click...")
-                    try:
-                        page.locator('.el-checkbox').first.click()
-                        print("  ✅ Clicked checkbox with fallback")
-                    except:
-                        print("  ❌ All checkbox methods failed - login may fail")
                 
                 human_delay(2, 3)
                 random_mouse_movement(page)
@@ -214,8 +195,8 @@ def scrape_solar_data():
                 human_delay(5, 8)
                 random_mouse_movement(page)
                 
-                # Double-check privacy checkbox one more time before clicking login
-                print("🔍 Verifying privacy checkbox before login...")
+                # Double-check checkbox right before login
+                print("🔍 Verifying checkbox before login...")
                 try:
                     page.evaluate("""
                         () => {
@@ -230,79 +211,27 @@ def scrape_solar_data():
                             }
                         }
                     """)
-                    print("  ✅ Checkbox verified")
                 except:
-                    print("  ⚠️ Could not verify checkbox")
+                    pass
                 
                 human_delay(1, 2)
                 
-                # Click login - try multiple selectors
+                # Click login
                 print("🔐 Logging in...")
-                login_clicked = False
-                login_selectors = [
-                    'button:has-text("Login")',
-                    'button:has-text("Log In")',
-                    'button[type="submit"]',
-                    '.login-btn',
-                    'button.el-button--primary'
-                ]
+                page.get_by_role("button", name="Login").click()
                 
-                for selector in login_selectors:
-                    try:
-                        login_btn = page.locator(selector).first
-                        if login_btn.is_visible(timeout=2000):
-                            login_btn.click()
-                            login_clicked = True
-                            print(f"  ✅ Clicked login using: {selector}")
-                            break
-                    except:
-                        continue
-                
-                if not login_clicked:
-                    try:
-                        page.get_by_role("button", name="Login").click()
-                        login_clicked = True
-                    except:
-                        page.screenshot(path="data/debug_no_login_btn.png")
-                        raise Exception("❌ Could not find login button")
-                
-                # Wait for URL to change
+                # Wait for navigation
                 print("⏳ Waiting for redirect...")
                 try:
-                    page.wait_for_url(lambda url: "login" not in url, timeout=20000)
-                    print(f"  ✅ Redirected to: {page.url}")
+                    page.wait_for_url("**/station**", timeout=30000)
                 except:
-                    current_url = page.url
-                    print(f"  ❌ Still on login page: {current_url}")
-                    
-                    # Check for error popup
-                    try:
-                        popup_visible = page.locator('text=Please read and agree').is_visible(timeout=2000)
-                        if popup_visible:
-                            print("  🔴 Privacy policy popup still showing - checkbox didn't work")
-                    except:
-                        pass
-                    
-                    # Check for other errors
-                    try:
-                        error_selectors = ['.el-message--error', '.error', '.alert']
-                        for sel in error_selectors:
-                            errors = page.locator(sel).all_text_contents()
-                            if errors:
-                                print(f"  🔴 Error messages: {errors}")
-                    except:
-                        pass
-                    
-                    # Save screenshot
-                    screenshot_path = "data/debug_login_failed.png"
-                    page.screenshot(path=screenshot_path)
-                    file_size = os.path.getsize(screenshot_path) / 1024
-                    print(f"  📸 Screenshot saved: {screenshot_path} ({file_size:.1f} KB)")
-                    
-                    raise Exception("Login failed — privacy checkbox, credentials, or CAPTCHA")
+                    # Check if we're stuck on login
+                    if "login" in page.url:
+                        page.screenshot(path="data/debug_login_failed.png")
+                        raise Exception("Login failed - still on login page. Check for captcha or wrong credentials.")
                 
                 page.wait_for_load_state("networkidle", timeout=60000)
-                human_delay(5, 7)
+                human_delay(7, 10)
             
             # At this point we should be on the station page
             print(f"📍 Current URL: {page.url}")
@@ -401,10 +330,8 @@ def scrape_solar_data():
             print(f"📍 Last known URL: {page.url if page else 'unknown'}")
             
             try:
-                screenshot_path = "data/debug_error.png"
-                page.screenshot(path=screenshot_path)
-                file_size = os.path.getsize(screenshot_path) / 1024
-                print(f"  📸 Screenshot saved: {screenshot_path} ({file_size:.1f} KB)")
+                page.screenshot(path="data/debug_error.png")
+                print("📸 Error screenshot saved")
             except:
                 pass
             
