@@ -8,14 +8,14 @@ from playwright.sync_api import sync_playwright
 
 
 def human_delay(min_seconds=5, max_seconds=10):
-    """Random delay to mimic human behavior"""
+    """Random delay between actions."""
     delay = random.uniform(min_seconds, max_seconds)
     print(f"  Waiting {delay:.1f} seconds...")
     time.sleep(delay)
 
 
 def random_mouse_movement(page):
-    """Simulate natural mouse movement"""
+    """Move mouse to a random viewport position."""
     try:
         viewport_size = page.viewport_size
         if viewport_size:
@@ -27,7 +27,7 @@ def random_mouse_movement(page):
 
 
 def save_debug_screenshot(page, path):
-    """Take a screenshot and loudly confirm the file was actually written."""
+    """Screenshot to path and log whether the file was actually written."""
     try:
         page.screenshot(path=path, full_page=True)
         if os.path.exists(path):
@@ -42,10 +42,7 @@ def save_debug_screenshot(page, path):
 
 
 def detect_captcha(page):
-    """
-    Return a list of CAPTCHA frameworks detected on the page.
-    Empty list means no CAPTCHA widget was found.
-    """
+    """Return list of CAPTCHA frameworks visible on the page."""
     probes = {
         'Cloudflare Turnstile (iframe)': 'iframe[src*="turnstile"]',
         'Cloudflare Turnstile (div)': '.cf-turnstile',
@@ -53,8 +50,8 @@ def detect_captcha(page):
         'reCAPTCHA (div)': '.g-recaptcha',
         'hCaptcha (iframe)': 'iframe[src*="hcaptcha"]',
         'hCaptcha (div)': '.h-captcha',
-        'Slider CAPTCHA (generic)': '[class*="slider-captcha"], [class*="slide-verify"], [class*="verify-slider"]',
-        'Cloudflare challenge page': '#challenge-form, #cf-challenge-running',
+        'Slider CAPTCHA': '[class*="slider-captcha"], [class*="slide-verify"], [class*="verify-slider"]',
+        'Cloudflare challenge': '#challenge-form, #cf-challenge-running',
     }
     hits = []
     for label, selector in probes.items():
@@ -67,16 +64,10 @@ def detect_captcha(page):
 
 
 def accept_privacy_policy(page):
-    """
-    Click the 'I have agreed Privacy Policy' checkbox. Returns True on success.
-    This used to swallow any exception and print 'already accepted' — which
-    lied to us when selectors changed. Now it tries several selectors and
-    fails loudly if none work.
-    """
+    """Tick the 'I have agreed Privacy Policy' checkbox. Returns True on success."""
     print("✅ Accepting privacy policy...")
 
-    # Quick check: is the checkbox already ticked? Element UI toggles
-    # an 'is-checked' class on the wrapping label when active.
+    # Element UI toggles is-checked on the label wrapper when active
     try:
         already = page.locator('label.el-checkbox.is-checked, .el-checkbox.is-checked').count()
         if already > 0:
@@ -86,16 +77,12 @@ def accept_privacy_policy(page):
         pass
 
     selectors = [
-        # Original selector from the working script
-        ('original regex', lambda: page.locator("div").filter(
+        ('text regex', lambda: page.locator("div").filter(
             has_text=re.compile(r"^I have agreedPrivacy Policy$")
         ).locator("span").nth(1)),
-        # Element UI default checkbox inner
         ('el-checkbox__inner', lambda: page.locator('span.el-checkbox__inner').first),
-        # Any checkbox near the 'Privacy Policy' text
         ('generic checkbox', lambda: page.locator('input[type="checkbox"]').first),
-        # Label containing the text
-        ('label text match', lambda: page.get_by_text("I have agreed", exact=False).first),
+        ('label text', lambda: page.get_by_text("I have agreed", exact=False).first),
     ]
 
     for label, locator_fn in selectors:
@@ -109,15 +96,12 @@ def accept_privacy_policy(page):
             print(f"  · selector '{label}' did not match ({type(e).__name__})")
             continue
 
-    print("  ❌ Could not find the privacy policy checkbox with any known selector")
+    print("  ❌ Could not find the privacy policy checkbox")
     return False
 
 
 def scrape_solar_data():
-    """
-    Scrape solar generation data from Soliscloud with human-like behavior.
-    Targets the '1st Ave Spar' plant.
-    """
+    """Scrape 1st Ave Spar solar data from SolisCloud."""
 
     username = os.environ.get('SOLIS_USERNAME')
     password = os.environ.get('SOLIS_PASSWORD')
@@ -130,7 +114,6 @@ def scrape_solar_data():
     os.makedirs('data', exist_ok=True)
     os.makedirs('data/daily', exist_ok=True)
 
-    # Check if we have saved auth state in repository
     use_auth_state = False
     auth_state_file = 'data/auth_state_encoded.txt'
 
@@ -167,9 +150,6 @@ def scrape_solar_data():
             ]
         )
 
-        # Context fingerprint — aligned to ZA to match the account's expected
-        # region. Prior mismatch (America/New_York + en-US) on a South African
-        # account from datacenter IPs is a bot signal.
         context_kwargs = {
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                           'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -213,7 +193,6 @@ def scrape_solar_data():
                     print("✅ Session still valid, skipping login")
 
             if not use_auth_state:
-                # Normal login process
                 print("📱 Navigating to login page...")
                 page.goto("https://www.soliscloud.com/login?redirect=/station",
                           wait_until="networkidle",
@@ -222,15 +201,12 @@ def scrape_solar_data():
                 human_delay(3, 6)
                 random_mouse_movement(page)
 
-                # Pre-login CAPTCHA check — catches Cloudflare challenge pages
-                # that block the login form from ever rendering.
                 pre_hits = detect_captcha(page)
                 if pre_hits:
                     print(f"  🛑 CAPTCHA detected on login page load: {pre_hits}")
                     save_debug_screenshot(page, "data/debug_captcha_preload.png")
                     raise Exception(f"CAPTCHA present before login: {pre_hits}")
 
-                # Fill username
                 print("👤 Entering username...")
                 username_field = page.get_by_role("textbox", name="Username/Email")
                 username_field.click()
@@ -242,7 +218,6 @@ def scrape_solar_data():
                 human_delay(5, 8)
                 random_mouse_movement(page)
 
-                # Fill password
                 print("🔑 Entering password...")
                 password_field = page.get_by_role("textbox", name="Password")
                 password_field.click()
@@ -254,20 +229,13 @@ def scrape_solar_data():
                 human_delay(5, 8)
                 random_mouse_movement(page)
 
-                # Accept privacy policy — now fails loudly if it can't tick the box
                 if not accept_privacy_policy(page):
                     save_debug_screenshot(page, "data/debug_no_checkbox.png")
-                    raise Exception(
-                        "Could not tick the privacy policy checkbox — "
-                        "SolisCloud markup likely changed. Inspect "
-                        "data/debug_no_checkbox.png and update selectors in "
-                        "accept_privacy_policy()."
-                    )
+                    raise Exception("Privacy policy checkbox not found")
 
                 human_delay(6, 9)
                 random_mouse_movement(page)
 
-                # Click login — try multiple selectors
                 print("🔐 Logging in...")
                 login_clicked = False
                 login_selectors = [
@@ -296,25 +264,16 @@ def scrape_solar_data():
                         login_clicked = True
                     except Exception:
                         save_debug_screenshot(page, "data/debug_no_login_btn.png")
-                        raise Exception("❌ Could not find login button")
+                        raise Exception("Could not find login button")
 
-                # Immediately probe for a CAPTCHA that appeared after submit.
-                # Most Cloudflare Turnstile challenges inject within 1–2s.
                 print("🔎 Checking for post-submit CAPTCHA...")
                 page.wait_for_timeout(2500)
                 post_hits = detect_captcha(page)
                 if post_hits:
                     print(f"  🛑 CAPTCHA appeared after login submit: {post_hits}")
                     save_debug_screenshot(page, "data/debug_captcha_postlogin.png")
-                    raise Exception(
-                        f"CAPTCHA blocking login: {post_hits}. "
-                        "GitHub Actions runners use datacenter IPs that Cloudflare "
-                        "routinely challenges. Bootstrap auth_state_encoded.txt "
-                        "from a local run (where you can solve the challenge) "
-                        "and commit it to the repo."
-                    )
+                    raise Exception(f"CAPTCHA blocking login: {post_hits}")
 
-                # Wait for URL to change (not just time delay)
                 print("⏳ Waiting for redirect...")
                 try:
                     page.wait_for_url(lambda url: "login" not in url, timeout=15000)
@@ -323,16 +282,14 @@ def scrape_solar_data():
                     current_url = page.url
                     print(f"  ❌ Still on login page: {current_url}")
 
-                    # Re-check CAPTCHA in case it was slow to render
                     late_hits = detect_captcha(page)
                     if late_hits:
                         print(f"  🛑 CAPTCHA detected on late re-check: {late_hits}")
 
-                    # Check for error toasts / banners on page
                     try:
                         error_selectors = [
-                            '.el-message--error',      # Element UI error toast
-                            '.el-form-item__error',    # Element UI field error
+                            '.el-message--error',
+                            '.el-form-item__error',
                             '.error', '.alert',
                             '[class*="error"]', '.message',
                         ]
@@ -345,20 +302,14 @@ def scrape_solar_data():
                         pass
 
                     save_debug_screenshot(page, "data/debug_login_failed.png")
-                    raise Exception(
-                        "Login failed — credentials, CAPTCHA, or site changes. "
-                        "See data/debug_login_failed.png (upload as a workflow "
-                        "artifact to view it after CI runs)."
-                    )
+                    raise Exception("Login failed — credentials, CAPTCHA, or site changes")
 
                 page.wait_for_load_state("networkidle", timeout=60000)
                 human_delay(5, 7)
 
-            # At this point we should be on the station page
             print(f"📍 Current URL: {page.url}")
             random_mouse_movement(page)
 
-            # Search for plant
             print("🔍 Searching for plant...")
             search_box = page.get_by_role("textbox", name="Search for Plant/Address/ID")
             search_box.wait_for(state="visible", timeout=30000)
@@ -376,7 +327,6 @@ def scrape_solar_data():
             human_delay(6, 10)
             random_mouse_movement(page)
 
-            # Click on first result and wait for popup
             print("📊 Opening plant details...")
             with page.expect_popup(timeout=30000) as page1_info:
                 page.locator("td:nth-child(2) > .cell").first.click()
@@ -390,14 +340,12 @@ def scrape_solar_data():
 
             print(f"📍 Popup URL: {page1.url}")
 
-            # Download export
             print("💾 Clicking export button...")
             with page1.expect_download(timeout=30000) as download_info:
                 page1.get_by_role("button", name="Export").click()
 
             download = download_info.value
 
-            # Save files
             date_str = datetime.now().strftime("%Y-%m-%d")
             file_extension = (
                 download.suggested_filename.split('.')[-1]
@@ -413,7 +361,6 @@ def scrape_solar_data():
             print(f"✅ Download saved to: {daily_path}")
             print(f"✅ Latest copy saved to: {latest_path}")
 
-            # Save the current auth state for next time
             if not use_auth_state:
                 try:
                     import base64
