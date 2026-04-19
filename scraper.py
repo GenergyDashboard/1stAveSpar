@@ -147,6 +147,11 @@ def scrape_solar_data():
                 for char in username:
                     username_field.type(char, delay=random.randint(50, 150))
                 
+                # Dismiss autocomplete dropdown
+                print("  Dismissing autocomplete...")
+                username_field.press("Escape")
+                human_delay(1, 2)
+                
                 human_delay(5, 8)
                 random_mouse_movement(page)
                 
