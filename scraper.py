@@ -29,32 +29,29 @@ def random_mouse_movement(page):
 def clear_and_type(page, locator, value, label="field"):
     """
     Bulletproof field clearing + human-like typing.
-    Handles autocomplete dropdowns and pre-filled values.
+    Handles autocomplete dropdowns and pre-filled values from saved state.
     """
-    # Focus the field
     locator.click()
     human_delay(0.3, 0.7)
 
-    # CRITICAL: Dismiss any autocomplete dropdown FIRST, before clearing
-    # Otherwise the dropdown will re-insert the suggestion when we type
+    # Dismiss any autocomplete dropdown FIRST so it can't re-insert text while we type
     page.keyboard.press("Escape")
     human_delay(0.2, 0.5)
 
-    # Re-focus after Escape (Escape can blur some inputs)
+    # Re-focus after Escape
     locator.click()
     human_delay(0.2, 0.4)
 
-    # Select all existing content with Ctrl+A then delete it
+    # Select all then delete
     page.keyboard.press("Control+A")
     human_delay(0.1, 0.3)
     page.keyboard.press("Delete")
     human_delay(0.3, 0.6)
 
-    # Verify the field is actually empty - if not, force-clear via JS
+    # Verify empty - if not, force-clear via JS with proper Vue events
     current = locator.input_value()
     if current:
-        print(f"  ⚠️ {label} still had '{current[:20]}...' after clear, force-clearing")
-        # Set value to empty AND dispatch input event so Vue updates its model
+        print(f"  ⚠️ {label} still had content after clear, force-clearing")
         locator.evaluate("""
             el => {
                 el.value = '';
@@ -64,7 +61,7 @@ def clear_and_type(page, locator, value, label="field"):
         """)
         human_delay(0.3, 0.6)
 
-    # Now type character-by-character with human-like delays
+    # Type character-by-character
     for char in value:
         locator.type(char, delay=random.randint(50, 150))
 
@@ -72,102 +69,95 @@ def clear_and_type(page, locator, value, label="field"):
     page.keyboard.press("Escape")
     human_delay(0.5, 1)
 
-    # Final verification
+    # Final check
     final = locator.input_value()
     if final != value:
-        print(f"  ⚠️ {label} mismatch! Expected '{value[:3]}...', got '{final[:6]}...'")
+        print(f"  ⚠️ {label} mismatch! Expected {len(value)} chars, got {len(final)}")
     else:
         print(f"  ✅ {label} entered correctly ({len(final)} chars)")
 
 
 def click_privacy_checkbox(page):
     """
-    Click the Element-UI PRIVACY POLICY checkbox specifically (not the
-    'Remember' checkbox above it). Targets by label text so we can't pick
-    the wrong checkbox, then verifies that specific checkbox is checked.
+    Click the privacy checkbox using the SAME pattern that worked in the
+    original scraper, just with updated regex for the new label text.
+
+    Original pattern (when label was "I have agreedPrivacy Policy"):
+      page.locator("div").filter(has_text=re.compile(r"^I have agreed...$"))
+                         .locator("span").nth(1).click()
+
+    SolisCloud changed the label to:
+      "I have read and agree to Privacy Policy and User Agreement"
     """
     print("✅ Clicking privacy policy checkbox...")
 
-    # Target the specific checkbox by its label text — Element-UI wraps the
-    # whole checkbox + label in a single <label class="el-checkbox">
-    privacy_checkbox = page.locator(
-        'label.el-checkbox:has-text("I have read and agree")'
-    ).first
-
+    # Pattern 1: Original-style nth(1) span click with updated regex
     try:
-        privacy_checkbox.wait_for(state="visible", timeout=10000)
-    except Exception as e:
-        print(f"  ❌ Could not find privacy checkbox: {e}")
-        return False
-
-    # Try clicking the inner span first (the actual visible square),
-    # then fall back to clicking the label itself if needed
-    click_targets = [
-        ("inner span", privacy_checkbox.locator('.el-checkbox__inner')),
-        ("label text", privacy_checkbox.locator('.el-checkbox__label')),
-        ("whole label", privacy_checkbox),
-    ]
-
-    for name, target in click_targets:
-        try:
-            target.click(timeout=3000)
-            human_delay(1, 2)
-
-            # Verify THIS specific checkbox is checked (not just any checkbox)
-            is_checked = privacy_checkbox.evaluate(
-                "el => el.classList.contains('is-checked')"
-            )
-            if is_checked:
-                print(f"  ✅ Privacy checkbox checked via {name}")
-                return True
-            else:
-                print(f"  ↻ Clicked {name} but privacy still unchecked")
-        except Exception as e:
-            print(f"  ↻ {name} click failed: {str(e)[:60]}")
-            continue
-
-    # Last resort: dispatch click on the .el-checkbox__inner via JS,
-    # scoped to the privacy checkbox specifically
-    print("  ↻ Falling back to scoped JS click...")
-    try:
-        result = privacy_checkbox.evaluate("""
-            label => {
-                const inner = label.querySelector('.el-checkbox__inner');
-                if (inner) {
-                    inner.click();
-                    return { clicked: true };
-                }
-                return { clicked: false };
-            }
-        """)
+        page.locator("div").filter(
+            has_text=re.compile(r"^I have read and agree.*Privacy Policy.*$")
+        ).locator("span").nth(1).click(timeout=5000)
         human_delay(1, 2)
 
-        is_checked = privacy_checkbox.evaluate(
-            "el => el.classList.contains('is-checked')"
-        )
-        if is_checked:
-            print(f"  ✅ Privacy checkbox checked via JS: {result}")
+        if _privacy_is_checked(page):
+            print("  ✅ Privacy checkbox checked (pattern 1: nth(1) span)")
             return True
+        print("  ↻ Pattern 1 clicked but state didn't update, trying pattern 2")
     except Exception as e:
-        print(f"  ⚠️ JS fallback failed: {e}")
+        print(f"  ↻ Pattern 1 failed: {str(e)[:80]}")
 
-    print("  ❌ Could not check privacy checkbox")
+    # Pattern 2: Click the inner span scoped to the privacy label
+    try:
+        privacy_label = page.locator(
+            'label.el-checkbox:has-text("I have read and agree")'
+        ).first
+        privacy_label.locator('.el-checkbox__inner').click(timeout=5000)
+        human_delay(1, 2)
+
+        if _privacy_is_checked(page):
+            print("  ✅ Privacy checkbox checked (pattern 2: scoped inner span)")
+            return True
+        print("  ↻ Pattern 2 clicked but state didn't update, trying pattern 3")
+    except Exception as e:
+        print(f"  ↻ Pattern 2 failed: {str(e)[:80]}")
+
+    # Pattern 3: Click the label text itself
+    try:
+        page.get_by_text("I have read and agree", exact=False).first.click(timeout=5000)
+        human_delay(1, 2)
+
+        if _privacy_is_checked(page):
+            print("  ✅ Privacy checkbox checked (pattern 3: label text)")
+            return True
+        print("  ↻ Pattern 3 clicked but state didn't update")
+    except Exception as e:
+        print(f"  ↻ Pattern 3 failed: {str(e)[:80]}")
+
+    print("  ❌ All patterns failed to check privacy box")
     return False
 
 
-def get_checkbox_state(page, label_text):
-    """Read the is-checked class from a specific Element-UI checkbox by label text"""
+def _privacy_is_checked(page):
+    """Read is-checked class on the SPECIFIC privacy checkbox label"""
     try:
-        cb = page.locator(f'label.el-checkbox:has-text("{label_text}")').first
-        return cb.evaluate("el => el.classList.contains('is-checked')")
+        return page.locator(
+            'label.el-checkbox:has-text("I have read and agree")'
+        ).first.evaluate("el => el.classList.contains('is-checked')")
+    except Exception:
+        return False
+
+
+def get_checkbox_state(page, label_text):
+    """Diagnostic: read is-checked class from a checkbox by its label text"""
+    try:
+        return page.locator(
+            f'label.el-checkbox:has-text("{label_text}")'
+        ).first.evaluate("el => el.classList.contains('is-checked')")
     except Exception:
         return None
 
 
 def scrape_solar_data():
-    """
-    Scrape solar generation data from Soliscloud with human-like behavior
-    """
+    """Scrape solar generation data from Soliscloud"""
 
     username = os.environ.get('SOLIS_USERNAME')
     password = os.environ.get('SOLIS_PASSWORD')
@@ -249,7 +239,6 @@ def scrape_solar_data():
 
                 human_delay(3, 5)
 
-                # Strict check: are we on the station page or back on login?
                 current_url = page.url
                 if "/login" in current_url:
                     print("⚠️  Saved session expired, logging in normally...")
@@ -261,7 +250,6 @@ def scrape_solar_data():
                     print(f"✅ Session still valid: {current_url}")
 
             if not use_auth_state:
-                # Normal login process
                 print("📱 Navigating to login page...")
                 page.goto("https://www.soliscloud.com/login?redirect=/station",
                           wait_until="networkidle",
@@ -270,7 +258,7 @@ def scrape_solar_data():
                 human_delay(3, 6)
                 random_mouse_movement(page)
 
-                # Fill username with bulletproof clearing
+                # Username with bulletproof clearing (fixes the "Ross SaundersRoss Saunders" bug)
                 print("👤 Entering username...")
                 username_field = page.get_by_role("textbox", name="Username/Email")
                 username_field.wait_for(state="visible", timeout=15000)
@@ -279,7 +267,7 @@ def scrape_solar_data():
                 human_delay(3, 5)
                 random_mouse_movement(page)
 
-                # Fill password with bulletproof clearing
+                # Password
                 print("🔑 Entering password...")
                 password_field = page.get_by_role("textbox", name="Password")
                 password_field.wait_for(state="visible", timeout=15000)
@@ -288,7 +276,7 @@ def scrape_solar_data():
                 human_delay(3, 5)
                 random_mouse_movement(page)
 
-                # Properly click the privacy checkbox via real DOM event
+                # Privacy checkbox - same pattern that worked originally, updated regex
                 checkbox_ok = click_privacy_checkbox(page)
                 if not checkbox_ok:
                     page.screenshot(path="data/debug_checkbox_failed.png", full_page=True)
@@ -301,9 +289,8 @@ def scrape_solar_data():
                 print("🔐 Clicking Login button...")
                 page.get_by_role("button", name="Login").click()
 
-                # Wait for redirect — STRICT check: pathname must leave /login
-                # (the previous code matched **/station** which falsely matched
-                # the ?redirect=/station query string)
+                # Wait for redirect — STRICT pathname check (not glob, which falsely
+                # matched ?redirect=/station query string)
                 print("⏳ Waiting for redirect away from login page...")
                 try:
                     page.wait_for_function(
@@ -315,9 +302,7 @@ def scrape_solar_data():
                     current_url = page.url
                     print(f"  ❌ Still on login page: {current_url}")
 
-                    # Diagnostic: capture what's blocking us
                     try:
-                        # Check for visible Element-UI error/warning messages
                         error_msgs = page.locator(
                             '.el-message, .el-form-item__error, .el-tooltip__popper, .error-message'
                         ).all_inner_texts()
@@ -325,7 +310,6 @@ def scrape_solar_data():
                         if error_msgs:
                             print(f"  🔴 On-page messages: {error_msgs}")
 
-                        # Check the SPECIFIC privacy checkbox state at moment of failure
                         privacy_checked = get_checkbox_state(page, "I have read and agree")
                         if privacy_checked is None:
                             print(f"  📋 Privacy checkbox: could not read state")
@@ -333,13 +317,11 @@ def scrape_solar_data():
                             mark = "checked ✅" if privacy_checked else "UNCHECKED ❌"
                             print(f"  📋 Privacy checkbox: {mark}")
 
-                        # Also check the Remember checkbox so we know if we hit the wrong one
                         remember_checked = get_checkbox_state(page, "Remember")
                         if remember_checked is not None:
                             mark = "checked" if remember_checked else "unchecked"
                             print(f"  📋 Remember checkbox: {mark}")
 
-                        # Capture username field value for diagnostics
                         try:
                             uname_value = page.get_by_role("textbox", name="Username/Email").input_value()
                             print(f"  📋 Username field value: '{uname_value}'")
@@ -354,7 +336,7 @@ def scrape_solar_data():
                 page.wait_for_load_state("networkidle", timeout=60000)
                 human_delay(7, 10)
 
-            # At this point we should be on the station page
+            # Should be on station page now
             print(f"📍 Current URL: {page.url}")
             random_mouse_movement(page)
 
@@ -365,20 +347,18 @@ def scrape_solar_data():
             search_box.click()
             human_delay(2, 4)
 
-            # Type search query
             for char in "1st":
                 search_box.type(char, delay=random.randint(100, 200))
 
             human_delay(5, 8)
             random_mouse_movement(page)
 
-            # Press Enter
             search_box.press("Enter")
 
             human_delay(6, 10)
             random_mouse_movement(page)
 
-            # Click on first result and wait for popup
+            # Click first result, wait for popup
             print("📊 Opening plant details...")
             with page.expect_popup(timeout=30000) as page1_info:
                 page.locator("td:nth-child(2) > .cell").first.click()
@@ -399,7 +379,6 @@ def scrape_solar_data():
 
             download = download_info.value
 
-            # Save files
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             date_str = datetime.now().strftime("%Y-%m-%d")
             file_extension = download.suggested_filename.split('.')[-1] if '.' in download.suggested_filename else 'xls'
@@ -413,7 +392,7 @@ def scrape_solar_data():
             print(f"✅ Download saved to: {daily_path}")
             print(f"✅ Latest copy saved to: {latest_path}")
 
-            # Save the current auth state for next time
+            # Save auth state for next time
             if not use_auth_state:
                 try:
                     import base64
