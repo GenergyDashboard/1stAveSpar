@@ -133,48 +133,61 @@ def scrape_solar_data():
                 human_delay(3, 6)
                 random_mouse_movement(page)
                 
-                # FIRST: Accept privacy policy checkbox BEFORE entering credentials
-                print("✅ Checking privacy policy...")
-                privacy_checked = False
-                
-                # Try multiple methods to check the privacy checkbox
-                privacy_methods = [
-                    # Method 1: Click the checkbox input directly
-                    lambda: page.locator('input[type="checkbox"]').first.click(),
-                    # Method 2: Click the checkbox wrapper
-                    lambda: page.locator('.el-checkbox').first.click(),
-                    # Method 3: Click the checkbox span
-                    lambda: page.locator('span.el-checkbox__input').first.click(),
-                    # Method 4: Click the label text
-                    lambda: page.locator('text=I have read and agree').click(),
-                    # Method 5: Click near the privacy policy text
-                    lambda: page.locator('text=Privacy Policy').locator('..').locator('..').locator('span').first.click(),
-                ]
-                
-                for i, method in enumerate(privacy_methods):
-                    try:
-                        method()
-                        human_delay(1, 2)
+                # FORCE CHECK privacy policy checkbox using JavaScript
+                print("✅ Forcing privacy policy checkbox...")
+                try:
+                    # Wait for checkbox to be present
+                    page.wait_for_selector('.el-checkbox', timeout=5000)
+                    
+                    # Use JavaScript to directly manipulate the checkbox state
+                    result = page.evaluate("""
+                        () => {
+                            const checkbox = document.querySelector('.el-checkbox__original');
+                            const label = document.querySelector('.el-checkbox');
+                            const span = document.querySelector('.el-checkbox__input');
+                            
+                            if (!checkbox || !label || !span) {
+                                return { success: false, reason: 'Elements not found' };
+                            }
+                            
+                            // Method 1: Try clicking the actual input
+                            if (!checkbox.checked) {
+                                checkbox.click();
+                            }
+                            
+                            // Method 2: Force the state if click didn't work
+                            if (!checkbox.checked) {
+                                checkbox.checked = true;
+                                label.classList.add('is-checked');
+                                span.classList.add('is-checked');
+                                
+                                // Trigger change event
+                                const event = new Event('change', { bubbles: true });
+                                checkbox.dispatchEvent(event);
+                            }
+                            
+                            return {
+                                success: checkbox.checked,
+                                hasCheckedClass: label.classList.contains('is-checked')
+                            };
+                        }
+                    """)
+                    
+                    if result.get('success'):
+                        print(f"  ✅ Privacy checkbox checked (checked={result['success']}, class={result['hasCheckedClass']})")
+                    else:
+                        print(f"  ⚠️ Checkbox check uncertain: {result}")
                         
-                        # Verify it's checked by looking for the checked class or state
-                        try:
-                            is_checked = page.locator('.el-checkbox.is-checked').count() > 0
-                            if is_checked:
-                                privacy_checked = True
-                                print(f"  ✅ Privacy checkbox checked (method {i+1})")
-                                break
-                        except:
-                            # Assume it worked if no error
-                            privacy_checked = True
-                            print(f"  ✅ Privacy checkbox clicked (method {i+1})")
-                            break
-                    except Exception as e:
-                        continue
+                except Exception as e:
+                    print(f"  ⚠️ JavaScript method failed: {e}")
+                    print("  Trying fallback click...")
+                    try:
+                        page.locator('.el-checkbox').first.click()
+                        print("  ✅ Clicked checkbox with fallback")
+                    except:
+                        print("  ❌ All checkbox methods failed - login may fail")
                 
-                if not privacy_checked:
-                    print("  ⚠️ Could not verify privacy checkbox - continuing anyway")
-                
-                human_delay(2, 4)
+                human_delay(2, 3)
                 random_mouse_movement(page)
                 
                 # Fill username
@@ -201,6 +214,28 @@ def scrape_solar_data():
                 human_delay(5, 8)
                 random_mouse_movement(page)
                 
+                # Double-check privacy checkbox one more time before clicking login
+                print("🔍 Verifying privacy checkbox before login...")
+                try:
+                    page.evaluate("""
+                        () => {
+                            const checkbox = document.querySelector('.el-checkbox__original');
+                            const label = document.querySelector('.el-checkbox');
+                            const span = document.querySelector('.el-checkbox__input');
+                            
+                            if (checkbox && !checkbox.checked) {
+                                checkbox.checked = true;
+                                label.classList.add('is-checked');
+                                span.classList.add('is-checked');
+                            }
+                        }
+                    """)
+                    print("  ✅ Checkbox verified")
+                except:
+                    print("  ⚠️ Could not verify checkbox")
+                
+                human_delay(1, 2)
+                
                 # Click login - try multiple selectors
                 print("🔐 Logging in...")
                 login_clicked = False
@@ -224,7 +259,6 @@ def scrape_solar_data():
                         continue
                 
                 if not login_clicked:
-                    # Fallback to original method
                     try:
                         page.get_by_role("button", name="Login").click()
                         login_clicked = True
@@ -232,33 +266,26 @@ def scrape_solar_data():
                         page.screenshot(path="data/debug_no_login_btn.png")
                         raise Exception("❌ Could not find login button")
                 
-                # Check for immediate popup errors (privacy policy not checked)
-                print("🔎 Checking for post-submit errors...")
-                human_delay(2, 3)
-                try:
-                    popup_error = page.locator('text=Please read and agree').count() > 0
-                    if popup_error:
-                        print("  ❌ Privacy policy error detected - clicking checkbox again...")
-                        page.locator('.el-checkbox').first.click()
-                        human_delay(1, 2)
-                        # Click login again
-                        page.locator('button:has-text("Login")').first.click()
-                        human_delay(2, 3)
-                except:
-                    pass
-                
-                # Wait for URL to change (not just time delay)
+                # Wait for URL to change
                 print("⏳ Waiting for redirect...")
                 try:
-                    page.wait_for_url(lambda url: "login" not in url, timeout=15000)
+                    page.wait_for_url(lambda url: "login" not in url, timeout=20000)
                     print(f"  ✅ Redirected to: {page.url}")
                 except:
                     current_url = page.url
                     print(f"  ❌ Still on login page: {current_url}")
                     
-                    # Check for error messages on page
+                    # Check for error popup
                     try:
-                        error_selectors = ['.error', '.alert', '[class*="error"]', '.el-message']
+                        popup_visible = page.locator('text=Please read and agree').is_visible(timeout=2000)
+                        if popup_visible:
+                            print("  🔴 Privacy policy popup still showing - checkbox didn't work")
+                    except:
+                        pass
+                    
+                    # Check for other errors
+                    try:
+                        error_selectors = ['.el-message--error', '.error', '.alert']
                         for sel in error_selectors:
                             errors = page.locator(sel).all_text_contents()
                             if errors:
@@ -266,13 +293,13 @@ def scrape_solar_data():
                     except:
                         pass
                     
-                    # Save detailed screenshot
+                    # Save screenshot
                     screenshot_path = "data/debug_login_failed.png"
                     page.screenshot(path=screenshot_path)
                     file_size = os.path.getsize(screenshot_path) / 1024
                     print(f"  📸 Screenshot saved: {screenshot_path} ({file_size:.1f} KB)")
                     
-                    raise Exception("Login failed — credentials, CAPTCHA, or site changes")
+                    raise Exception("Login failed — privacy checkbox, credentials, or CAPTCHA")
                 
                 page.wait_for_load_state("networkidle", timeout=60000)
                 human_delay(5, 7)
