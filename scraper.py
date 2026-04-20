@@ -2,7 +2,6 @@ import os
 import json
 import random
 import time
-import re
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 
@@ -26,6 +25,18 @@ def random_mouse_movement(page):
         pass
 
 
+# The EXACT selector for the privacy checkbox, captured via Playwright codegen.
+# The ".el-tooltip__trigger" class is the key discriminator — only the privacy
+# checkbox has a tooltip attached ("Please read and agree..."), not the Remember one.
+PRIVACY_CHECKBOX_SELECTOR = (
+    '.el-checkbox.el-checkbox--default.el-tooltip__trigger '
+    '> .el-checkbox__input > .el-checkbox__inner'
+)
+PRIVACY_CHECKBOX_LABEL = (
+    '.el-checkbox.el-checkbox--default.el-tooltip__trigger'
+)
+
+
 def clear_and_type(page, locator, value, label="field"):
     """
     Bulletproof field clearing + human-like typing.
@@ -38,7 +49,6 @@ def clear_and_type(page, locator, value, label="field"):
     page.keyboard.press("Escape")
     human_delay(0.2, 0.5)
 
-    # Re-focus after Escape
     locator.click()
     human_delay(0.2, 0.4)
 
@@ -79,70 +89,30 @@ def clear_and_type(page, locator, value, label="field"):
 
 def click_privacy_checkbox(page):
     """
-    Click the privacy checkbox using the SAME pattern that worked in the
-    original scraper, just with updated regex for the new label text.
-
-    Original pattern (when label was "I have agreedPrivacy Policy"):
-      page.locator("div").filter(has_text=re.compile(r"^I have agreed...$"))
-                         .locator("span").nth(1).click()
-
-    SolisCloud changed the label to:
-      "I have read and agree to Privacy Policy and User Agreement"
+    Click the privacy checkbox using the exact selector captured from
+    Playwright codegen. The .el-tooltip__trigger class uniquely identifies
+    the privacy checkbox (it has a tooltip; Remember doesn't).
     """
     print("✅ Clicking privacy policy checkbox...")
 
-    # Pattern 1: Original-style nth(1) span click with updated regex
     try:
-        page.locator("div").filter(
-            has_text=re.compile(r"^I have read and agree.*Privacy Policy.*$")
-        ).locator("span").nth(1).click(timeout=5000)
+        checkbox = page.locator(PRIVACY_CHECKBOX_SELECTOR)
+        checkbox.wait_for(state="visible", timeout=10000)
+        checkbox.click()
         human_delay(1, 2)
 
-        if _privacy_is_checked(page):
-            print("  ✅ Privacy checkbox checked (pattern 1: nth(1) span)")
+        # Verify the specific privacy checkbox is now checked
+        is_checked = page.locator(PRIVACY_CHECKBOX_LABEL).first.evaluate(
+            "el => el.classList.contains('is-checked')"
+        )
+        if is_checked:
+            print("  ✅ Privacy checkbox checked")
             return True
-        print("  ↻ Pattern 1 clicked but state didn't update, trying pattern 2")
+        else:
+            print("  ⚠️ Click registered but checkbox still unchecked")
+            return False
     except Exception as e:
-        print(f"  ↻ Pattern 1 failed: {str(e)[:80]}")
-
-    # Pattern 2: Click the inner span scoped to the privacy label
-    try:
-        privacy_label = page.locator(
-            'label.el-checkbox:has-text("I have read and agree")'
-        ).first
-        privacy_label.locator('.el-checkbox__inner').click(timeout=5000)
-        human_delay(1, 2)
-
-        if _privacy_is_checked(page):
-            print("  ✅ Privacy checkbox checked (pattern 2: scoped inner span)")
-            return True
-        print("  ↻ Pattern 2 clicked but state didn't update, trying pattern 3")
-    except Exception as e:
-        print(f"  ↻ Pattern 2 failed: {str(e)[:80]}")
-
-    # Pattern 3: Click the label text itself
-    try:
-        page.get_by_text("I have read and agree", exact=False).first.click(timeout=5000)
-        human_delay(1, 2)
-
-        if _privacy_is_checked(page):
-            print("  ✅ Privacy checkbox checked (pattern 3: label text)")
-            return True
-        print("  ↻ Pattern 3 clicked but state didn't update")
-    except Exception as e:
-        print(f"  ↻ Pattern 3 failed: {str(e)[:80]}")
-
-    print("  ❌ All patterns failed to check privacy box")
-    return False
-
-
-def _privacy_is_checked(page):
-    """Read is-checked class on the SPECIFIC privacy checkbox label"""
-    try:
-        return page.locator(
-            'label.el-checkbox:has-text("I have read and agree")'
-        ).first.evaluate("el => el.classList.contains('is-checked')")
-    except Exception:
+        print(f"  ❌ Privacy checkbox click failed: {e}")
         return False
 
 
@@ -276,7 +246,7 @@ def scrape_solar_data():
                 human_delay(3, 5)
                 random_mouse_movement(page)
 
-                # Privacy checkbox - same pattern that worked originally, updated regex
+                # Privacy checkbox - exact selector from codegen
                 checkbox_ok = click_privacy_checkbox(page)
                 if not checkbox_ok:
                     page.screenshot(path="data/debug_checkbox_failed.png", full_page=True)
@@ -289,8 +259,7 @@ def scrape_solar_data():
                 print("🔐 Clicking Login button...")
                 page.get_by_role("button", name="Login").click()
 
-                # Wait for redirect — STRICT pathname check (not glob, which falsely
-                # matched ?redirect=/station query string)
+                # Wait for redirect - STRICT pathname check
                 print("⏳ Waiting for redirect away from login page...")
                 try:
                     page.wait_for_function(
