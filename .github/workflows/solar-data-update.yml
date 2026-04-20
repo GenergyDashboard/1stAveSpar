@@ -1,88 +1,125 @@
-name: Scrape SolisCloud Data
-
+name: Scrape and Update Solar Data
 on:
   schedule:
-    # 20:00 SAST daily
-    - cron: '0 18 * * *'
+    # Run 3 times daily: 6am, 11am, 6pm SAST
+    - cron: '0 4 * * *'   # 6am SAST
+    - cron: '0 9 * * *'   # 11am SAST  
+    - cron: '0 16 * * *'  # 6pm SAST
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: solis-scraper
+  group: solar-data-update
   cancel-in-progress: false
 
 jobs:
-  scrape:
+  scrape-and-update:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
+    
     steps:
+      - name: Set up job
+        run: echo "Starting solar data scrape and update"
+      
+      - name: Add random delay (0-10 minutes)
+        run: sleep $((RANDOM % 600))
+      
+      - name: Skip delay notification
+        run: echo "Delay completed"
+      
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Python
+      
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
-
-      - name: Install Python dependencies
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Install Playwright browser (Chromium)
-        run: python -m playwright install --with-deps chromium
-
-      - name: Run SolisCloud scraper
+          python -m playwright install --with-deps chromium
+      
+      - name: Run scraper
         env:
           SOLIS_USERNAME: ${{ secrets.SOLIS_USERNAME }}
           SOLIS_PASSWORD: ${{ secrets.SOLIS_PASSWORD }}
           TZ: Africa/Johannesburg
         run: python scraper.py
-
-      - name: Upload debug screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-screenshots-${{ github.run_id }}
-          path: data/debug_*.png
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Commit and push data
-        if: success()
+      
+      - name: Process data and generate stats (legacy - optional)
+        run: python process_solar_data.py || echo "Legacy processor skipped"
+        continue-on-error: true
+      
+      - name: Check file structure
         run: |
-          git config --local user.name  "github-actions[bot]"
+          echo "Checking data directory structure..."
+          ls -la data/
+          ls -la data/daily/ || echo "No daily directory"
+      
+      - name: Migrate XLS data to daily records
+        run: python migrate_data.py
+      
+      - name: Update irradiation from Open-Meteo API
+        run: python update_irradiation.py
+      
+      - name: Enhance with TOU and financial data
+        run: python solar_processor_enhanced.py
+      
+      - name: Generate client auth file
+        run: python generate_client_auth.py || echo "Auth generation skipped"
+        continue-on-error: true
+      
+      - name: Check for downtime and notify
+        run: python check_downtime.py || echo "Downtime check skipped"
+        continue-on-error: true
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.name "github-actions[bot]"
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Stage only data files — debug PNGs stay out of history
+          
+          # Stage all data files
           git add data/daily/ 2>/dev/null || true
           git add data/solar_export_latest.* 2>/dev/null || true
+          git add data/dashboard_data.json 2>/dev/null || true
           git add data/last_scrape.json 2>/dev/null || true
           git add data/auth_state_encoded.txt 2>/dev/null || true
-
+          git add predictions_2025_2044.min.json 2>/dev/null || true
+          
           if git diff --cached --quiet; then
-            echo "No data changes to commit"
+            echo "No changes to commit"
           else
-            git commit -m "Update 1st Ave Spar solar data [$(date -u +%Y-%m-%dT%H:%M:%SZ)]"
+            git commit -m "Update solar data [$(date -u +%Y-%m-%dT%H:%M:%SZ)]"
             git push
           fi
-
-      - name: Upload scraped data artifact
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: solar-data-${{ github.run_id }}
-          path: |
-            data/daily/*.xls
-            data/daily/*.xlsx
-            data/solar_export_latest.*
-            data/last_scrape.json
-          if-no-files-found: ignore
-          retention-days: 30
+      
+      - name: Post Cache Python dependencies
+        if: always()
+        run: echo "Cache step completed"
+      
+      - name: Post Set up Python
+        if: always()
+        run: echo "Python setup completed"
+      
+      - name: Post Checkout repository
+        if: always()
+        run: echo "Checkout completed"
+      
+      - name: Complete job
+        run: echo "Solar data update completed successfully"
