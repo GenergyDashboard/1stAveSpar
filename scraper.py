@@ -26,8 +26,8 @@ def random_mouse_movement(page):
 
 
 # The EXACT selector for the privacy checkbox, captured via Playwright codegen.
-# The ".el-tooltip__trigger" class is the key discriminator — only the privacy
-# checkbox has a tooltip attached ("Please read and agree..."), not the Remember one.
+# The ".el-tooltip__trigger" class is the key discriminator - only the privacy
+# checkbox has a tooltip attached, not the Remember one.
 PRIVACY_CHECKBOX_SELECTOR = (
     '.el-checkbox.el-checkbox--default.el-tooltip__trigger '
     '> .el-checkbox__input > .el-checkbox__inner'
@@ -45,20 +45,17 @@ def clear_and_type(page, locator, value, label="field"):
     locator.click()
     human_delay(0.3, 0.7)
 
-    # Dismiss any autocomplete dropdown FIRST so it can't re-insert text while we type
     page.keyboard.press("Escape")
     human_delay(0.2, 0.5)
 
     locator.click()
     human_delay(0.2, 0.4)
 
-    # Select all then delete
     page.keyboard.press("Control+A")
     human_delay(0.1, 0.3)
     page.keyboard.press("Delete")
     human_delay(0.3, 0.6)
 
-    # Verify empty - if not, force-clear via JS with proper Vue events
     current = locator.input_value()
     if current:
         print(f"  ⚠️ {label} still had content after clear, force-clearing")
@@ -71,15 +68,12 @@ def clear_and_type(page, locator, value, label="field"):
         """)
         human_delay(0.3, 0.6)
 
-    # Type character-by-character
     for char in value:
         locator.type(char, delay=random.randint(50, 150))
 
-    # Dismiss any autocomplete that appeared during typing
     page.keyboard.press("Escape")
     human_delay(0.5, 1)
 
-    # Final check
     final = locator.input_value()
     if final != value:
         print(f"  ⚠️ {label} mismatch! Expected {len(value)} chars, got {len(final)}")
@@ -88,11 +82,7 @@ def clear_and_type(page, locator, value, label="field"):
 
 
 def click_privacy_checkbox(page):
-    """
-    Click the privacy checkbox using the exact selector captured from
-    Playwright codegen. The .el-tooltip__trigger class uniquely identifies
-    the privacy checkbox (it has a tooltip; Remember doesn't).
-    """
+    """Click the privacy checkbox using exact selector from Playwright codegen"""
     print("✅ Clicking privacy policy checkbox...")
 
     try:
@@ -101,7 +91,6 @@ def click_privacy_checkbox(page):
         checkbox.click()
         human_delay(1, 2)
 
-        # Verify the specific privacy checkbox is now checked
         is_checked = page.locator(PRIVACY_CHECKBOX_LABEL).first.evaluate(
             "el => el.classList.contains('is-checked')"
         )
@@ -126,147 +115,120 @@ def get_checkbox_state(page, label_text):
         return None
 
 
-def is_any_dialog_visible(page):
+def dismiss_modal_dialogs(page):
     """
-    Return True if any Element-UI dialog wrapper is actually visible
-    (display != 'none' AND has dimensions). Element UI keeps the wrapper
-    in the DOM with display:none when closed, so .is_visible() alone
-    can give false positives.
+    Dismiss any modal dialogs blocking the page (announcements, terms updates,
+    'what's new' popups, etc). SolisCloud occasionally throws these up after
+    landing on the station page, and they intercept all pointer events.
+
+    Tries multiple dismiss strategies: close button, dialog footer buttons
+    (Confirm/I know/OK/Got it), then Escape key as last resort.
     """
-    try:
-        return page.evaluate("""
-            () => {
-                const wrappers = document.querySelectorAll('.el-dialog__wrapper');
-                for (const w of wrappers) {
-                    const cs = window.getComputedStyle(w);
-                    if (cs.display !== 'none'
-                        && cs.visibility !== 'hidden'
-                        && w.offsetParent !== null
-                        && w.getBoundingClientRect().height > 0) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        """)
-    except Exception:
-        return False
+    print("🚪 Checking for modal dialogs to dismiss...")
 
-
-def dismiss_blocking_dialogs(page, max_attempts=4):
-    """
-    SolisCloud sometimes pops a modal dialog (announcements, T&C updates,
-    "what's new", etc.) on the station page that intercepts pointer events
-    and blocks the search box click.
-
-    This function detects any visible .el-dialog__wrapper and tries multiple
-    strategies to close it: clicking the X button, clicking common confirm
-    buttons by text, and finally pressing Escape.
-    """
-    print("🪟 Checking for blocking dialogs...")
-
-    if not is_any_dialog_visible(page):
-        print("  ✅ No blocking dialogs detected")
-        return True
-
-    # Ordered close strategies — most specific first
-    close_strategies = [
-        # Element UI native close button (X in top-right)
-        '.el-dialog__wrapper .el-dialog__headerbtn',
-        '.el-dialog__wrapper .el-dialog__close',
-        # Common confirm/dismiss buttons by visible text
-        '.el-dialog__wrapper button:has-text("I Know")',
-        '.el-dialog__wrapper button:has-text("I know")',
-        '.el-dialog__wrapper button:has-text("Got it")',
-        '.el-dialog__wrapper button:has-text("Got It")',
-        '.el-dialog__wrapper button:has-text("Confirm")',
-        '.el-dialog__wrapper button:has-text("Agree")',
-        '.el-dialog__wrapper button:has-text("Accept")',
-        '.el-dialog__wrapper button:has-text("OK")',
-        '.el-dialog__wrapper button:has-text("Ok")',
-        '.el-dialog__wrapper button:has-text("Close")',
-        '.el-dialog__wrapper button:has-text("Skip")',
-        '.el-dialog__wrapper button:has-text("Later")',
-        '.el-dialog__wrapper button:has-text("Cancel")',
-        # Last-resort: any primary button inside the dialog
-        '.el-dialog__wrapper .el-button--primary',
-        '.el-dialog__wrapper button',
+    # Visible dialog wrapper selectors (Element-UI dialogs)
+    dialog_selectors = [
+        '.el-dialog__wrapper:visible',
+        '.el-dialog:visible',
+        '.gl-dialog2:visible',
     ]
 
-    for attempt in range(max_attempts):
-        if not is_any_dialog_visible(page):
-            print(f"  ✅ All dialogs dismissed after {attempt} attempt(s)")
-            return True
-
-        print(f"  ⚠️  Blocking dialog detected (attempt {attempt + 1}/{max_attempts})")
-        dismissed = False
-
-        for selector in close_strategies:
-            try:
-                btns = page.locator(selector)
-                count = btns.count()
-                for i in range(count):
-                    btn = btns.nth(i)
-                    try:
-                        if btn.is_visible():
-                            btn.click(timeout=3000)
-                            print(f"  🖱️  Clicked: {selector}")
-                            human_delay(1, 2)
-                            dismissed = True
-                            break
-                    except Exception:
-                        continue
-                if dismissed:
-                    break
-            except Exception:
-                continue
-
-        # Fallback: press Escape
-        if not dismissed:
-            try:
-                page.keyboard.press("Escape")
-                print("  ⌨️  Pressed Escape")
-                human_delay(1, 2)
-            except Exception:
-                pass
-
-        # Last-ditch: hide all visible dialog wrappers via JS
-        if attempt == max_attempts - 2 and is_any_dialog_visible(page):
-            try:
-                hidden = page.evaluate("""
-                    () => {
-                        let n = 0;
-                        document.querySelectorAll('.el-dialog__wrapper').forEach(w => {
-                            const cs = window.getComputedStyle(w);
-                            if (cs.display !== 'none') {
-                                w.style.display = 'none';
-                                n++;
-                            }
-                        });
-                        // Also remove modal backdrop if present
-                        document.querySelectorAll('.v-modal').forEach(m => m.remove());
-                        document.body.style.overflow = '';
-                        return n;
-                    }
-                """)
-                if hidden:
-                    print(f"  🧹 Force-hid {hidden} dialog(s) via JS")
-                    human_delay(1, 2)
-            except Exception as e:
-                print(f"  (force-hide failed: {e})")
-
-    still_visible = is_any_dialog_visible(page)
-    if still_visible:
-        print("  ⚠️  Could not dismiss all dialogs after max attempts")
+    dialog = None
+    for sel in dialog_selectors:
         try:
-            page.screenshot(path="data/debug_dialog_stuck.png", full_page=True)
-            print("  📸 Saved data/debug_dialog_stuck.png")
+            candidate = page.locator(sel).first
+            if candidate.is_visible(timeout=1000):
+                dialog = candidate
+                print(f"  📋 Found visible dialog matching: {sel}")
+                break
         except Exception:
-            pass
-        return False
+            continue
 
-    print("  ✅ Dialogs cleared")
-    return True
+    if not dialog:
+        print("  ✅ No visible dialogs to dismiss")
+        return True
+
+    # Strategy 1: Click the close (X) button on the dialog
+    try:
+        close_btn = page.locator('.el-dialog__headerbtn:visible').first
+        if close_btn.is_visible(timeout=1000):
+            close_btn.click(timeout=3000)
+            human_delay(1, 2)
+            print("  ✅ Dismissed via close (X) button")
+            return _wait_for_dialog_gone(page)
+    except Exception as e:
+        print(f"  ↻ Close button strategy failed: {str(e)[:60]}")
+
+    # Strategy 2: Click any common confirm-style button inside the dialog footer
+    confirm_button_texts = ["I know", "OK", "Confirm", "Got it",
+                            "Close", "Agree", "Continue", "I Know"]
+    for text in confirm_button_texts:
+        try:
+            btn = page.locator(
+                f'.el-dialog__wrapper:visible .el-button:has-text("{text}")'
+            ).first
+            if btn.is_visible(timeout=1000):
+                btn.click(timeout=3000)
+                human_delay(1, 2)
+                print(f"  ✅ Dismissed via '{text}' button")
+                return _wait_for_dialog_gone(page)
+        except Exception:
+            continue
+
+    # Strategy 3: Press Escape
+    try:
+        page.keyboard.press("Escape")
+        human_delay(1, 2)
+        if _dialog_is_gone(page):
+            print("  ✅ Dismissed via Escape key")
+            return True
+    except Exception:
+        pass
+
+    # Strategy 4: Brute force - hide all dialog wrappers via JS
+    try:
+        page.evaluate("""
+            () => {
+                document.querySelectorAll('.el-dialog__wrapper, .v-modal').forEach(el => {
+                    el.style.display = 'none';
+                    el.style.pointerEvents = 'none';
+                });
+            }
+        """)
+        human_delay(1, 2)
+        print("  ✅ Dialogs force-hidden via JS")
+        return True
+    except Exception as e:
+        print(f"  ⚠️ JS hide failed: {e}")
+
+    print("  ❌ Could not dismiss dialog")
+    return False
+
+
+def _wait_for_dialog_gone(page, timeout=5000):
+    """Wait for visible dialog to disappear after dismissal attempt"""
+    try:
+        page.wait_for_function(
+            """() => {
+                const wrappers = document.querySelectorAll('.el-dialog__wrapper');
+                return Array.from(wrappers).every(w => {
+                    const style = window.getComputedStyle(w);
+                    return style.display === 'none' || style.visibility === 'hidden';
+                });
+            }""",
+            timeout=timeout
+        )
+        return True
+    except Exception:
+        return _dialog_is_gone(page)
+
+
+def _dialog_is_gone(page):
+    """Check if any visible dialog wrapper is still on the page"""
+    try:
+        return page.locator('.el-dialog__wrapper:visible').count() == 0
+    except Exception:
+        return True
 
 
 def scrape_solar_data():
@@ -283,7 +245,6 @@ def scrape_solar_data():
     os.makedirs('data', exist_ok=True)
     os.makedirs('data/daily', exist_ok=True)
 
-    # Check if we have saved auth state in repository
     use_auth_state = False
     auth_state_file = 'data/auth_state_encoded.txt'
 
@@ -371,7 +332,6 @@ def scrape_solar_data():
                 human_delay(3, 6)
                 random_mouse_movement(page)
 
-                # Username with bulletproof clearing (fixes the "Ross SaundersRoss Saunders" bug)
                 print("👤 Entering username...")
                 username_field = page.get_by_role("textbox", name="Username/Email")
                 username_field.wait_for(state="visible", timeout=15000)
@@ -380,7 +340,6 @@ def scrape_solar_data():
                 human_delay(3, 5)
                 random_mouse_movement(page)
 
-                # Password
                 print("🔑 Entering password...")
                 password_field = page.get_by_role("textbox", name="Password")
                 password_field.wait_for(state="visible", timeout=15000)
@@ -389,7 +348,6 @@ def scrape_solar_data():
                 human_delay(3, 5)
                 random_mouse_movement(page)
 
-                # Privacy checkbox - exact selector from codegen
                 checkbox_ok = click_privacy_checkbox(page)
                 if not checkbox_ok:
                     page.screenshot(path="data/debug_checkbox_failed.png", full_page=True)
@@ -398,11 +356,9 @@ def scrape_solar_data():
                 human_delay(2, 3)
                 random_mouse_movement(page)
 
-                # Click login
                 print("🔐 Clicking Login button...")
                 page.get_by_role("button", name="Login").click()
 
-                # Wait for redirect - STRICT pathname check
                 print("⏳ Waiting for redirect away from login page...")
                 try:
                     page.wait_for_function(
@@ -452,10 +408,9 @@ def scrape_solar_data():
             print(f"📍 Current URL: {page.url}")
             random_mouse_movement(page)
 
-            # Dismiss any blocking modal dialogs (announcements, T&C updates, etc.)
-            # SolisCloud started showing these and they intercept pointer events,
-            # blocking the search box click.
-            dismiss_blocking_dialogs(page)
+            # NEW: Dismiss any modal dialogs (announcements, terms updates, etc)
+            # that SolisCloud sometimes throws up after landing on station page
+            dismiss_modal_dialogs(page)
             human_delay(1, 2)
 
             # Search for plant
@@ -463,22 +418,14 @@ def scrape_solar_data():
             search_box = page.get_by_role("textbox", name="Search for Plant/Address/ID")
             search_box.wait_for(state="visible", timeout=30000)
 
-            # Click with dialog-recovery: if a dialog re-appears between dismissal
-            # and click, retry once after dismissing again, then force-click as
-            # a last resort so we never get stuck.
+            # If a dialog reappeared between dismissal and now, try once more
             try:
                 search_box.click(timeout=10000)
-            except Exception as click_err:
-                print(f"  ⚠️  Search click failed: {click_err}")
-                print("  🔁 Re-checking for dialogs and retrying...")
-                dismiss_blocking_dialogs(page)
+            except Exception:
+                print("  ↻ Click intercepted, re-attempting modal dismissal")
+                dismiss_modal_dialogs(page)
                 human_delay(1, 2)
-                try:
-                    search_box.click(timeout=10000)
-                except Exception as click_err2:
-                    print(f"  ⚠️  Second click failed: {click_err2}")
-                    print("  💪 Force-clicking search box (bypassing pointer-event check)")
-                    search_box.click(force=True, timeout=10000)
+                search_box.click(timeout=10000)
 
             human_delay(2, 4)
 
@@ -507,26 +454,14 @@ def scrape_solar_data():
 
             print(f"📍 Popup URL: {page1.url}")
 
-            # Dismiss any dialogs on the popup window too, just in case
-            dismiss_blocking_dialogs(page1)
+            # Also dismiss any dialogs in the popup window
+            dismiss_modal_dialogs(page1)
             human_delay(1, 2)
 
             # Download export
             print("💾 Clicking export button...")
-            export_btn = page1.get_by_role("button", name="Export")
             with page1.expect_download(timeout=30000) as download_info:
-                try:
-                    export_btn.click(timeout=10000)
-                except Exception as exp_err:
-                    print(f"  ⚠️  Export click failed: {exp_err}")
-                    print("  🔁 Dismissing dialogs on popup and retrying...")
-                    dismiss_blocking_dialogs(page1)
-                    human_delay(1, 2)
-                    try:
-                        export_btn.click(timeout=10000)
-                    except Exception:
-                        print("  💪 Force-clicking export button")
-                        export_btn.click(force=True, timeout=10000)
+                page1.get_by_role("button", name="Export").click()
 
             download = download_info.value
 
@@ -543,7 +478,6 @@ def scrape_solar_data():
             print(f"✅ Download saved to: {daily_path}")
             print(f"✅ Latest copy saved to: {latest_path}")
 
-            # Save auth state for next time
             if not use_auth_state:
                 try:
                     import base64
