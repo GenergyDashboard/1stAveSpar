@@ -126,6 +126,149 @@ def get_checkbox_state(page, label_text):
         return None
 
 
+def is_any_dialog_visible(page):
+    """
+    Return True if any Element-UI dialog wrapper is actually visible
+    (display != 'none' AND has dimensions). Element UI keeps the wrapper
+    in the DOM with display:none when closed, so .is_visible() alone
+    can give false positives.
+    """
+    try:
+        return page.evaluate("""
+            () => {
+                const wrappers = document.querySelectorAll('.el-dialog__wrapper');
+                for (const w of wrappers) {
+                    const cs = window.getComputedStyle(w);
+                    if (cs.display !== 'none'
+                        && cs.visibility !== 'hidden'
+                        && w.offsetParent !== null
+                        && w.getBoundingClientRect().height > 0) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        """)
+    except Exception:
+        return False
+
+
+def dismiss_blocking_dialogs(page, max_attempts=4):
+    """
+    SolisCloud sometimes pops a modal dialog (announcements, T&C updates,
+    "what's new", etc.) on the station page that intercepts pointer events
+    and blocks the search box click.
+
+    This function detects any visible .el-dialog__wrapper and tries multiple
+    strategies to close it: clicking the X button, clicking common confirm
+    buttons by text, and finally pressing Escape.
+    """
+    print("🪟 Checking for blocking dialogs...")
+
+    if not is_any_dialog_visible(page):
+        print("  ✅ No blocking dialogs detected")
+        return True
+
+    # Ordered close strategies — most specific first
+    close_strategies = [
+        # Element UI native close button (X in top-right)
+        '.el-dialog__wrapper .el-dialog__headerbtn',
+        '.el-dialog__wrapper .el-dialog__close',
+        # Common confirm/dismiss buttons by visible text
+        '.el-dialog__wrapper button:has-text("I Know")',
+        '.el-dialog__wrapper button:has-text("I know")',
+        '.el-dialog__wrapper button:has-text("Got it")',
+        '.el-dialog__wrapper button:has-text("Got It")',
+        '.el-dialog__wrapper button:has-text("Confirm")',
+        '.el-dialog__wrapper button:has-text("Agree")',
+        '.el-dialog__wrapper button:has-text("Accept")',
+        '.el-dialog__wrapper button:has-text("OK")',
+        '.el-dialog__wrapper button:has-text("Ok")',
+        '.el-dialog__wrapper button:has-text("Close")',
+        '.el-dialog__wrapper button:has-text("Skip")',
+        '.el-dialog__wrapper button:has-text("Later")',
+        '.el-dialog__wrapper button:has-text("Cancel")',
+        # Last-resort: any primary button inside the dialog
+        '.el-dialog__wrapper .el-button--primary',
+        '.el-dialog__wrapper button',
+    ]
+
+    for attempt in range(max_attempts):
+        if not is_any_dialog_visible(page):
+            print(f"  ✅ All dialogs dismissed after {attempt} attempt(s)")
+            return True
+
+        print(f"  ⚠️  Blocking dialog detected (attempt {attempt + 1}/{max_attempts})")
+        dismissed = False
+
+        for selector in close_strategies:
+            try:
+                btns = page.locator(selector)
+                count = btns.count()
+                for i in range(count):
+                    btn = btns.nth(i)
+                    try:
+                        if btn.is_visible():
+                            btn.click(timeout=3000)
+                            print(f"  🖱️  Clicked: {selector}")
+                            human_delay(1, 2)
+                            dismissed = True
+                            break
+                    except Exception:
+                        continue
+                if dismissed:
+                    break
+            except Exception:
+                continue
+
+        # Fallback: press Escape
+        if not dismissed:
+            try:
+                page.keyboard.press("Escape")
+                print("  ⌨️  Pressed Escape")
+                human_delay(1, 2)
+            except Exception:
+                pass
+
+        # Last-ditch: hide all visible dialog wrappers via JS
+        if attempt == max_attempts - 2 and is_any_dialog_visible(page):
+            try:
+                hidden = page.evaluate("""
+                    () => {
+                        let n = 0;
+                        document.querySelectorAll('.el-dialog__wrapper').forEach(w => {
+                            const cs = window.getComputedStyle(w);
+                            if (cs.display !== 'none') {
+                                w.style.display = 'none';
+                                n++;
+                            }
+                        });
+                        // Also remove modal backdrop if present
+                        document.querySelectorAll('.v-modal').forEach(m => m.remove());
+                        document.body.style.overflow = '';
+                        return n;
+                    }
+                """)
+                if hidden:
+                    print(f"  🧹 Force-hid {hidden} dialog(s) via JS")
+                    human_delay(1, 2)
+            except Exception as e:
+                print(f"  (force-hide failed: {e})")
+
+    still_visible = is_any_dialog_visible(page)
+    if still_visible:
+        print("  ⚠️  Could not dismiss all dialogs after max attempts")
+        try:
+            page.screenshot(path="data/debug_dialog_stuck.png", full_page=True)
+            print("  📸 Saved data/debug_dialog_stuck.png")
+        except Exception:
+            pass
+        return False
+
+    print("  ✅ Dialogs cleared")
+    return True
+
+
 def scrape_solar_data():
     """Scrape solar generation data from Soliscloud"""
 
@@ -309,11 +452,34 @@ def scrape_solar_data():
             print(f"📍 Current URL: {page.url}")
             random_mouse_movement(page)
 
+            # Dismiss any blocking modal dialogs (announcements, T&C updates, etc.)
+            # SolisCloud started showing these and they intercept pointer events,
+            # blocking the search box click.
+            dismiss_blocking_dialogs(page)
+            human_delay(1, 2)
+
             # Search for plant
             print("🔍 Searching for plant...")
             search_box = page.get_by_role("textbox", name="Search for Plant/Address/ID")
             search_box.wait_for(state="visible", timeout=30000)
-            search_box.click()
+
+            # Click with dialog-recovery: if a dialog re-appears between dismissal
+            # and click, retry once after dismissing again, then force-click as
+            # a last resort so we never get stuck.
+            try:
+                search_box.click(timeout=10000)
+            except Exception as click_err:
+                print(f"  ⚠️  Search click failed: {click_err}")
+                print("  🔁 Re-checking for dialogs and retrying...")
+                dismiss_blocking_dialogs(page)
+                human_delay(1, 2)
+                try:
+                    search_box.click(timeout=10000)
+                except Exception as click_err2:
+                    print(f"  ⚠️  Second click failed: {click_err2}")
+                    print("  💪 Force-clicking search box (bypassing pointer-event check)")
+                    search_box.click(force=True, timeout=10000)
+
             human_delay(2, 4)
 
             for char in "1st":
@@ -341,10 +507,26 @@ def scrape_solar_data():
 
             print(f"📍 Popup URL: {page1.url}")
 
+            # Dismiss any dialogs on the popup window too, just in case
+            dismiss_blocking_dialogs(page1)
+            human_delay(1, 2)
+
             # Download export
             print("💾 Clicking export button...")
+            export_btn = page1.get_by_role("button", name="Export")
             with page1.expect_download(timeout=30000) as download_info:
-                page1.get_by_role("button", name="Export").click()
+                try:
+                    export_btn.click(timeout=10000)
+                except Exception as exp_err:
+                    print(f"  ⚠️  Export click failed: {exp_err}")
+                    print("  🔁 Dismissing dialogs on popup and retrying...")
+                    dismiss_blocking_dialogs(page1)
+                    human_delay(1, 2)
+                    try:
+                        export_btn.click(timeout=10000)
+                    except Exception:
+                        print("  💪 Force-clicking export button")
+                        export_btn.click(force=True, timeout=10000)
 
             download = download_info.value
 
