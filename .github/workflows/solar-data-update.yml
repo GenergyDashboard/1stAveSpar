@@ -3,8 +3,7 @@ name: Update Solar Data
 
 on:
   schedule:
-    # Run every hour from 03:00 to 19:00 UTC (05:00 to 21:00 SAST/UTC+2)
-    - cron: '0 3-19 * * *'
+    - cron: '0,30 3-19 * * *'
   workflow_dispatch:
     inputs:
       test_mode:
@@ -58,7 +57,8 @@ jobs:
         run: |
           pip install playwright pandas openpyxl xlrd bcrypt requests
           playwright install chromium
-          playwright install-deps
+          timeout 120 playwright install-deps || echo "⚠️ install-deps timed out"
+          sudo apt-get install -y --no-install-recommends libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2t64 libxshmfence1 2>/dev/null || sudo apt-get install -y --no-install-recommends libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 libxshmfence1 2>/dev/null || true
       
       - name: Run scraper
         env:
@@ -66,6 +66,10 @@ jobs:
           SOLIS_PASSWORD: ${{ secrets.SOLIS_PASSWORD }}
         run: |
           python scraper.py
+      
+      - name: Generate today_detailed.json for fleet dashboard
+        run: |
+          python generate_today_detailed.py
       
       - name: Process data and generate stats (legacy - optional)
         run: |
