@@ -28596,9 +28596,9 @@
     },
     {
       "date": "2026-05-06",
-      "generation_kwh": 0.02,
-      "actual_load_kwh": 369.41,
-      "actual_grid_kwh": 369.39,
+      "generation_kwh": 20.77,
+      "actual_load_kwh": 598.25,
+      "actual_grid_kwh": 577.48,
       "hourly_data": [
         {
           "time": "00:00",
@@ -28658,10 +28658,31 @@
         },
         {
           "time": "08:00",
-          "generation_kw": 0.012,
-          "grid_kw": 24.053,
-          "load_kw": 24.065,
-          "intervals": 4
+          "generation_kw": 0.045,
+          "grid_kw": 71.82,
+          "load_kw": 71.865,
+          "intervals": 12
+        },
+        {
+          "time": "09:00",
+          "generation_kw": 0.477,
+          "grid_kw": 74.427,
+          "load_kw": 74.903,
+          "intervals": 12
+        },
+        {
+          "time": "10:00",
+          "generation_kw": 10.284,
+          "grid_kw": 61.64,
+          "load_kw": 71.924,
+          "intervals": 12
+        },
+        {
+          "time": "11:00",
+          "generation_kw": 9.953,
+          "grid_kw": 24.26,
+          "load_kw": 34.213,
+          "intervals": 5
         }
       ]
     }
@@ -29041,33 +29062,33 @@
     },
     "2026-05": {
       "tou_breakdown": {
-        "peak_kwh": 0.4276666666666667,
-        "standard_kwh": 45.9445,
+        "peak_kwh": 0.4346666666666667,
+        "standard_kwh": 45.9565,
         "off_peak_kwh": 31.168
       },
       "financial": {
         "utility": {
-          "peak_zar": 1.53,
-          "standard_zar": 102.46,
+          "peak_zar": 1.55,
+          "standard_zar": 102.48,
           "off_peak_zar": 52.99,
-          "total_zar": 156.97
+          "total_zar": 157.02
         },
         "ppa": {
-          "peak_zar": 0.64,
-          "standard_zar": 68.92,
+          "peak_zar": 0.65,
+          "standard_zar": 68.93,
           "off_peak_zar": 46.75,
-          "total_zar": 116.31
+          "total_zar": 116.34
         },
         "savings": {
-          "peak_savings_zar": 0.89,
-          "standard_savings_zar": 33.54,
+          "peak_savings_zar": 0.9,
+          "standard_savings_zar": 33.55,
           "off_peak_savings_zar": 6.23,
-          "total_savings_zar": 40.66
+          "total_savings_zar": 40.68
         },
-        "peak_savings_zar": 0.89,
-        "standard_savings_zar": 33.54,
+        "peak_savings_zar": 0.9,
+        "standard_savings_zar": 33.55,
         "off_peak_savings_zar": 6.23,
-        "total_savings_zar": 40.66
+        "total_savings_zar": 40.68
       },
       "tou_breakdown_expected": {
         "peak_kwh": 1307.78,
@@ -29106,33 +29127,33 @@
     "actual_grid_kwh": 52073.19999999999,
     "days_active": 64,
     "tou_breakdown": {
-      "peak_kwh": 2049.896916666666,
-      "standard_kwh": 19154.298416666654,
+      "peak_kwh": 2049.903916666666,
+      "standard_kwh": 19154.310416666653,
       "off_peak_kwh": 6483.4243333333325
     },
     "financial": {
       "utility": {
-        "peak_zar": 9696.01,
-        "standard_zar": 43336.6,
+        "peak_zar": 9696.05,
+        "standard_zar": 43336.63,
         "off_peak_zar": 11038.03,
-        "total_zar": 64070.64
+        "total_zar": 64070.7
       },
       "ppa": {
-        "peak_zar": 3074.85,
-        "standard_zar": 28731.45,
+        "peak_zar": 3074.86,
+        "standard_zar": 28731.47,
         "off_peak_zar": 9725.14,
-        "total_zar": 41531.43
+        "total_zar": 41531.46
       },
       "savings": {
-        "peak_savings_zar": 6621.17,
-        "standard_savings_zar": 14605.15,
+        "peak_savings_zar": 6621.19,
+        "standard_savings_zar": 14605.16,
         "off_peak_savings_zar": 1312.89,
-        "total_savings_zar": 22539.21
+        "total_savings_zar": 22539.24
       },
-      "peak_savings_zar": 6621.17,
-      "standard_savings_zar": 14605.15,
+      "peak_savings_zar": 6621.19,
+      "standard_savings_zar": 14605.16,
       "off_peak_savings_zar": 1312.89,
-      "total_savings_zar": 22539.21
+      "total_savings_zar": 22539.24
     }
   },
   "tou_rates": [
