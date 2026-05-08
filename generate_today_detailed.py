@@ -21,7 +21,9 @@ SAST = timezone(timedelta(hours=2))
 DATA_DIR = Path(__file__).parent / "data"
 XLS_FILE = DATA_DIR / "solar_export_latest.xls"
 OUTPUT_FILE = DATA_DIR / "today_detailed.json"
+HISTORY_FILE = DATA_DIR / "history.json"
 PREDICTIONS_FILE = Path(__file__).parent / "predictions_2025_2044.min.json"
+HISTORY_DAYS = 30  # Keep 30 days of rolling history
 
 
 def load_predictions():
@@ -156,6 +158,41 @@ def fetch_irradiation(date_str):
     return [0.0] * 24
 
 
+def load_history():
+    """Load existing history.json or return empty dict."""
+    try:
+        if HISTORY_FILE.exists():
+            with open(HISTORY_FILE) as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"  ⚠️  Could not load history: {e}")
+    return {}
+
+
+def save_history(history, today, hourly_pv, irradiation):
+    """Save today's data to history and trim to HISTORY_DAYS."""
+    total = sum(hourly_pv)
+    last_hour = max((h for h in range(24) if hourly_pv[h] > 0), default=0)
+
+    history[today] = {
+        "total_kwh": round(total, 2),
+        "hourly": [round(v, 2) for v in hourly_pv],
+        "irradiation": [round(v, 1) for v in irradiation],
+        "last_hour": last_hour,
+    }
+
+    # Trim to last HISTORY_DAYS
+    dates = sorted(history.keys())
+    if len(dates) > HISTORY_DAYS:
+        for old_date in dates[:-HISTORY_DAYS]:
+            del history[old_date]
+
+    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
+    print(f"  📅 History: {len(history)} days saved ({dates[0] if dates else '?'} → {today})")
+
+
 def main():
     print("📊 Generating today_detailed.json for 1st Avenue Spar")
 
@@ -179,7 +216,7 @@ def main():
     today = datetime.now(SAST).strftime("%Y-%m-%d")
     irradiation = fetch_irradiation(today)
 
-    # Build output in the format the main dashboard expects
+    # Build today_detailed.json output
     output = []
     for h in range(24):
         output.append({
@@ -190,12 +227,16 @@ def main():
             "irradiation_wm2": round(irradiation[h], 1),
         })
 
-    # Write output
+    # Write today_detailed.json
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_FILE, "w") as f:
         json.dump(output, f, indent=2)
     print(f"  ✅ Saved: {OUTPUT_FILE}")
     print(f"  📊 {sum(1 for h in hourly_pv if h > 0)} hours with PV data")
+
+    # Update rolling history
+    history = load_history()
+    save_history(history, today, hourly_pv, irradiation)
 
 
 if __name__ == "__main__":
