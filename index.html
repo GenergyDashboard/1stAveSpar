@@ -1890,10 +1890,10 @@
         }
 
         function checkSession() {
-            const s = localStorage.getItem('nautica-auth');
-            const t = localStorage.getItem('nautica-auth-ts');
+            const s = localStorage.getItem('spar-auth');
+            const t = localStorage.getItem('spar-auth-ts');
             if (s === 'ok' && t && (Date.now() - parseInt(t)) < 86400000) return true;
-            localStorage.removeItem('nautica-auth'); localStorage.removeItem('nautica-auth-ts');
+            localStorage.removeItem('spar-auth'); localStorage.removeItem('spar-auth-ts');
             return false;
         }
 
@@ -1904,12 +1904,12 @@
             e.preventDefault();
             const u = document.getElementById('loginUser').value;
             const p = document.getElementById('loginPass').value;
-            if (credentials) {
+            if (credentials && credentials.username_hash && credentials.password_hash) {
                 const uHash = await hashStr(u);
                 const pHash = await hashStr(p);
                 if (uHash === credentials.username_hash && pHash === credentials.password_hash) {
-                    localStorage.setItem('nautica-auth', 'ok');
-                    localStorage.setItem('nautica-auth-ts', Date.now().toString());
+                    localStorage.setItem('spar-auth', 'ok');
+                    localStorage.setItem('spar-auth-ts', Date.now().toString());
                     isLoggedIn = true;
                     hideLoginModal();
                     showClientView();
@@ -1921,7 +1921,7 @@
 
         function logout() {
             isLoggedIn = false;
-            localStorage.removeItem('nautica-auth'); localStorage.removeItem('nautica-auth-ts');
+            localStorage.removeItem('spar-auth'); localStorage.removeItem('spar-auth-ts');
             document.getElementById('editLayoutBtn').style.display = 'none';
             document.getElementById('calcConfigBtn').style.display = 'none';
             if (document.body.classList.contains('edit-mode')) toggleEditMode();
@@ -1998,27 +1998,44 @@
 
 
         // ══════════════════════════════════════════════════
-        // SPAR DATA ADAPTER (v2 — full predictions/financial)
+        // SPAR DATA ADAPTER (v3 — daily_records as source of truth)
         // ──────────────────────────────────────────────────
-        // Nautica's renderer expects FusionSolar-shaped data
-        // (today.data['PV Yield (kWh)'] etc). Spar's source file
-        // is SolisCloud-shaped. This adapter converts Spar → Nautica.
+        // dashboard_data.json's top-level today/yesterday/month
+        // fields can go stale if the pipeline's snapshot step fails.
+        // daily_records[] is always fresh, so we derive everything
+        // from it and ignore the stale snapshot fields.
         // ══════════════════════════════════════════════════
         function adaptSparToNauticaShape(s) {
             const out = {};
             out.plant = s.system?.plant_name || '1st Avenue Spar';
-            out.last_updated = s.last_updated || '';
+
+            // Sort daily_records ascending so we can pick the most recent
+            const records = (s.daily_records || []).slice()
+                .filter(r => r && r.date)
+                .sort((a, b) => a.date.localeCompare(b.date));
 
             const dRec = {};
-            (s.daily_records || []).forEach(r => { if (r.date) dRec[r.date] = r; });
+            records.forEach(r => { dRec[r.date] = r; });
 
-            const todayDate = s.today?.date;
-            const yestDate = s.yesterday?.date;
-            const todayRec = dRec[todayDate] || {};
-            const yestRec = dRec[yestDate] || {};
+            // ── TRUE today/yesterday: most recent record + the one before ──
+            const latest = records.length ? records[records.length - 1] : null;
+            const prev = records.length > 1 ? records[records.length - 2] : null;
+            const todayDate = latest?.date || new Date().toISOString().slice(0,10);
+            const yestDate = prev?.date || '';
 
-            function makeDayShape(date, summary, rec) {
-                const gen = summary?.generation_kwh || rec?.generation_kwh || 0;
+            // ── last_updated: derived from the latest record ──
+            // Prefer hourly_data's latest entry if present; else top-level
+            let derivedUpdate = s.last_updated || '';
+            if (latest && Array.isArray(latest.hourly_data) && latest.hourly_data.length > 0) {
+                const lastHour = latest.hourly_data[latest.hourly_data.length - 1];
+                if (lastHour && lastHour.time) {
+                    derivedUpdate = latest.date + ' ' + lastHour.time;
+                }
+            }
+            out.last_updated = derivedUpdate;
+
+            function makeDayShape(date, rec) {
+                const gen = rec?.generation_kwh || 0;
                 const cons = rec?.actual_load_kwh || 0;
                 const grid = rec?.actual_grid_kwh || 0;
                 return {
@@ -2037,77 +2054,107 @@
                     }
                 };
             }
-            out.today = makeDayShape(todayDate, s.today, todayRec);
-            out.yesterday = makeDayShape(yestDate, s.yesterday, yestRec);
+            out.today = makeDayShape(todayDate, latest || {});
+            out.yesterday = makeDayShape(yestDate, prev || {});
 
-            const ym = (todayDate || '').substring(0, 7);
-            const mSum = s.monthly_summaries?.[ym] || {};
-            const mGen = s.month?.generation_kwh || mSum.total_generation_kwh || 0;
+            // ── current_month: sum the daily_records for today's YM ──
+            const ym = todayDate.substring(0, 7);
+            let mGen = 0, mLoad = 0, mGrid = 0;
+            records.forEach(r => {
+                if (r.date.startsWith(ym)) {
+                    mGen += r.generation_kwh || 0;
+                    mLoad += r.actual_load_kwh || 0;
+                    mGrid += r.actual_grid_kwh || 0;
+                }
+            });
             out.current_month = {
                 period: ym,
                 data: {
                     'PV Yield (kWh)': mGen,
                     'Inverter Yield (kWh)': mGen,
-                    'Consumption (kWh)': mSum.actual_load_kwh || 0,
-                    'Import (kWh)': mSum.actual_grid_kwh || 0,
+                    'Consumption (kWh)': mLoad,
+                    'Import (kWh)': mGrid,
                     'Self-consumption (kWh)': mGen,
                     'Export (kWh)': 0,
                     'Self-consumption Rate (%)': mGen > 0 ? 100 : 0,
                 }
             };
 
+            // ── monthly: rebuild fully from daily_records for max freshness ──
+            // (rather than trusting s.monthly_summaries which may be stale)
+            const monthAgg = {};
+            records.forEach(r => {
+                const m = r.date.substring(0, 7);
+                if (!monthAgg[m]) monthAgg[m] = { gen: 0, load: 0, grid: 0, days: 0 };
+                monthAgg[m].gen += r.generation_kwh || 0;
+                monthAgg[m].load += r.actual_load_kwh || 0;
+                monthAgg[m].grid += r.actual_grid_kwh || 0;
+                monthAgg[m].days++;
+            });
             out.monthly = {};
-            Object.entries(s.monthly_summaries || {}).forEach(([k, m]) => {
+            Object.entries(monthAgg).forEach(([k, m]) => {
                 out.monthly[k] = {
                     data: {
-                        'PV Yield (kWh)': m.total_generation_kwh || 0,
-                        'Inverter Yield (kWh)': m.total_generation_kwh || 0,
-                        'Consumption (kWh)': m.actual_load_kwh || 0,
-                        'Import (kWh)': m.actual_grid_kwh || 0,
-                        'Self-consumption (kWh)': m.total_generation_kwh || 0,
+                        'PV Yield (kWh)': m.gen,
+                        'Inverter Yield (kWh)': m.gen,
+                        'Consumption (kWh)': m.load,
+                        'Import (kWh)': m.grid,
+                        'Self-consumption (kWh)': m.gen,
                         'Export (kWh)': 0,
-                    }
+                    },
+                    days_with_data: m.days,
                 };
             });
 
+            // ── lifetime: by year from daily_records ──
+            const yearAgg = {};
+            records.forEach(r => {
+                const yr = r.date.substring(0, 4);
+                if (!yearAgg[yr]) yearAgg[yr] = { gen: 0, load: 0, grid: 0 };
+                yearAgg[yr].gen += r.generation_kwh || 0;
+                yearAgg[yr].load += r.actual_load_kwh || 0;
+                yearAgg[yr].grid += r.actual_grid_kwh || 0;
+            });
             out.lifetime = {};
-            Object.entries(s.monthly_summaries || {}).forEach(([k, m]) => {
-                const yr = k.substring(0, 4);
-                if (!out.lifetime[yr]) {
-                    out.lifetime[yr] = { data: {
-                        'PV Yield (kWh)': 0, 'Inverter Yield (kWh)': 0,
-                        'Consumption (kWh)': 0, 'Import (kWh)': 0,
-                        'Self-consumption (kWh)': 0, 'Export (kWh)': 0,
-                        'CO₂ Avoided (t)': 0, 'Standard Coal Saved (t)': 0,
-                    }};
-                }
-                const d = out.lifetime[yr].data;
-                d['PV Yield (kWh)'] += m.total_generation_kwh || 0;
-                d['Inverter Yield (kWh)'] += m.total_generation_kwh || 0;
-                d['Consumption (kWh)'] += m.actual_load_kwh || 0;
-                d['Import (kWh)'] += m.actual_grid_kwh || 0;
-                d['Self-consumption (kWh)'] += m.total_generation_kwh || 0;
-                d['CO₂ Avoided (t)'] += (m.total_generation_kwh || 0) * 0.001;
-                d['Standard Coal Saved (t)'] += (m.total_generation_kwh || 0) * 0.000548;
+            Object.entries(yearAgg).forEach(([yr, y]) => {
+                out.lifetime[yr] = { data: {
+                    'PV Yield (kWh)': y.gen,
+                    'Inverter Yield (kWh)': y.gen,
+                    'Consumption (kWh)': y.load,
+                    'Import (kWh)': y.grid,
+                    'Self-consumption (kWh)': y.gen,
+                    'Export (kWh)': 0,
+                    'CO₂ Avoided (t)': y.gen * 0.001,
+                    'Standard Coal Saved (t)': y.gen * 0.000548,
+                }};
             });
 
-            const ls = s.lifetime_summary || {};
-            const lifeEnv = s.lifetime?.env_impact || {};
+            // ── all_time_totals: sum of all daily_records ──
+            let totGen = 0, totLoad = 0, totGrid = 0;
+            records.forEach(r => {
+                totGen += r.generation_kwh || 0;
+                totLoad += r.actual_load_kwh || 0;
+                totGrid += r.actual_grid_kwh || 0;
+            });
             out.all_time_totals = {
-                'PV Yield (kWh)': ls.total_generation_kwh || s.lifetime?.total_generation_kwh || 0,
-                'Inverter Yield (kWh)': ls.total_generation_kwh || 0,
-                'Consumption (kWh)': ls.actual_load_kwh || 0,
-                'Import (kWh)': ls.actual_grid_kwh || 0,
-                'Self-consumption (kWh)': ls.total_generation_kwh || 0,
+                'PV Yield (kWh)': totGen,
+                'Inverter Yield (kWh)': totGen,
+                'Consumption (kWh)': totLoad,
+                'Import (kWh)': totGrid,
+                'Self-consumption (kWh)': totGen,
                 'Export (kWh)': 0,
-                'CO₂ Avoided (t)': lifeEnv.co2_offset_tons || 0,
-                'Standard Coal Saved (t)': (lifeEnv.coal_saved_kg || 0) / 1000,
+                'CO₂ Avoided (t)': totGen * 0.001,
+                'Standard Coal Saved (t)': totGen * 0.000548,
                 'Self-consumption Rate (%)': 100,
                 'Peak Power (kW)': s.system?.installed_capacity_kwp || 0,
             };
 
-            function buildSav(fin) {
-                if (!fin) return { pv_savings: {peak:0,standard:0,off_peak:0,total:0}, total: 0, ppa: {}, utility: {} };
+            // ── savings: prefer financial fields on the records themselves ──
+            function buildSavFromRec(rec) {
+                if (!rec || !rec.financial) {
+                    return { pv_savings: {peak:0,standard:0,off_peak:0,total:0}, export_savings:{total:0}, total:0, ppa:{}, utility:{} };
+                }
+                const fin = rec.financial;
                 const peak = fin.peak_savings_zar || fin.savings?.peak_savings_zar || 0;
                 const std  = fin.standard_savings_zar || fin.savings?.standard_savings_zar || 0;
                 const off  = fin.off_peak_savings_zar || fin.savings?.off_peak_savings_zar || 0;
@@ -2120,17 +2167,42 @@
                     total: tot,
                 };
             }
+            // Aggregate savings across all records in current month
+            function aggregateSav(recs) {
+                let peak=0, std=0, off=0, utPeak=0, utStd=0, utOff=0, ppaPeak=0, ppaStd=0, ppaOff=0;
+                recs.forEach(r => {
+                    const f = r.financial || {};
+                    peak += f.peak_savings_zar || 0;
+                    std  += f.standard_savings_zar || 0;
+                    off  += f.off_peak_savings_zar || 0;
+                    utPeak += f.utility?.peak_zar || 0;
+                    utStd  += f.utility?.standard_zar || 0;
+                    utOff  += f.utility?.off_peak_zar || 0;
+                    ppaPeak += f.ppa?.peak_zar || 0;
+                    ppaStd  += f.ppa?.standard_zar || 0;
+                    ppaOff  += f.ppa?.off_peak_zar || 0;
+                });
+                const tot = peak + std + off;
+                return {
+                    pv_savings: { peak, standard: std, off_peak: off, total: tot },
+                    export_savings: { standard: 0, off_peak: 0, total: 0 },
+                    utility: { peak_zar: utPeak, standard_zar: utStd, off_peak_zar: utOff, total_zar: utPeak+utStd+utOff },
+                    ppa: { peak_zar: ppaPeak, standard_zar: ppaStd, off_peak_zar: ppaOff, total_zar: ppaPeak+ppaStd+ppaOff },
+                    total: tot,
+                };
+            }
             out.savings = {
-                today: buildSav(todayRec.financial),
-                current_month: buildSav(mSum.financial),
-                all_time: buildSav(ls.financial),
+                today: buildSavFromRec(latest),
+                current_month: aggregateSav(records.filter(r => r.date.startsWith(ym))),
+                all_time: aggregateSav(records),
             };
 
+            // ── hourly: from latest record's hourly_data ──
             const hrPv = new Array(24).fill(0);
             const hrLoad = new Array(24).fill(0);
             const hrGrid = new Array(24).fill(0);
             let lastH = -1;
-            (todayRec.hourly_data || []).forEach(h => {
+            (latest?.hourly_data || []).forEach(h => {
                 const hh = parseInt((h.time || '00:00').split(':')[0]);
                 if (isNaN(hh) || hh < 0 || hh > 23) return;
                 hrPv[hh]   = h.generation_kw || 0;
@@ -2147,21 +2219,17 @@
 
             out._spar = {
                 tou_rates: s.tou_rates || [],
-                daily_records: s.daily_records || [],
-                lifetime_summary_raw: ls,
+                daily_records: records,
                 system: s.system || {},
             };
             return out;
         }
 
         // ── Predictions adapter (Caveat 3) ──────────────────
-        // Spar: daily_predictions[YYYY-MM-DD].{pv_kw, load_kw, grid_kw, irradiation_wm2} arrays
-        // Nautica expects: daily_hourly[MM-DD] = 24-hour kWh array (avg pattern across years)
         function adaptSparPredictions(rawPred) {
             const dp = rawPred?.daily_predictions || {};
             const sysKwp = 71.59;
-            // Build MM-DD buckets averaged across years
-            const buckets = {}; // "MM-DD" → {pvSum:[24], pvCount, loadSum:[24], loadCount, irrSum:[24], irrCount}
+            const buckets = {};
             Object.entries(dp).forEach(([date, d]) => {
                 if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
                 const mmdd = date.substring(5);
@@ -2182,7 +2250,7 @@
             });
 
             const daily_hourly = {};
-            const monthlyTotals = new Array(13).fill(0); // 1-indexed
+            const monthlyTotals = new Array(13).fill(0);
             Object.entries(buckets).forEach(([mmdd, b]) => {
                 const avgPv = b.pv.map(v => b.pvN > 0 ? v / b.pvN : 0);
                 daily_hourly[mmdd] = avgPv;
@@ -2206,8 +2274,6 @@
             };
         }
 
-        // ── Irradiation adapter (Caveat 2) ──────────────────
-        // Returns { "YYYY-MM-DD": [24 values], ... } so irradiation chart can work
         function adaptSparIrradiation(rawPred) {
             const dp = rawPred?.daily_predictions || {};
             const out = {};
@@ -2219,7 +2285,6 @@
             return out;
         }
 
-        // Daily history from daily_records (with per-day hourly arrays)
         function adaptSparDailyHistory(s) {
             const out = {};
             (s.daily_records || []).forEach(r => {
@@ -2250,35 +2315,28 @@
             return out;
         }
 
-        // ── Financial config adapter (Caveat 4) ─────────────
-        // Spar's TOU rates → Nautica's finConfig shape with Eskom Megaflex schedule.
-        // Memory: Spar's high & low season schedules are identical
-        // (Peak 07-10 & 18-20, Std 06-07/10-18/20-22, Off-peak 22-06; weekends no peak).
         function adaptSparFinConfig(s) {
             const rates = s.tou_rates || [];
             const latest = rates.length ? rates[rates.length - 1] : null;
             const high = latest?.high_season || {peak:0, standard:0, off_peak:0};
             const low  = latest?.low_season  || {peak:0, standard:0, off_peak:0};
-
-            // Eskom Megaflex schedule used by Spar (per memory note)
             const PEAK = 'peak', STD = 'standard', OFF = 'off_peak';
             const weekday = [
-                OFF,OFF,OFF,OFF,OFF,OFF,   // 00-05
-                STD,                        // 06
-                PEAK,PEAK,PEAK,             // 07,08,09
-                STD,STD,STD,STD,STD,STD,STD,STD,  // 10-17
-                PEAK,PEAK,                  // 18,19
-                STD,STD,                    // 20,21
-                OFF,OFF                     // 22,23
+                OFF,OFF,OFF,OFF,OFF,OFF,
+                STD,
+                PEAK,PEAK,PEAK,
+                STD,STD,STD,STD,STD,STD,STD,STD,
+                PEAK,PEAK,
+                STD,STD,
+                OFF,OFF
             ];
             const weekend = [
                 OFF,OFF,OFF,OFF,OFF,OFF,
                 STD,STD,STD,STD,STD,STD,STD,STD,STD,STD,STD,STD,STD,STD,STD,STD,
                 OFF,OFF
             ];
-
             return {
-                _info: '1st Avenue Spar — Eskom Megaflex (urban). Same TOU schedule year-round; rates differ Jun-Aug.',
+                _info: '1st Avenue Spar — Eskom Megaflex (urban).',
                 rates: {
                     high_demand: { peak: high.peak, standard: high.standard, off_peak: high.off_peak },
                     low_demand:  { peak: low.peak,  standard: low.standard,  off_peak: low.off_peak  },
@@ -2292,7 +2350,6 @@
                     high_demand: { weekday, saturday: weekend, sunday: weekend },
                     low_demand:  { weekday, saturday: weekend, sunday: weekend },
                 },
-                // Spar does not export — zero credits
                 export_credits: { peak: 0, standard: 0, off_peak: 0 },
                 ppa_rate_zar_per_kwh: 1.50,
                 _historical_rates: rates,
