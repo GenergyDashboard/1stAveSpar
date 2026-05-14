@@ -21,7 +21,7 @@ permissions:
 jobs:
   scrape-and-update:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Add random delay (0-10 minutes)
         if: github.event.inputs.test_mode != 'T' && github.event_name != 'workflow_dispatch' || github.event.inputs.test_mode == 'F'
@@ -29,22 +29,22 @@ jobs:
           DELAY=$((RANDOM % 600))
           echo "⏱️ Waiting $DELAY seconds ($(($DELAY / 60)) minutes) before starting..."
           sleep $DELAY
-      
+
       - name: Skip delay notification
         if: github.event.inputs.test_mode == 'T'
         run: |
           echo "🚀 Test Mode: Skipping random delay, running immediately!"
-      
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      
+
       - name: Cache Python dependencies
         uses: actions/cache@v3
         with:
@@ -52,25 +52,25 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install dependencies
         run: |
           pip install playwright pandas openpyxl xlrd bcrypt requests
           playwright install chromium
           timeout 120 playwright install-deps || echo "⚠️ install-deps timed out"
           sudo apt-get install -y --no-install-recommends libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2t64 libxshmfence1 2>/dev/null || sudo apt-get install -y --no-install-recommends libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 libxshmfence1 2>/dev/null || true
-      
+
       - name: Run scraper
         env:
           SOLIS_USERNAME: ${{ secrets.SOLIS_USERNAME }}
           SOLIS_PASSWORD: ${{ secrets.SOLIS_PASSWORD }}
         run: |
           python scraper.py
-      
+
       - name: Generate today_detailed.json for fleet dashboard
         run: |
           python generate_today_detailed.py
-      
+
       - name: Process data and generate stats (legacy - optional)
         run: |
           if [ -f "process_data.py" ]; then
@@ -79,7 +79,7 @@ jobs:
           else
             echo "⚠️ process_data.py not found - using new migration pipeline instead"
           fi
-      
+
       - name: Check file structure
         run: |
           echo "📁 Current directory: $(pwd)"
@@ -98,14 +98,14 @@ jobs:
           echo ""
           echo "📂 Latest XLS:"
           ls -lt data/daily/*.xls 2>/dev/null | head -3 || echo "No XLS files"
-      
+
       - name: Migrate XLS data to daily records
         run: |
           if [ ! -f "migrate_data.py" ]; then
             echo "⚠️ migrate_data.py not found - skipping migration"
             exit 0
           fi
-          
+
           if [ -f "dashboard_data.json" ]; then
             echo "✓ Found dashboard_data.json in root"
             python3 migrate_data.py dashboard_data.json data/daily
@@ -118,7 +118,7 @@ jobs:
             echo '{"daily_records":[],"system":{"name":"1st Avenue Spar","capacity_kwp":71.59},"monthly_summaries":{},"lifetime_summary":{}}' > dashboard_data.json
             python3 migrate_data.py dashboard_data.json data/daily
           fi
-      
+
       - name: Update irradiation from Open-Meteo API
         run: |
           if [ ! -f "update_irradiation.py" ]; then
@@ -126,26 +126,26 @@ jobs:
             echo "   Predictions file will use existing/static irradiation data"
             exit 0
           fi
-          
+
           if [ ! -f "predictions_2025_2044.min.json" ]; then
             echo "⚠️ predictions_2025_2044.min.json not found"
             echo "   Cannot update irradiation without predictions file"
             exit 0
           fi
-          
+
           echo "📡 Fetching fresh irradiation data from Open-Meteo API..."
           python3 update_irradiation.py || {
             echo "⚠️ Irradiation update failed, continuing with existing data"
             exit 0
           }
-      
+
       - name: Enhance with TOU and financial data
         run: |
           if [ ! -f "solar_processor_enhanced.py" ]; then
             echo "⚠️ solar_processor_enhanced.py not found - skipping enhancement"
             exit 0
           fi
-          
+
           if [ -f "dashboard_data.json" ]; then
             echo "✓ Enhancing dashboard_data.json"
             python3 solar_processor_enhanced.py dashboard_data.json
@@ -155,12 +155,29 @@ jobs:
           else
             echo "⚠️ No dashboard_data.json to enhance"
           fi
-      
-      - name: Generate client auth file
+
+      - name: Generate client auth file (hashed)
+        env:
+          CLIENT_USERNAME: ${{ secrets.CLIENT_USERNAME }}
+          CLIENT_PASSWORD: ${{ secrets.CLIENT_PASSWORD }}
         run: |
           mkdir -p data
-          echo '{"username":"${{ secrets.CLIENT_USERNAME }}","password":"${{ secrets.CLIENT_PASSWORD }}"}' > data/client_auth.json
-      
+          python3 << 'PYEOF'
+          import json, hashlib, os, sys
+          u = os.environ.get('CLIENT_USERNAME', '')
+          p = os.environ.get('CLIENT_PASSWORD', '')
+          if not u or not p:
+              print("❌ ERROR: CLIENT_USERNAME or CLIENT_PASSWORD secret is empty")
+              sys.exit(1)
+          out = {
+              "username_hash": hashlib.sha256(u.encode('utf-8')).hexdigest(),
+              "password_hash": hashlib.sha256(p.encode('utf-8')).hexdigest(),
+          }
+          with open('data/client_auth.json', 'w') as f:
+              json.dump(out, f)
+          print(f"✓ Wrote hashed credentials (user hash: {out['username_hash'][:12]}..., pass hash: {out['password_hash'][:12]}...)")
+          PYEOF
+
       - name: Check for downtime and notify
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -172,7 +189,7 @@ jobs:
           else
             echo "⚠️ check_downtime_notify.py not found - skipping notification check"
           fi
-      
+
       - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
