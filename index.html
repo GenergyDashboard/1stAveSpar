@@ -1998,33 +1998,24 @@
 
 
         // ══════════════════════════════════════════════════
-        // SPAR DATA ADAPTER (v3 — daily_records as source of truth)
-        // ──────────────────────────────────────────────────
-        // dashboard_data.json's top-level today/yesterday/month
-        // fields can go stale if the pipeline's snapshot step fails.
-        // daily_records[] is always fresh, so we derive everything
-        // from it and ignore the stale snapshot fields.
+        // SPAR DATA ADAPTER (v4 — proper field shapes for all renderers)
         // ══════════════════════════════════════════════════
         function adaptSparToNauticaShape(s) {
             const out = {};
             out.plant = s.system?.plant_name || '1st Avenue Spar';
 
-            // Sort daily_records ascending so we can pick the most recent
             const records = (s.daily_records || []).slice()
                 .filter(r => r && r.date)
                 .sort((a, b) => a.date.localeCompare(b.date));
-
             const dRec = {};
             records.forEach(r => { dRec[r.date] = r; });
 
-            // ── TRUE today/yesterday: most recent record + the one before ──
             const latest = records.length ? records[records.length - 1] : null;
             const prev = records.length > 1 ? records[records.length - 2] : null;
             const todayDate = latest?.date || new Date().toISOString().slice(0,10);
             const yestDate = prev?.date || '';
 
-            // ── last_updated: derived from the latest record ──
-            // Prefer hourly_data's latest entry if present; else top-level
+            // last_updated derived from latest record's last hourly entry
             let derivedUpdate = s.last_updated || '';
             if (latest && Array.isArray(latest.hourly_data) && latest.hourly_data.length > 0) {
                 const lastHour = latest.hourly_data[latest.hourly_data.length - 1];
@@ -2057,7 +2048,7 @@
             out.today = makeDayShape(todayDate, latest || {});
             out.yesterday = makeDayShape(yestDate, prev || {});
 
-            // ── current_month: sum the daily_records for today's YM ──
+            // current_month
             const ym = todayDate.substring(0, 7);
             let mGen = 0, mLoad = 0, mGrid = 0;
             records.forEach(r => {
@@ -2080,8 +2071,7 @@
                 }
             };
 
-            // ── monthly: rebuild fully from daily_records for max freshness ──
-            // (rather than trusting s.monthly_summaries which may be stale)
+            // ── monthly[ym] = FLAT structure (renderMonthlyTab reads md['PV Yield (kWh)'] directly) ──
             const monthAgg = {};
             records.forEach(r => {
                 const m = r.date.substring(0, 7);
@@ -2094,19 +2084,17 @@
             out.monthly = {};
             Object.entries(monthAgg).forEach(([k, m]) => {
                 out.monthly[k] = {
-                    data: {
-                        'PV Yield (kWh)': m.gen,
-                        'Inverter Yield (kWh)': m.gen,
-                        'Consumption (kWh)': m.load,
-                        'Import (kWh)': m.grid,
-                        'Self-consumption (kWh)': m.gen,
-                        'Export (kWh)': 0,
-                    },
-                    days_with_data: m.days,
+                    'PV Yield (kWh)': m.gen,
+                    'Inverter Yield (kWh)': m.gen,
+                    'Consumption (kWh)': m.load,
+                    'Import (kWh)': m.grid,
+                    'Self-consumption (kWh)': m.gen,
+                    'Export (kWh)': 0,
+                    'days_with_data': m.days,
                 };
             });
 
-            // ── lifetime: by year from daily_records ──
+            // ── lifetime[yr] = FLAT structure ──
             const yearAgg = {};
             records.forEach(r => {
                 const yr = r.date.substring(0, 4);
@@ -2117,7 +2105,7 @@
             });
             out.lifetime = {};
             Object.entries(yearAgg).forEach(([yr, y]) => {
-                out.lifetime[yr] = { data: {
+                out.lifetime[yr] = {
                     'PV Yield (kWh)': y.gen,
                     'Inverter Yield (kWh)': y.gen,
                     'Consumption (kWh)': y.load,
@@ -2126,10 +2114,10 @@
                     'Export (kWh)': 0,
                     'CO₂ Avoided (t)': y.gen * 0.001,
                     'Standard Coal Saved (t)': y.gen * 0.000548,
-                }};
+                };
             });
 
-            // ── all_time_totals: sum of all daily_records ──
+            // ── all_time_totals ──
             let totGen = 0, totLoad = 0, totGrid = 0;
             records.forEach(r => {
                 totGen += r.generation_kwh || 0;
@@ -2149,27 +2137,10 @@
                 'Peak Power (kW)': s.system?.installed_capacity_kwp || 0,
             };
 
-            // ── savings: prefer financial fields on the records themselves ──
-            function buildSavFromRec(rec) {
-                if (!rec || !rec.financial) {
-                    return { pv_savings: {peak:0,standard:0,off_peak:0,total:0}, export_savings:{total:0}, total:0, ppa:{}, utility:{} };
-                }
-                const fin = rec.financial;
-                const peak = fin.peak_savings_zar || fin.savings?.peak_savings_zar || 0;
-                const std  = fin.standard_savings_zar || fin.savings?.standard_savings_zar || 0;
-                const off  = fin.off_peak_savings_zar || fin.savings?.off_peak_savings_zar || 0;
-                const tot  = fin.total_savings_zar || fin.savings?.total_savings_zar || (peak+std+off);
-                return {
-                    pv_savings: { peak, standard: std, off_peak: off, total: tot },
-                    export_savings: { standard: 0, off_peak: 0, total: 0 },
-                    utility: fin.utility || {},
-                    ppa: fin.ppa || {},
-                    total: tot,
-                };
-            }
-            // Aggregate savings across all records in current month
+            // ── savings ──
             function aggregateSav(recs) {
                 let peak=0, std=0, off=0, utPeak=0, utStd=0, utOff=0, ppaPeak=0, ppaStd=0, ppaOff=0;
+                let genPeak=0, genStd=0, genOff=0;
                 recs.forEach(r => {
                     const f = r.financial || {};
                     peak += f.peak_savings_zar || 0;
@@ -2181,6 +2152,10 @@
                     ppaPeak += f.ppa?.peak_zar || 0;
                     ppaStd  += f.ppa?.standard_zar || 0;
                     ppaOff  += f.ppa?.off_peak_zar || 0;
+                    const tb = r.tou_breakdown || {};
+                    genPeak += tb.peak_kwh || 0;
+                    genStd  += tb.standard_kwh || 0;
+                    genOff  += tb.off_peak_kwh || 0;
                 });
                 const tot = peak + std + off;
                 return {
@@ -2188,8 +2163,13 @@
                     export_savings: { standard: 0, off_peak: 0, total: 0 },
                     utility: { peak_zar: utPeak, standard_zar: utStd, off_peak_zar: utOff, total_zar: utPeak+utStd+utOff },
                     ppa: { peak_zar: ppaPeak, standard_zar: ppaStd, off_peak_zar: ppaOff, total_zar: ppaPeak+ppaStd+ppaOff },
+                    generation: { peak: genPeak, standard: genStd, off_peak: genOff, total: genPeak+genStd+genOff },
                     total: tot,
                 };
+            }
+            function buildSavFromRec(rec) {
+                if (!rec) return { pv_savings: {peak:0,standard:0,off_peak:0,total:0}, export_savings:{total:0}, total:0 };
+                return aggregateSav([rec]);
             }
             out.savings = {
                 today: buildSavFromRec(latest),
@@ -2197,7 +2177,7 @@
                 all_time: aggregateSav(records),
             };
 
-            // ── hourly: from latest record's hourly_data ──
+            // ── hourly: latest day's data + multi-day avg ──
             const hrPv = new Array(24).fill(0);
             const hrLoad = new Array(24).fill(0);
             const hrGrid = new Array(24).fill(0);
@@ -2210,11 +2190,34 @@
                 hrGrid[hh] = h.grid_kw       || 0;
                 if (hrPv[hh] > 0 || hrLoad[hh] > 0 || hrGrid[hh] > 0) lastH = Math.max(lastH, hh);
             });
+            // Compute trailing average across last 30 days for avg_*
+            const avgPv = new Array(24).fill(0);
+            const avgLoad = new Array(24).fill(0);
+            const avgGrid = new Array(24).fill(0);
+            const avgCount = new Array(24).fill(0);
+            const recentDays = records.slice(-30);
+            recentDays.forEach(r => {
+                (r.hourly_data || []).forEach(h => {
+                    const hh = parseInt((h.time || '00:00').split(':')[0]);
+                    if (isNaN(hh) || hh < 0 || hh > 23) return;
+                    avgPv[hh]   += h.generation_kw || 0;
+                    avgLoad[hh] += h.load_kw || 0;
+                    avgGrid[hh] += h.grid_kw || 0;
+                    avgCount[hh]++;
+                });
+            });
+            for (let h = 0; h < 24; h++) {
+                if (avgCount[h] > 0) {
+                    avgPv[h]   /= avgCount[h];
+                    avgLoad[h] /= avgCount[h];
+                    avgGrid[h] /= avgCount[h];
+                }
+            }
             out.hourly = {
                 current_hour: lastH >= 0 ? lastH : new Date().getHours(),
                 pv: hrPv, load: hrLoad, grid: hrGrid,
                 export: new Array(24).fill(0),
-                avg_pv: hrPv.slice(), avg_load: hrLoad.slice(), avg_grid: hrGrid.slice(),
+                avg_pv: avgPv, avg_load: avgLoad, avg_grid: avgGrid,
             };
 
             out._spar = {
@@ -2225,7 +2228,7 @@
             return out;
         }
 
-        // ── Predictions adapter (Caveat 3) ──────────────────
+        // ── Predictions adapter: per-date pv/load/grid arrays → MM-DD avg pattern ──
         function adaptSparPredictions(rawPred) {
             const dp = rawPred?.daily_predictions || {};
             const sysKwp = 71.59;
@@ -2238,17 +2241,14 @@
                         pv: new Array(24).fill(0), pvN: 0,
                         load: new Array(24).fill(0), loadN: 0,
                         grid: new Array(24).fill(0), gridN: 0,
-                        irr: new Array(24).fill(0), irrN: 0,
                     };
                 }
                 const b = buckets[mmdd];
-                const pv = d.pv_kw || [], ld = d.load_kw || [], gr = d.grid_kw || [], ir = d.irradiation_wm2 || [];
+                const pv = d.pv_kw || [], ld = d.load_kw || [], gr = d.grid_kw || [];
                 if (pv.length === 24)  { for (let h=0;h<24;h++) b.pv[h]   += pv[h]||0;  b.pvN++; }
                 if (ld.length === 24)  { for (let h=0;h<24;h++) b.load[h] += ld[h]||0;  b.loadN++; }
                 if (gr.length === 24)  { for (let h=0;h<24;h++) b.grid[h] += gr[h]||0;  b.gridN++; }
-                if (ir.length === 24)  { for (let h=0;h<24;h++) b.irr[h]  += ir[h]||0;  b.irrN++; }
             });
-
             const daily_hourly = {};
             const monthlyTotals = new Array(13).fill(0);
             Object.entries(buckets).forEach(([mmdd, b]) => {
@@ -2258,7 +2258,6 @@
                 const mm = parseInt(mmdd.substring(0,2));
                 if (!isNaN(mm)) monthlyTotals[mm] += dayTotal;
             });
-
             return {
                 site: '1st Avenue Spar',
                 system_kWp: sysKwp,
@@ -2274,47 +2273,116 @@
             };
         }
 
+        // ── Irradiation adapter: shape expected = {daily_records: {date: {hourly_wm2: [24]}}}
         function adaptSparIrradiation(rawPred) {
             const dp = rawPred?.daily_predictions || {};
-            const out = {};
+            const daily_records = {};
             Object.entries(dp).forEach(([date, d]) => {
                 if (Array.isArray(d.irradiation_wm2) && d.irradiation_wm2.length === 24) {
-                    out[date] = d.irradiation_wm2.slice();
+                    daily_records[date] = { hourly_wm2: d.irradiation_wm2.slice() };
                 }
             });
-            return out;
+            return { daily_records: daily_records };
         }
 
+        // ── DailyHistory adapter — produces BOTH flat (Spar-style) and nested (Nautica-style) ──
+        // Plus converts tou_breakdown to per-period format with generation/utility_cost/pv_savings/export_savings
         function adaptSparDailyHistory(s) {
             const out = {};
+            // Pre-compute average load per hour for utility cost distribution
+            const avgLoadHr = new Array(24).fill(0);
+            const avgLoadN = new Array(24).fill(0);
+            (s.daily_records || []).slice(-30).forEach(r => {
+                (r.hourly_data || []).forEach(h => {
+                    const hh = parseInt((h.time || '00:00').split(':')[0]);
+                    if (isNaN(hh)) return;
+                    avgLoadHr[hh] += h.load_kw || 0;
+                    avgLoadN[hh]++;
+                });
+            });
+            for (let h=0;h<24;h++) if (avgLoadN[h]>0) avgLoadHr[h] /= avgLoadN[h];
+            const avgLoadTotal = avgLoadHr.reduce((a,b)=>a+b,0) || 1;
+
             (s.daily_records || []).forEach(r => {
                 if (!r.date) return;
                 const hrPv = new Array(24).fill(0);
                 const hrLoad = new Array(24).fill(0);
                 const hrGrid = new Array(24).fill(0);
+                let lastH = -1;
                 (r.hourly_data || []).forEach(h => {
                     const hh = parseInt((h.time || '00:00').split(':')[0]);
                     if (isNaN(hh) || hh < 0 || hh > 23) return;
                     hrPv[hh]   = h.generation_kw || 0;
                     hrLoad[hh] = h.load_kw       || 0;
                     hrGrid[hh] = h.grid_kw       || 0;
+                    if (hrPv[hh] > 0 || hrLoad[hh] > 0 || hrGrid[hh] > 0) lastH = Math.max(lastH, hh);
                 });
+
+                const gen = r.generation_kwh || 0;
+                const load = r.actual_load_kwh || 0;
+                const grid = r.actual_grid_kwh || 0;
+                const tb = r.tou_breakdown || {};
+                const fin = r.financial || {};
+
+                // Build per-period tou_breakdown in the format Nautica's renderDailySavingsTable expects
+                const touBreakdown = {
+                    peak: {
+                        generation: tb.peak_kwh || 0,
+                        utility_cost: fin.utility?.peak_zar || 0,
+                        pv_savings: fin.peak_savings_zar || 0,
+                        export_savings: 0,
+                    },
+                    standard: {
+                        generation: tb.standard_kwh || 0,
+                        utility_cost: fin.utility?.standard_zar || 0,
+                        pv_savings: fin.standard_savings_zar || 0,
+                        export_savings: 0,
+                    },
+                    off_peak: {
+                        generation: tb.off_peak_kwh || 0,
+                        utility_cost: fin.utility?.off_peak_zar || 0,
+                        pv_savings: fin.off_peak_savings_zar || 0,
+                        export_savings: 0,
+                    },
+                };
+
+                const peakSav = fin.peak_savings_zar || 0;
+                const stdSav  = fin.standard_savings_zar || 0;
+                const offSav  = fin.off_peak_savings_zar || 0;
+                const totSav  = fin.total_savings_zar || (peakSav + stdSav + offSav);
+
                 out[r.date] = {
-                    data: {
-                        'PV Yield (kWh)': r.generation_kwh || 0,
-                        'Consumption (kWh)': r.actual_load_kwh || 0,
-                        'Import (kWh)': r.actual_grid_kwh || 0,
-                        'Self-consumption (kWh)': r.generation_kwh || 0,
-                        'Export (kWh)': 0,
+                    // ─── FLAT SPAR-STYLE FIELDS (read by renderDailyTab) ───
+                    pv: gen,
+                    consumption: load,
+                    import: grid,
+                    export: 0,
+                    self_consumption: gen,
+                    current_hour: lastH >= 0 ? lastH : 23,
+                    tou_breakdown: touBreakdown,
+                    savings: {
+                        pv_savings: { peak: peakSav, standard: stdSav, off_peak: offSav, total: totSav },
+                        export_savings: { standard: 0, off_peak: 0, total: 0 },
+                        utility: fin.utility || {},
+                        ppa: fin.ppa || {},
+                        total: totSav,
                     },
                     hourly: { pv: hrPv, load: hrLoad, grid: hrGrid, export: new Array(24).fill(0) },
-                    financial: r.financial || {},
-                    tou_breakdown: r.tou_breakdown || {},
+                    financial: fin,
+                    // ─── NESTED NAUTICA-STYLE (read by overview/monthly charts) ───
+                    data: {
+                        'PV Yield (kWh)': gen,
+                        'Consumption (kWh)': load,
+                        'Import (kWh)': grid,
+                        'Self-consumption (kWh)': gen,
+                        'Export (kWh)': 0,
+                    },
                 };
             });
             return out;
         }
 
+        // ── Financial config adapter ──
         function adaptSparFinConfig(s) {
             const rates = s.tou_rates || [];
             const latest = rates.length ? rates[rates.length - 1] : null;
@@ -6324,13 +6392,25 @@
         // ══════════════════════════════════════════════════
         // WARRANTY TAB
         // ══════════════════════════════════════════════════
+        // Warranty start date pulled from dashData._spar.system.commissioning_date at render time
+        function getWarrantyData() {
+            const commDate = (dashData?._spar?.system?.commissioning_date) || '2025-01-01';
+            return [
+                { item: 'Solar Panel Performance', start: commDate, years: 25 },
+                { item: 'Mounting Structure', start: commDate, years: 20 },
+                { item: 'Solar Panel Manufacturer\'s Warranty', start: commDate, years: 12 },
+                { item: 'Inverters', start: commDate, years: 10 },
+                { item: 'Monitoring Platform', start: commDate, years: 10 },
+                { item: 'Workmanship', start: commDate, years: 1 }
+            ];
+        }
         const WARRANTY_DATA = [
-            { item: 'Solar Panel Performance', start: '2023-12-19', years: 25 },
-            { item: 'Mounting Structure', start: '2023-12-19', years: 20 },
-            { item: 'Solar Panel Manufacturer\'s Warranty', start: '2023-12-19', years: 12 },
-            { item: 'Inverters', start: '2023-12-19', years: 10 },
-            { item: 'Monitoring Platform', start: '2023-12-19', years: 10 },
-            { item: 'Workmanship', start: '2023-12-19', years: 1 }
+            { item: 'Solar Panel Performance', start: '2025-01-01', years: 25 },
+            { item: 'Mounting Structure', start: '2025-01-01', years: 20 },
+            { item: 'Solar Panel Manufacturer\'s Warranty', start: '2025-01-01', years: 12 },
+            { item: 'Inverters', start: '2025-01-01', years: 10 },
+            { item: 'Monitoring Platform', start: '2025-01-01', years: 10 },
+            { item: 'Workmanship', start: '2025-01-01', years: 1 }
         ];
         const warrantyCharts = {};
 
@@ -6345,7 +6425,7 @@
             let donutsHtml = '';
             let tableHtml = '';
 
-            WARRANTY_DATA.forEach((w, idx) => {
+            (getWarrantyData()).forEach((w, idx) => {
                 const start = new Date(w.start + 'T00:00:00');
                 const expiry = new Date(start);
                 expiry.setFullYear(expiry.getFullYear() + w.years);
@@ -6392,7 +6472,7 @@
             tbody.innerHTML = tableHtml;
 
             // Render donut charts
-            WARRANTY_DATA.forEach((w, idx) => {
+            (getWarrantyData()).forEach((w, idx) => {
                 const start = new Date(w.start + 'T00:00:00');
                 const expiry = new Date(start);
                 expiry.setFullYear(expiry.getFullYear() + w.years);
