@@ -30748,6 +30748,106 @@
           "load_kw": 9.633,
           "intervals": 3
         }
+      ],
+      "tou_breakdown": {
+        "peak_kwh": 0.0,
+        "standard_kwh": 7.096916666666666,
+        "off_peak_kwh": 10.86908333333333
+      },
+      "financial": {
+        "utility": {
+          "peak_zar": 0.0,
+          "standard_zar": 15.83,
+          "off_peak_zar": 18.48,
+          "total_zar": 34.3
+        },
+        "ppa": {
+          "peak_zar": 0.0,
+          "standard_zar": 10.65,
+          "off_peak_zar": 16.3,
+          "total_zar": 26.95
+        },
+        "savings": {
+          "peak_savings_zar": 0.0,
+          "standard_savings_zar": 5.18,
+          "off_peak_savings_zar": 2.17,
+          "total_savings_zar": 7.35
+        },
+        "peak_savings_zar": 0.0,
+        "standard_savings_zar": 5.18,
+        "off_peak_savings_zar": 2.17,
+        "total_savings_zar": 7.35
+      }
+    },
+    {
+      "date": "2026-05-17",
+      "generation_kwh": 2.85,
+      "actual_load_kwh": 381.72,
+      "actual_grid_kwh": 378.87,
+      "hourly_data": [
+        {
+          "time": "00:00",
+          "generation_kw": 0.0,
+          "grid_kw": 34.7,
+          "load_kw": 34.7,
+          "intervals": 12
+        },
+        {
+          "time": "01:00",
+          "generation_kw": 0.0,
+          "grid_kw": 33.033,
+          "load_kw": 33.033,
+          "intervals": 12
+        },
+        {
+          "time": "02:00",
+          "generation_kw": 0.0,
+          "grid_kw": 31.827,
+          "load_kw": 31.827,
+          "intervals": 12
+        },
+        {
+          "time": "03:00",
+          "generation_kw": 0.0,
+          "grid_kw": 34.887,
+          "load_kw": 34.887,
+          "intervals": 12
+        },
+        {
+          "time": "04:00",
+          "generation_kw": 0.0,
+          "grid_kw": 34.527,
+          "load_kw": 34.527,
+          "intervals": 12
+        },
+        {
+          "time": "05:00",
+          "generation_kw": 0.0,
+          "grid_kw": 49.453,
+          "load_kw": 49.453,
+          "intervals": 12
+        },
+        {
+          "time": "06:00",
+          "generation_kw": 0.003,
+          "grid_kw": 61.307,
+          "load_kw": 61.309,
+          "intervals": 10
+        },
+        {
+          "time": "07:00",
+          "generation_kw": 0.772,
+          "grid_kw": 64.133,
+          "load_kw": 64.906,
+          "intervals": 12
+        },
+        {
+          "time": "08:00",
+          "generation_kw": 2.074,
+          "grid_kw": 35.0,
+          "load_kw": 37.074,
+          "intervals": 7
+        }
       ]
     }
   ],
