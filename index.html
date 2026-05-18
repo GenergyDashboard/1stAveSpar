@@ -1841,8 +1841,8 @@
             // Historical month fallback multiplier (expLoad = expPV × this)
             hist_load_fallback: 1.5,
             // Lifetime start: first operational month
-            system_start_year: 2023,
-            system_start_month: 12,
+            system_start_year: 2025,
+            system_start_month: 11,
             // SC ratio defaults (fallback when no actual data)
             default_sc_ratio: 0.8,
             default_sc_ratio_tou: 0.9,
@@ -2625,41 +2625,29 @@
             return total * factor;
         }
 
-        // Lifetime expected: each year's PVSyst × degradation, current year partial
+        // Lifetime expected: sum the PVSyst daily prediction for ONLY the days
+        // the system actually has real data. Exact, no start-year guesswork.
+        // (Previous version looped whole calendar years from a hardcoded start
+        //  year and over-counted by ~2 phantom years.)
         function calcLifetimeExpected(currentHour) {
-            if (!pvsyst) return 0;
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth(); // 0-based
-            const currentDay = now.getDate();
-            const mt = pvsyst.monthly_totals_kwh || {};
+            const rawPred = pvsyst?._spar_predictions_raw?.daily_predictions;
+            const records = dashData?._spar?.daily_records || [];
+            if (!rawPred || !records.length) return 0;
+
             let total = 0;
-
-            // First operational month (from config)
-            total += (mt[String(CC.system_start_month)] || 0) * degradationFactor(CC.system_start_year);
-
-            // Full years after start → last complete year
-            for (let y = CC.system_start_year + 1; y < currentYear; y++) {
-                total += (pvsyst.annual_total_kwh || 0) * degradationFactor(y);
-            }
-
-            // Current year: completed months + partial current month
-            const factor = degradationFactor(currentYear);
-            // Completed months (Jan=1 up to month before current)
-            for (let m = 1; m <= currentMonth; m++) {
-                total += (mt[String(m)] || 0) * factor;
-            }
-            // Current month partial
-            const mm = String(currentMonth + 1).padStart(2, '0');
-            for (let d = 1; d <= currentDay; d++) {
-                const mmdd = mm + '-' + String(d).padStart(2, '0');
-                const hourly = getPvsystDay(mmdd);
-                if (d < currentDay) {
-                    total += hourly.reduce((a, b) => a + b, 0) * factor;
+            const lastDate = records[records.length - 1]?.date;
+            records.forEach(r => {
+                const pred = rawPred[r.date];
+                if (!pred || !Array.isArray(pred.pv_kw)) return;
+                if (r.date === lastDate) {
+                    // Partial final day: only count hours up to currentHour
+                    for (let h = 0; h <= currentHour && h < pred.pv_kw.length; h++) {
+                        total += pred.pv_kw[h] || 0;
+                    }
                 } else {
-                    for (let h = 0; h <= currentHour; h++) total += (hourly[h] || 0) * factor;
+                    total += pred.pv_kw.reduce((a, b) => a + (b || 0), 0);
                 }
-            }
+            });
             return total;
         }
 
@@ -4016,7 +4004,39 @@
             return total * factor;
         }
 
-        function calcMonthTOUSavings(year, month, sc, exp, numDays, gridImport) {
+        function buildMonthlySavingsFromRecords(ym) {
+            const records = (dashData?._spar?.daily_records || []).filter(r => r.date && r.date.startsWith(ym));
+            if (!records.length) return null;
+            const totals = {peak:{gen:0,util:0,ppa:0,pvs:0,exs:0},standard:{gen:0,util:0,ppa:0,pvs:0,exs:0},off_peak:{gen:0,util:0,ppa:0,pvs:0,exs:0}};
+            records.forEach(r => {
+                const tb = r.tou_breakdown || {};
+                const fin = r.financial || {};
+                const ut = fin.utility || {};
+                const ppa = fin.ppa || {};
+                totals.peak.gen     += tb.peak_kwh || 0;
+                totals.standard.gen += tb.standard_kwh || 0;
+                totals.off_peak.gen += tb.off_peak_kwh || 0;
+                totals.peak.util     += ut.peak_zar || 0;
+                totals.standard.util += ut.standard_zar || 0;
+                totals.off_peak.util += ut.off_peak_zar || 0;
+                totals.peak.ppa     += ppa.peak_zar || 0;
+                totals.standard.ppa += ppa.standard_zar || 0;
+                totals.off_peak.ppa += ppa.off_peak_zar || 0;
+                totals.peak.pvs     += fin.peak_savings_zar || 0;
+                totals.standard.pvs += fin.standard_savings_zar || 0;
+                totals.off_peak.pvs += fin.off_peak_savings_zar || 0;
+            });
+            return {
+                generation:   { peak: totals.peak.gen, standard: totals.standard.gen, off_peak: totals.off_peak.gen, total: totals.peak.gen+totals.standard.gen+totals.off_peak.gen },
+                utility_cost: { peak: totals.peak.util, standard: totals.standard.util, off_peak: totals.off_peak.util, total: totals.peak.util+totals.standard.util+totals.off_peak.util },
+                ppa_cost:     { peak: totals.peak.ppa, standard: totals.standard.ppa, off_peak: totals.off_peak.ppa, total: totals.peak.ppa+totals.standard.ppa+totals.off_peak.ppa },
+                pv_savings:   { peak: totals.peak.pvs, standard: totals.standard.pvs, off_peak: totals.off_peak.pvs, total: totals.peak.pvs+totals.standard.pvs+totals.off_peak.pvs },
+                export_savings: { standard: 0, off_peak: 0, total: 0 },
+                total: totals.peak.pvs+totals.standard.pvs+totals.off_peak.pvs,
+            };
+        }
+
+                function calcMonthTOUSavings(year, month, sc, exp, numDays, gridImport) {
             if (!finConfig || !pvsyst) return null;
             const fc = finConfig;
             const r = fc.rates || {};
@@ -4153,8 +4173,8 @@
             if (expPV > 0) { const tD = actPV-expPV; tgtSt.className='slab-status '+(tD>=0?'ahead':'behind'); tgtSt.innerHTML=(tD>=0?'▲ ':'▼ ')+fmt(Math.abs(tD))+' kWh '+(tD>=0?'Ahead':'Behind'); }
             document.getElementById('ml-target-exp').textContent = fmt(expPV) + ' kWh';
 
-            // Savings table
-            const sav = calcMonthTOUSavings(yr, mo, actSC, actExp, numDays, actGrid);
+            // Savings table — use real daily_records financial data for current Spar site
+            const sav = buildMonthlySavingsFromRecords(ym) || calcMonthTOUSavings(yr, mo, actSC, actExp, numDays, actGrid);
             renderMonthlySavingsTable(sav);
 
             // Charts
@@ -4188,17 +4208,17 @@
             if (!sav) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">No data</td></tr>'; return; }
             const periods = ['peak','standard','off_peak'];
             const labels = {peak:'<span class="tou-pill peak">Peak</span>',standard:'<span class="tou-pill standard">Standard</span>',off_peak:'<span class="tou-pill off-peak">Off-Peak</span>'};
-            let html='', totGen=0, totUtil=0, totPvS=0, totExpS=0;
+            let html='', totGen=0, totUtil=0, totPvS=0, totPpa=0;
             periods.forEach(p => {
                 const genV = sav.generation?.[p]||0;
                 const utilV = sav.utility_cost?.[p]||0;
                 const pvs = sav.pv_savings?.[p]||0;
-                const exs = sav.export_savings?.[p]||0;
-                const total = pvs+exs;
-                totGen+=genV; totUtil+=utilV; totPvS+=pvs; totExpS+=exs;
-                html += `<tr><td style="text-align:left">${labels[p]}</td><td>${fmt(genV)} kWh</td><td>R${fmt(utilV)}</td><td>R${fmt(pvs)}</td><td>R${fmt(exs)}</td><td>R${fmt(total)}</td></tr>`;
+                // PPA Cost column (replaces Export Savings for Spar)
+                const ppa = (sav.ppa_cost?.[p]) || 0;
+                totGen+=genV; totUtil+=utilV; totPvS+=pvs; totPpa+=ppa;
+                html += `<tr><td style="text-align:left">${labels[p]}</td><td>${fmt(genV)} kWh</td><td>R${fmt(utilV)}</td><td>R${fmt(pvs)}</td><td>R${fmt(ppa)}</td><td>R${fmt(pvs)}</td></tr>`;
             });
-            html += `<tr class="total-row"><td style="text-align:left">Total</td><td>${fmt(totGen)} kWh</td><td>R${fmt(totUtil)}</td><td>R${fmt(totPvS)}</td><td>R${fmt(totExpS)}</td><td>R${fmt(totPvS+totExpS)}</td></tr>`;
+            html += `<tr class="total-row"><td style="text-align:left">Total</td><td>${fmt(totGen)} kWh</td><td>R${fmt(totUtil)}</td><td>R${fmt(totPvS)}</td><td>R${fmt(totPpa)}</td><td>R${fmt(totPvS)}</td></tr>`;
             tbody.innerHTML = html;
         }
 
@@ -4460,6 +4480,43 @@
 
         function renderLifetimeSavingsTable(sortedMonths) {
             const tbody = document.getElementById('lifetimeSavingsBody');
+            // For 1st Ave Spar: aggregate REAL financial data from daily_records 
+            // rather than synthesizing from PVSyst + Eskom rates.
+            const records = dashData?._spar?.daily_records || [];
+            if (records.length > 0) {
+                const totals = {peak:{gen:0,util:0,ppa:0,pvs:0,exs:0},standard:{gen:0,util:0,ppa:0,pvs:0,exs:0},off_peak:{gen:0,util:0,ppa:0,pvs:0,exs:0}};
+                records.forEach(r => {
+                    const tb = r.tou_breakdown || {};
+                    const fin = r.financial || {};
+                    const ut = fin.utility || {};
+                    const ppa = fin.ppa || {};
+                    totals.peak.gen     += tb.peak_kwh || 0;
+                    totals.standard.gen += tb.standard_kwh || 0;
+                    totals.off_peak.gen += tb.off_peak_kwh || 0;
+                    totals.peak.util     += ut.peak_zar || 0;
+                    totals.standard.util += ut.standard_zar || 0;
+                    totals.off_peak.util += ut.off_peak_zar || 0;
+                    totals.peak.ppa     += ppa.peak_zar || 0;
+                    totals.standard.ppa += ppa.standard_zar || 0;
+                    totals.off_peak.ppa += ppa.off_peak_zar || 0;
+                    totals.peak.pvs     += fin.peak_savings_zar || 0;
+                    totals.standard.pvs += fin.standard_savings_zar || 0;
+                    totals.off_peak.pvs += fin.off_peak_savings_zar || 0;
+                });
+                const periods = ['peak','standard','off_peak'];
+                const labels = {peak:'<span class="tou-pill peak">Peak</span>',standard:'<span class="tou-pill standard">Standard</span>',off_peak:'<span class="tou-pill off-peak">Off-Peak</span>'};
+                let tG=0,tU=0,tPpa=0,tP=0;
+                let html = '';
+                periods.forEach(p => {
+                    const g=totals[p].gen, u=totals[p].util, ppa=totals[p].ppa, ps=totals[p].pvs;
+                    tG+=g; tU+=u; tPpa+=ppa; tP+=ps;
+                    html += `<tr><td style="text-align:left">${labels[p]}</td><td>${fmt(g)} kWh</td><td>R${fmt(u)}</td><td>R${fmt(ps)}</td><td>R${fmt(ppa)}</td><td>R${fmt(ps)}</td></tr>`;
+                });
+                html += `<tr class="total-row"><td style="text-align:left">Total</td><td>${fmt(tG)} kWh</td><td>R${fmt(tU)}</td><td>R${fmt(tP)}</td><td>R${fmt(tPpa)}</td><td>R${fmt(tP)}</td></tr>`;
+                tbody.innerHTML = html;
+                return;
+            }
+            // Fallback: legacy Nautica calc (synthesizes from PVSyst + Eskom)
             if (!finConfig || !pvsyst) { tbody.innerHTML = '<tr><td colspan="6">Financial config not loaded</td></tr>'; return; }
             const fc = finConfig;
             const rates = fc.rates || {};
@@ -6295,10 +6352,22 @@
             // Yearly table
             const yearMap={};
             allM.forEach(m=>{const[yy]=m.split('-').map(Number);if(!yearMap[yy])yearMap[yy]={a:0,e:0};yearMap[yy].a+=dashData.monthly[m]['PV Yield (kWh)']||0;});
-            Object.keys(yearMap).forEach(yy=>{const y=parseInt(yy),f2=degradationFactor(y);
-                if(y===CC.system_start_year){const mt=pvsyst?.monthly_totals_kwh||{};let e=0;for(let m=CC.system_start_month;m<=12;m++)e+=(mt[String(m)]||0)*f2;yearMap[yy].e=e;}
-                else if(y===now.getFullYear()){let e=0;for(let m3=1;m3<=now.getMonth()+1;m3++){const k=y+'-'+String(m3).padStart(2,'0');if(dashData.monthly[k]){const ic=m3===now.getMonth()+1;e+=calcMonthExpFor(y,m3,ic?now.getDate():new Date(y,m3,0).getDate(),ic?curH:23);}}yearMap[yy].e=e;}
-                else{yearMap[yy].e=(pvsyst?.annual_total_kwh||0)*f2;}});
+            // Expected per year: sum PVSyst daily prediction for ONLY dates with real records.
+            // (Avoids start-month / phantom-year assumptions — same method as calcLifetimeExpected.)
+            (function(){
+                const rawPred=pvsyst?._spar_predictions_raw?.daily_predictions;
+                const records=dashData?._spar?.daily_records||[];
+                if(!rawPred||!records.length)return;
+                const lastDate=records[records.length-1]?.date;
+                records.forEach(r=>{
+                    const yy=parseInt(r.date.substring(0,4));
+                    if(!yearMap[yy])yearMap[yy]={a:0,e:0};
+                    const pred=rawPred[r.date];
+                    if(!pred||!Array.isArray(pred.pv_kw))return;
+                    if(r.date===lastDate){for(let h=0;h<=curH&&h<pred.pv_kw.length;h++)yearMap[yy].e+=pred.pv_kw[h]||0;}
+                    else{yearMap[yy].e+=pred.pv_kw.reduce((a,b)=>a+(b||0),0);}
+                });
+            })();
             const yC=[TW*0.2,TW*0.2,TW*0.2,TW*0.2,TW*0.2].map(Math.floor);
             const yR=[row(hdr('Year',yC[0]),hdr('Generated',yC[1]),hdr('Expected',yC[2]),hdr('Variance',yC[3]),hdr('Performance',yC[4]))];
             let yA=0,yE=0;
