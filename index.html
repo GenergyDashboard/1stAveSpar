@@ -2224,6 +2224,8 @@
                 tou_rates: s.tou_rates || [],
                 daily_records: records,
                 system: s.system || {},
+                monthly_summaries_raw: s.monthly_summaries || {},
+                lifetime_summary_raw: s.lifetime_summary || {},
             };
             return out;
         }
@@ -2264,7 +2266,11 @@
                 annual_total_kwh: monthlyTotals.reduce((a,v) => a + v, 0),
                 base_year: 2025,
                 degradation: { year1: 0.99, annual: 0.995 },
+                // Keyed BOTH padded ("01") and unpadded ("1") so any caller's
+                // lookup style works — some code uses String(monthInt) which
+                // produces "1".."12", other code uses zero-padded "01".."12".
                 monthly_totals_kwh: monthlyTotals.slice(1).reduce((o, v, i) => {
+                    o[String(i+1)] = v;
                     o[String(i+1).padStart(2,'0')] = v;
                     return o;
                 }, {}),
@@ -4325,6 +4331,30 @@
         // ══════════════════════════════════════════════════
         // LIFETIME STATS TAB
         // ══════════════════════════════════════════════════
+        // Expected PV generation for a month — sums PVSyst daily prediction
+        // for ONLY the dates that have real records (handles partial months
+        // like the first month of operation). Final day is prorated to currentHour.
+        function calcMonthExpectedFromRecords(ym, currentHour) {
+            const rawPred = pvsyst?._spar_predictions_raw?.daily_predictions;
+            const records = dashData?._spar?.daily_records || [];
+            if (!rawPred || !records.length) return 0;
+            const lastDate = records[records.length - 1]?.date;
+            let total = 0;
+            records.forEach(r => {
+                if (!r.date || !r.date.startsWith(ym)) return;
+                const pred = rawPred[r.date];
+                if (!pred || !Array.isArray(pred.pv_kw)) return;
+                if (r.date === lastDate) {
+                    for (let h = 0; h <= currentHour && h < pred.pv_kw.length; h++) {
+                        total += pred.pv_kw[h] || 0;
+                    }
+                } else {
+                    total += pred.pv_kw.reduce((a, b) => a + (b || 0), 0);
+                }
+            });
+            return total;
+        }
+
         let lifetimeGenChart = null;
         let lifetimeSavChart = null;
         let lifetimeInited = false;
@@ -4615,17 +4645,8 @@
                 const [yr,mm] = ym.split('-').map(Number);
                 const factor = degradationFactor(yr);
                 const isCurrentMonth = yr === now.getFullYear() && mm === (now.getMonth()+1);
-                let expPV;
-                if (isCurrentMonth) {
-                    expPV = 0;
-                    for (let d=1;d<=now.getDate();d++) {
-                        const mmdd = String(mm).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-                        const dayPvs = getPvsystDay(mmdd);
-                        if (d<now.getDate()) expPV += dayPvs.reduce((a,b)=>a+b,0);
-                        else { for (let h=0;h<=currentHour;h++) expPV += dayPvs[h]||0; }
-                    }
-                    expPV *= factor;
-                } else { expPV = (mt[String(mm)]||0) * factor; }
+                // Expected from real record dates (handles partial first month)
+                let expPV = calcMonthExpectedFromRecords(ym, currentHour);
                 cumActual += (md['PV Yield (kWh)']||0);
                 cumExpected += expPV;
                 cumMap[ym] = cumExpected > 0 ? (cumActual/cumExpected*100) : 0;
@@ -4639,17 +4660,8 @@
                 const factor = degradationFactor(yr);
                 const isCurrentMonth = yr === now.getFullYear() && mm === (now.getMonth()+1);
 
-                let expPV;
-                if (isCurrentMonth) {
-                    expPV = 0;
-                    for (let d=1;d<=now.getDate();d++) {
-                        const mmdd = String(mm).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-                        const dayPvs = getPvsystDay(mmdd);
-                        if (d<now.getDate()) expPV += dayPvs.reduce((a,b)=>a+b,0);
-                        else { for (let h=0;h<=currentHour;h++) expPV += dayPvs[h]||0; }
-                    }
-                    expPV *= factor;
-                } else { expPV = (mt[String(mm)]||0) * factor; }
+                // Expected from real record dates (handles partial first month)
+                let expPV = calcMonthExpectedFromRecords(ym, currentHour);
 
                 const actPV = md['PV Yield (kWh)'] || 0;
                 const actLoad = md['Consumption (kWh)'] || 0;
@@ -4715,56 +4727,24 @@
             const currentHour = (pipelineHour !== undefined && pipelineHour !== null) ? pipelineHour : now.getHours();
 
             displayMonths.forEach(ym => {
-                const md = dashData.monthly?.[ym];
-                if (!md) return;
                 const [yr,mm] = ym.split('-').map(Number);
-                const factor = degradationFactor(yr);
-                const season = (fc.seasons||{})[String(mm)] || 'low_demand';
-                const isCurrentMonth = yr === now.getFullYear() && mm === (now.getMonth()+1);
-                const daysInMonth = new Date(yr, mm, 0).getDate();
-                const days = isCurrentMonth ? now.getDate() : daysInMonth;
 
-                const sc = md['Self-consumption (kWh)'] || 0;
-                const exp = md['Export (kWh)'] || 0;
+                // ── ACTUAL savings: sum real financial data from each record ──
+                const monthRecs = (dashData?._spar?.daily_records || [])
+                    .filter(r => r.date && r.date.startsWith(ym));
+                let actSav = 0;
+                monthRecs.forEach(r => {
+                    const fin = r.financial || {};
+                    actSav += (fin.savings?.total_savings_zar) || fin.total_savings_zar || 0;
+                });
 
-                // Calculate expected PV for this month
-                let expPV;
-                if (isCurrentMonth) {
-                    expPV = 0;
-                    for (let d=1;d<=now.getDate();d++) {
-                        const mmdd = String(mm).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-                        const dayPvs = getPvsystDay(mmdd);
-                        if (d<now.getDate()) expPV += dayPvs.reduce((a,b)=>a+b,0);
-                        else { for (let h=0;h<=currentHour;h++) expPV += dayPvs[h]||0; }
-                    }
-                    expPV *= factor;
-                } else {
-                    expPV = (mt[String(mm)]||0) * factor;
-                }
-
-                // Actual savings: distribute SC+Exp across TOU periods using daily patterns
-                let actSav = 0, predSav = 0;
-                const monthPattern = pvsyst.daily_hourly || {};
-                for (let d = 1; d <= days; d++) {
-                    const dt = new Date(yr, mm-1, d);
-                    const wd = dt.getDay();
-                    const dayType = wd===0?'sunday':wd===6?'saturday':'weekday';
-                    const schedule = (fc.tou_schedule||{})[season]?.[dayType] || [];
-                    const mmdd = String(mm).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-                    const dayP = monthPattern[mmdd] || new Array(24).fill(0);
-                    const dayTotal = dayP.reduce((a,b)=>a+b,0) || 1;
-
-                    for (let h = 0; h < 24; h++) {
-                        const period = schedule[h] || 'off_peak';
-                        const rate = rates[season]?.[period] || 0;
-                        const credit = (fc.export_credits||{})[period] || 0;
-                        const hourFrac = dayP[h] / dayTotal / days;
-                        actSav += sc * hourFrac * rate + exp * hourFrac * credit;
-                        // Predicted: use expPV with same SC ratio
-                        const predSC = expPV * (sc / ((sc+exp)||1));
-                        const predExp = expPV * (exp / ((sc+exp)||1));
-                        predSav += predSC * hourFrac * rate + predExp * hourFrac * credit;
-                    }
+                // ── PREDICTED savings: the pipeline pre-computes financial_expected
+                //    per month (expected generation valued at real tariff rates).
+                //    Use it directly so predicted is a genuine independent baseline. ──
+                const msExp = dashData?._spar?.monthly_summaries_raw?.[ym]?.financial_expected;
+                let predSav = 0;
+                if (msExp) {
+                    predSav = (msExp.savings?.total_savings_zar) || msExp.total_savings_zar || 0;
                 }
 
                 labels.push(monthNames[mm] + ' ' + String(yr).slice(2));
