@@ -31376,8 +31376,8 @@
     {
       "date": "2026-05-20",
       "generation_kwh": 127.74,
-      "actual_load_kwh": 1401.19,
-      "actual_grid_kwh": 1273.45,
+      "actual_load_kwh": 1466.72,
+      "actual_grid_kwh": 1338.98,
       "hourly_data": [
         {
           "time": "00:00",
@@ -31529,9 +31529,23 @@
         {
           "time": "21:00",
           "generation_kw": 0.0,
-          "grid_kw": 28.413,
-          "load_kw": 28.413,
-          "intervals": 9
+          "grid_kw": 38.673,
+          "load_kw": 38.673,
+          "intervals": 12
+        },
+        {
+          "time": "22:00",
+          "generation_kw": 0.0,
+          "grid_kw": 35.367,
+          "load_kw": 35.367,
+          "intervals": 12
+        },
+        {
+          "time": "23:00",
+          "generation_kw": 0.0,
+          "grid_kw": 19.9,
+          "load_kw": 19.9,
+          "intervals": 7
         }
       ],
       "tou_breakdown": {
@@ -32010,15 +32024,15 @@
         "total_savings_zar": 5225.9
       },
       "total_generation_kwh": 3264.79,
-      "actual_load_kwh": 25965.36,
-      "actual_grid_kwh": 22700.58,
+      "actual_load_kwh": 26030.89,
+      "actual_grid_kwh": 22766.11,
       "days_with_data": 20
     }
   },
   "lifetime_summary": {
     "total_generation_kwh": 57924.38,
-    "actual_load_kwh": 239696.75,
-    "actual_grid_kwh": 181777.89,
+    "actual_load_kwh": 239762.28,
+    "actual_grid_kwh": 181843.42,
     "days_active": 175,
     "tou_breakdown": {
       "peak_kwh": 3342.7320000000022,
