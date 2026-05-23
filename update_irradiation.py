@@ -9,8 +9,8 @@ import requests
 from datetime import datetime, timedelta
 
 # Configuration
-LATITUDE = -33,9742851
-LONGITUDE = 25,6122097
+LATITUDE = -33.9742851,
+LONGITUDE = 25.6122097,
 FORECAST_API = "https://api.open-meteo.com/v1/forecast"
 PREDICTIONS_FILE = "predictions_2025_2044.min.json"
 
