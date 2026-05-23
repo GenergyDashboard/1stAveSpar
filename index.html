@@ -1313,15 +1313,20 @@
                     <div class="chart-legend-row">
                         <div class="chart-legend-defaults">
                             <div class="chart-legend-item" data-mds="m-actGen" onclick="toggleMonthlyDs('m-actGen')"><span class="legend-swatch" style="background:rgba(74,222,128,0.5);border:1px solid #4ade80;"></span>PV Generation (kWh)</div>
-                            <div class="chart-legend-item" data-mds="m-avgPV" onclick="toggleMonthlyDs('m-avgPV')"><span class="legend-swatch" style="background:#4ade80;"></span>Avg PV (MTD)</div>
-                            <div class="chart-legend-item" data-mds="m-avgExpPV" onclick="toggleMonthlyDs('m-avgExpPV')"><span class="legend-swatch dashed" style="border-color:#60a5fa;"></span>Avg Predicted PV (MTD)</div>
-                            <div class="chart-legend-item" data-mds="m-irrad" onclick="toggleMonthlyDs('m-irrad')"><span class="legend-swatch" style="background:rgba(255,215,0,0.5);"></span>Scaled Irradiation (kWh equiv)</div>
+                            <div class="chart-legend-item" data-mds="m-avg30PV" onclick="toggleMonthlyDs('m-avg30PV')"><span class="legend-swatch dashed" style="border-color:#4ade80;"></span>30-Day Avg PV</div>
+                            <div class="chart-legend-item" data-mds="m-irrad" onclick="toggleMonthlyDs('m-irrad')"><span class="legend-swatch" style="background:rgba(255,165,0,0.7);"></span>Irradiation (kWh equiv)</div>
+                            <div class="chart-legend-item" data-mds="m-avg30Irrad" onclick="toggleMonthlyDs('m-avg30Irrad')"><span class="legend-swatch dashed" style="border-color:#f97316;"></span>30-Day Avg Irradiation</div>
+                            <div class="chart-legend-item" data-mds="m-p50" onclick="toggleMonthlyDs('m-p50')"><span class="legend-swatch" style="background:#a78bfa;"></span>Median (30d)</div>
+                            <div class="chart-legend-item" data-mds="m-pMin" onclick="toggleMonthlyDs('m-pMin')"><span class="legend-swatch" style="background:#94a3b8;"></span>Min (30d)</div>
+                            <div class="chart-legend-item" data-mds="m-pMax" onclick="toggleMonthlyDs('m-pMax')"><span class="legend-swatch" style="background:#94a3b8;"></span>Max (30d)</div>
                         </div>
                         <div class="chart-legend-more" onclick="this.classList.toggle('open')">
                             <span class="more-btn">More ▼</span>
                             <div class="more-items">
                                 <div class="chart-legend-item off" data-mds="m-actLoad" onclick="event.stopPropagation();toggleMonthlyDs('m-actLoad')"><span class="legend-swatch" style="background:#ef4444;"></span>Actual Load (Avg)</div>
                                 <div class="chart-legend-item off" data-mds="m-actGrid" onclick="event.stopPropagation();toggleMonthlyDs('m-actGrid')"><span class="legend-swatch" style="background:#f97316;"></span>Actual Grid (Avg)</div>
+                                <div class="chart-legend-item off" data-mds="m-avgPV" onclick="event.stopPropagation();toggleMonthlyDs('m-avgPV')"><span class="legend-swatch" style="background:#4ade80;"></span>Avg PV (MTD)</div>
+                                <div class="chart-legend-item off" data-mds="m-avgExpPV" onclick="event.stopPropagation();toggleMonthlyDs('m-avgExpPV')"><span class="legend-swatch dashed" style="border-color:#60a5fa;"></span>Avg Predicted PV (MTD)</div>
                             </div>
                         </div>
                     </div>
@@ -3943,7 +3948,7 @@
         let monthlyTOUChart = null;
         let monthlyInited = false;
         let monthlyChartYM = ''; // Track which month is displayed for click-to-navigate
-        const monthlyDsVis = { 'm-actGen':true,'m-irrad':true,'m-actLoad':false,'m-actGrid':false,'m-avgPV':true,'m-avgExpPV':true,'m-actPeak':true,'m-actStd':true,'m-actOff':true,'m-expPeak':false,'m-expStd':false,'m-expOff':false };
+        const monthlyDsVis = { 'm-actGen':true,'m-irrad':true,'m-avg30PV':true,'m-avg30Irrad':true,'m-p50':true,'m-pMin':true,'m-pMax':true,'m-actLoad':false,'m-actGrid':false,'m-avgPV':false,'m-avgExpPV':false,'m-actPeak':true,'m-actStd':true,'m-actOff':true,'m-expPeak':false,'m-expStd':false,'m-expOff':false };
 
         function goToMonthly() {
             const btn = document.querySelectorAll('.tab-nav button')[2];
@@ -3989,7 +3994,7 @@
             const el = document.querySelector(`[data-mds="${key}"]`);
             if (el) el.classList.toggle('off', !monthlyDsVis[key]);
             // Daily generation chart datasets
-            const dMap = {'m-actGen':0,'m-irrad':1,'m-actLoad':2,'m-actGrid':3,'m-avgPV':4,'m-avgExpPV':5};
+            const dMap = {'m-actGen':0,'m-irrad':1,'m-actLoad':2,'m-actGrid':3,'m-avgPV':4,'m-avgExpPV':5,'m-avg30PV':6,'m-avg30Irrad':7,'m-p50':8,'m-pMin':9,'m-pMax':10};
             if (monthlyDailyChart && dMap[key] !== undefined) { monthlyDailyChart.data.datasets[dMap[key]].hidden = !monthlyDsVis[key]; monthlyDailyChart.update(); }
             // TOU chart datasets
             const tMap = {'m-actPeak':0,'m-actStd':1,'m-actOff':2,'m-expPeak':3,'m-expStd':4,'m-expOff':5};
@@ -4233,12 +4238,53 @@
             const ctx = document.getElementById('monthlyDailyChart');
             if (!ctx) return;
             const labels = [];
-            const actGen=[], irradScaled=[], actLoadArr=[], actGridArr=[];
+            const actGen=[], irradScaled=[], irradActual=[], actLoadArr=[], actGridArr=[];
+            const avg30PVArr=[], avg30IrradArr=[], p50Arr=[], pMinArr=[], pMaxArr=[];
             const factor = degradationFactor(yr);
             const mm = String(mo).padStart(2,'0');
             const monthNames = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             const avgL = dashData.hourly?.avg_load || [];
             const dailyExpLoad = avgL.reduce((a,b)=>a+b,0);
+
+            // Build a date→record lookup over ALL records (not just this month)
+            // so the rolling 30-day window can cross month boundaries.
+            const allRecs = (dashData?._spar?.daily_records || []).slice()
+                .filter(r => r && r.date)
+                .sort((a, b) => a.date.localeCompare(b.date));
+            const recByDate = {};
+            allRecs.forEach(r => { recByDate[r.date] = r; });
+
+            // Daily irradiation in kWh/m² from predictions (we store W/m² hourly)
+            function dailyIrradKwh(dateStr) {
+                const ir = irradData?.daily_records?.[dateStr]?.hourly_wm2;
+                if (!Array.isArray(ir)) return 0;
+                // W/m² hourly → kWh/m² for the day = sum(W/m²)/1000
+                return ir.reduce((a, b) => a + (b || 0), 0) / 1000;
+            }
+            function dailyGenKwh(dateStr) {
+                const r = recByDate[dateStr];
+                return r ? (r.generation_kwh || 0) : null;
+            }
+            // 30-day rolling stats up to and including `dateStr` (exclusive of dates with no data)
+            function rolling30(dateStr) {
+                const end = new Date(dateStr + 'T00:00:00');
+                const gens = [], irrs = [];
+                for (let i = 0; i < 30; i++) {
+                    const d = new Date(end); d.setDate(end.getDate() - i);
+                    const ds = d.toISOString().slice(0, 10);
+                    const g = dailyGenKwh(ds);
+                    if (g !== null && g > 0) gens.push(g);
+                    const ir = dailyIrradKwh(ds);
+                    if (ir > 0) irrs.push(ir);
+                }
+                gens.sort((a, b) => a - b);
+                const avgG = gens.length ? gens.reduce((a, b) => a + b, 0) / gens.length : 0;
+                const avgI = irrs.length ? irrs.reduce((a, b) => a + b, 0) / irrs.length : 0;
+                const med = gens.length ? gens[Math.floor(gens.length / 2)] : 0;
+                const mn = gens.length ? gens[0] : 0;
+                const mx = gens.length ? gens[gens.length - 1] : 0;
+                return { avgG, avgI, med, mn, mx, n: gens.length };
+            }
 
             let totalActPV = 0, totalExpPV = 0, totalActLoad = 0, totalActGrid = 0;
 
@@ -4259,10 +4305,16 @@
                 totalActPV += dayActPV; totalExpPV += dayExpPV;
                 totalActLoad += dayActLoad; totalActGrid += dayActGrid;
 
-                // Always use PVSyst daily total as irradiation proxy (consistent scale)
-                const irradDaily = dayPvs.reduce((a,b)=>a+b,0);
+                // Day's actual irradiation from real measurements (kWh/m² equivalent)
+                const irradDayKwh = dailyIrradKwh(dateStr);
 
-                dailyData.push({d, dayActPV, dayExpPV, dayActLoad, dayActGrid, irradDaily});
+                // Rolling 30-day stats anchored on this day
+                const stats = rolling30(dateStr);
+
+                dailyData.push({
+                    d, dateStr, dayActPV, dayExpPV, dayActLoad, dayActGrid,
+                    irradDayKwh, stats,
+                });
             }
 
             const avgActLoad = numDays > 0 ? totalActLoad / numDays : 0;
@@ -4270,20 +4322,25 @@
             const avgActPV = numDays > 0 ? totalActPV / numDays : 0;
             const avgExpPV = numDays > 0 ? totalExpPV / numDays : 0;
 
-            // Scale irradiation to match generation magnitude
-            const maxPV = Math.max(...dailyData.map(d=>d.dayActPV), 1);
-            const maxIrrad = Math.max(...dailyData.map(d=>d.irradDaily), 1);
+            // Scale irradiation (kWh/m²) up to PV magnitude (kWh) so they share an axis
+            const maxPV = Math.max(...dailyData.map(d => d.dayActPV), 1);
+            const maxIrrad = Math.max(...dailyData.map(d => d.irradDayKwh), 1);
             const irradScale = maxPV / maxIrrad;
 
             const avgActPVLine = [], avgExpPVLine = [];
             dailyData.forEach(dd => {
                 labels.push(String(dd.d).padStart(2,'0') + ' ' + monthNames[mo]);
                 actGen.push(Math.round(dd.dayActPV));
-                irradScaled.push(Math.round(dd.irradDaily * irradScale));
+                irradScaled.push(Math.round(dd.irradDayKwh * irradScale));
                 actLoadArr.push(Math.round(avgActLoad));
                 actGridArr.push(Math.round(avgActGrid));
                 avgActPVLine.push(Math.round(avgActPV));
                 avgExpPVLine.push(Math.round(avgExpPV));
+                avg30PVArr.push(dd.stats.n > 0 ? Math.round(dd.stats.avgG) : null);
+                avg30IrradArr.push(dd.stats.n > 0 ? Math.round(dd.stats.avgI * irradScale) : null);
+                p50Arr.push(dd.stats.n > 0 ? Math.round(dd.stats.med) : null);
+                pMinArr.push(dd.stats.n > 0 ? Math.round(dd.stats.mn) : null);
+                pMaxArr.push(dd.stats.n > 0 ? Math.round(dd.stats.mx) : null);
             });
 
             const fmtTick = v => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -4292,12 +4349,17 @@
             monthlyDailyChart = new Chart(ctx, {
                 data: { labels,
                     datasets: [
-                        { type:'bar', label:'PV Generation (kWh)', data:actGen, backgroundColor:'rgba(74,222,128,0.5)', borderColor:'#4ade80', borderWidth:1, borderRadius:3, yAxisID:'y', hidden:!monthlyDsVis['m-actGen'], order:3 },
-                        { type:'line', label:'Scaled Irradiation (kWh equiv)', data:irradScaled, backgroundColor:'rgba(255,215,0,0.15)', borderColor:'rgba(255,215,0,0.6)', borderWidth:1.5, pointRadius:0, tension:0.4, fill:true, yAxisID:'y', hidden:!monthlyDsVis['m-irrad'], order:2 },
+                        { type:'bar', label:'PV Generation (kWh)', data:actGen, backgroundColor:'rgba(74,222,128,0.5)', borderColor:'#4ade80', borderWidth:1, borderRadius:3, yAxisID:'y', hidden:!monthlyDsVis['m-actGen'], order:6 },
+                        { type:'line', label:'Irradiation (kWh equiv)', data:irradScaled, borderColor:'rgba(255,165,0,0.85)', backgroundColor:'rgba(255,165,0,0.05)', borderWidth:2, pointRadius:0, tension:0.4, fill:false, yAxisID:'y', hidden:!monthlyDsVis['m-irrad'], order:5 },
                         { type:'line', label:'Actual Load (Avg)', data:actLoadArr, borderColor:'#ef4444', borderWidth:2.5, pointRadius:0, tension:0, fill:false, yAxisID:'y', hidden:!monthlyDsVis['m-actLoad'], order:0 },
                         { type:'line', label:'Actual Grid (Avg)', data:actGridArr, borderColor:'#f97316', borderWidth:2.5, pointRadius:0, tension:0, fill:false, yAxisID:'y', hidden:!monthlyDsVis['m-actGrid'], order:0 },
                         { type:'line', label:'Avg PV (MTD)', data:avgActPVLine, borderColor:'#4ade80', borderWidth:2, pointRadius:0, tension:0, fill:false, yAxisID:'y', hidden:!monthlyDsVis['m-avgPV'], order:1 },
-                        { type:'line', label:'Avg Predicted PV (MTD)', data:avgExpPVLine, borderColor:'#60a5fa', borderWidth:2, borderDash:[6,4], pointRadius:0, tension:0, fill:false, yAxisID:'y', hidden:!monthlyDsVis['m-avgExpPV'], order:1 }
+                        { type:'line', label:'Avg Predicted PV (MTD)', data:avgExpPVLine, borderColor:'#60a5fa', borderWidth:2, borderDash:[6,4], pointRadius:0, tension:0, fill:false, yAxisID:'y', hidden:!monthlyDsVis['m-avgExpPV'], order:1 },
+                        { type:'line', label:'30-Day Avg PV', data:avg30PVArr, borderColor:'#4ade80', backgroundColor:'rgba(74,222,128,0.05)', borderWidth:2.5, borderDash:[6,4], pointRadius:0, tension:0.3, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-avg30PV'], order:4 },
+                        { type:'line', label:'30-Day Avg Irradiation', data:avg30IrradArr, borderColor:'#f97316', borderWidth:2.5, borderDash:[6,4], pointRadius:0, tension:0.3, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-avg30Irrad'], order:4 },
+                        { type:'line', label:'Median (30d)', data:p50Arr, borderColor:'#a78bfa', borderWidth:2, pointRadius:0, tension:0.2, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-p50'], order:3 },
+                        { type:'line', label:'Min (30d)', data:pMinArr, borderColor:'rgba(148,163,184,0.7)', borderWidth:1.5, borderDash:[2,3], pointRadius:0, tension:0.2, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-pMin'], order:2 },
+                        { type:'line', label:'Max (30d)', data:pMaxArr, borderColor:'rgba(148,163,184,0.7)', borderWidth:1.5, borderDash:[2,3], pointRadius:0, tension:0.2, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-pMax'], order:2 }
                     ]
                 },
                 options: {
@@ -7237,4 +7299,4 @@
         </div>
     </div>
 </body>
-</html>
+    </html>
