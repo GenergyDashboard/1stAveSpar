@@ -3037,9 +3037,11 @@
             ovMonthVis[key] = !ovMonthVis[key];
             const el = document.querySelector('[data-om="'+key+'"]');
             if (el) el.classList.toggle('off', !ovMonthVis[key]);
-            if (ovMonthChart && ovMonthDsMap[key] !== undefined) {
-                ovMonthChart.data.datasets[ovMonthDsMap[key]].hidden = !ovMonthVis[key];
-                ovMonthChart.update();
+            // Re-render so y-axis max recomputes from visible datasets only
+            // (instead of leaving dead space when a tall hidden dataset like
+            //  Grid Import inflates the scale).
+            if (ovMonthChart) {
+                renderOvMonthChart();
             }
         }
 
