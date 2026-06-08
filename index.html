@@ -792,6 +792,7 @@
                     <button class="fs-md" onclick="setFontScale(1)" title="Default">A</button>
                     <button class="fs-lg" onclick="setFontScale(1.15)" title="Larger">A</button>
                     <button class="edit-layout-btn" id="editLayoutBtn" onclick="toggleEditMode()" title="Edit Layout">✎ Edit</button>
+                    <button class="edit-layout-btn" id="chartTooltipBtn" onclick="toggleChartTooltips()" title="Show/hide pop-up info when hovering charts">💬 Hover Info</button>
                     <button class="edit-layout-btn" id="chartDefaultsBtn" onclick="toggleChartDefaults()" title="Chart & Tab Defaults" style="display:none;">⚙ Defaults</button>
                     <button class="edit-layout-btn" id="calcConfigBtn" onclick="toggleCalcPanel()" title="Calculation Settings" style="background:rgba(96,165,250,0.15);border-color:#60a5fa;color:#60a5fa;">⚙ Calc</button>
                 </div>
@@ -1026,21 +1027,23 @@
                                 <div class="chart-legend-item" data-om="om-pvGen" onclick="toggleOvMonthDs('om-pvGen')"><span class="legend-swatch" style="background:rgba(74,222,128,0.5);border:1px solid #4ade80;"></span>PV Generation (kWh)</div>
                                 <div class="chart-legend-item" data-om="om-mtdPV" onclick="toggleOvMonthDs('om-mtdPV')"><span class="legend-swatch" style="background:#22c55e;"></span>MTD Avg PV (actual)</div>
                                 <div class="chart-legend-item" data-om="om-mtdPredPV" onclick="toggleOvMonthDs('om-mtdPredPV')"><span class="legend-swatch dashed" style="border-color:#22c55e;"></span>MTD Avg PV (predicted)</div>
-                                <div class="chart-legend-item" data-om="om-avg30PV" onclick="toggleOvMonthDs('om-avg30PV')"><span class="legend-swatch dashed" style="border-color:#4ade80;"></span>30-Day Avg PV</div>
                                 <div class="chart-legend-item" data-om="om-irrad" onclick="toggleOvMonthDs('om-irrad')"><span class="legend-swatch" style="background:rgba(255,165,0,0.7);"></span>Irradiation (kWh equiv)</div>
                                 <div class="chart-legend-item" data-om="om-mtdIrrad" onclick="toggleOvMonthDs('om-mtdIrrad')"><span class="legend-swatch" style="background:#fb923c;"></span>MTD Avg Irradiation</div>
-                                <div class="chart-legend-item" data-om="om-avg30Irrad" onclick="toggleOvMonthDs('om-avg30Irrad')"><span class="legend-swatch dashed" style="border-color:#f97316;"></span>30-Day Avg Irradiation</div>
-                                <div class="chart-legend-item" data-om="om-p50" onclick="toggleOvMonthDs('om-p50')"><span class="legend-swatch" style="background:#a78bfa;"></span>Median (30d)</div>
-                                <div class="chart-legend-item" data-om="om-pMin" onclick="toggleOvMonthDs('om-pMin')"><span class="legend-swatch" style="background:#94a3b8;"></span>Min (30d)</div>
-                                <div class="chart-legend-item" data-om="om-pMax" onclick="toggleOvMonthDs('om-pMax')"><span class="legend-swatch" style="background:#94a3b8;"></span>Max (30d)</div>
+                                <div class="chart-legend-item" data-om="om-mtdMin" onclick="toggleOvMonthDs('om-mtdMin')"><span class="legend-swatch" style="background:#64748b;"></span>MTD Min</div>
+                                <div class="chart-legend-item" data-om="om-mtdMax" onclick="toggleOvMonthDs('om-mtdMax')"><span class="legend-swatch" style="background:#64748b;"></span>MTD Max</div>
                             </div>
                             <div class="chart-legend-more" onclick="this.classList.toggle('open')">
                                 <span class="more-btn">More ▼</span>
                                 <div class="more-items">
                                     <div class="chart-legend-item off" data-om="om-grid" onclick="event.stopPropagation();toggleOvMonthDs('om-grid')"><span class="legend-swatch" style="background:rgba(249,115,22,0.6);"></span>Grid Import (kWh)</div>
                                     <div class="chart-legend-item off" data-om="om-load" onclick="event.stopPropagation();toggleOvMonthDs('om-load')"><span class="legend-swatch" style="background:#ef4444;"></span>Load (kWh)</div>
-                                    <div class="chart-legend-item off" data-om="om-avgPV" onclick="event.stopPropagation();toggleOvMonthDs('om-avgPV')"><span class="legend-swatch" style="background:#4ade80;"></span>Avg PV (MTD)</div>
-                                    <div class="chart-legend-item off" data-om="om-avgExpPV" onclick="event.stopPropagation();toggleOvMonthDs('om-avgExpPV')"><span class="legend-swatch dashed" style="border-color:#60a5fa;"></span>Avg Predicted PV (MTD)</div>
+                                    <div class="chart-legend-item off" data-om="om-avg30PV" onclick="event.stopPropagation();toggleOvMonthDs('om-avg30PV')"><span class="legend-swatch dashed" style="border-color:#4ade80;"></span>30-Day Avg PV</div>
+                                    <div class="chart-legend-item off" data-om="om-avg30Irrad" onclick="event.stopPropagation();toggleOvMonthDs('om-avg30Irrad')"><span class="legend-swatch dashed" style="border-color:#f97316;"></span>30-Day Avg Irradiation</div>
+                                    <div class="chart-legend-item off" data-om="om-p50" onclick="event.stopPropagation();toggleOvMonthDs('om-p50')"><span class="legend-swatch" style="background:#a78bfa;"></span>Median 30d (typical day)</div>
+                                    <div class="chart-legend-item off" data-om="om-pMin" onclick="event.stopPropagation();toggleOvMonthDs('om-pMin')"><span class="legend-swatch" style="background:#94a3b8;"></span>Min (30d)</div>
+                                    <div class="chart-legend-item off" data-om="om-pMax" onclick="event.stopPropagation();toggleOvMonthDs('om-pMax')"><span class="legend-swatch" style="background:#94a3b8;"></span>Max (30d)</div>
+                                    <div class="chart-legend-item off" data-om="om-avgPV" onclick="event.stopPropagation();toggleOvMonthDs('om-avgPV')"><span class="legend-swatch" style="background:#4ade80;"></span>Avg PV (MTD legacy)</div>
+                                    <div class="chart-legend-item off" data-om="om-avgExpPV" onclick="event.stopPropagation();toggleOvMonthDs('om-avgExpPV')"><span class="legend-swatch dashed" style="border-color:#60a5fa;"></span>Avg Predicted PV (MTD legacy)</div>
                                 </div>
                             </div>
                         </div>
@@ -1882,6 +1885,42 @@
         function calcEnv(kwh) { return { trees: Math.round(kwh * ENV.trees), homes: Math.round(kwh * ENV.homes), coal: Math.round(kwh * ENV.coal), water: Math.round(kwh * ENV.water) }; }
 
         function setFontScale(s) { document.documentElement.style.setProperty('--font-scale', s); localStorage.setItem('nautica-font-scale', s); }
+
+        // ══════ Global chart tooltip toggle ════════════════
+        // Lets the user hide the on-hover pop-up info blocks across every chart,
+        // so they can read values directly off the axes without the tooltip
+        // blocking the data point. Choice is persisted in localStorage.
+        let chartTooltipsEnabled = localStorage.getItem('spar-chart-tooltips') !== 'off';
+        function applyChartTooltipState() {
+            // Chart.js global default — affects all charts on next render
+            if (typeof Chart !== 'undefined' && Chart.defaults && Chart.defaults.plugins && Chart.defaults.plugins.tooltip) {
+                Chart.defaults.plugins.tooltip.enabled = chartTooltipsEnabled;
+            }
+            // Force-update every live chart instance so the change is immediate
+            if (typeof Chart !== 'undefined' && Chart.instances) {
+                Object.values(Chart.instances).forEach(c => {
+                    if (c && c.options && c.options.plugins && c.options.plugins.tooltip) {
+                        c.options.plugins.tooltip.enabled = chartTooltipsEnabled;
+                        try { c.update('none'); } catch(e) {}
+                    }
+                });
+            }
+            // Reflect state in the button
+            const btn = document.getElementById('chartTooltipBtn');
+            if (btn) {
+                btn.style.opacity = chartTooltipsEnabled ? '1' : '0.5';
+                btn.title = chartTooltipsEnabled
+                    ? 'Hover info ON — click to hide pop-ups when hovering charts'
+                    : 'Hover info OFF — click to show pop-ups when hovering charts';
+            }
+        }
+        function toggleChartTooltips() {
+            chartTooltipsEnabled = !chartTooltipsEnabled;
+            localStorage.setItem('spar-chart-tooltips', chartTooltipsEnabled ? 'on' : 'off');
+            applyChartTooltipState();
+        }
+        // Apply on load (after Chart.js has had a chance to load)
+        document.addEventListener('DOMContentLoaded', () => setTimeout(applyChartTooltipState, 100));
         const savedScale = localStorage.getItem('nautica-font-scale');
         if (savedScale) document.documentElement.style.setProperty('--font-scale', savedScale);
 
@@ -3039,8 +3078,8 @@
         let ovDayDate = null; // null = today, otherwise 'YYYY-MM-DD'
 
         // Overview Month chart visibility
-        const ovMonthVis = {'om-pvGen':true,'om-irrad':true,'om-mtdPV':true,'om-mtdPredPV':true,'om-avg30PV':true,'om-mtdIrrad':true,'om-avg30Irrad':true,'om-p50':true,'om-pMin':true,'om-pMax':true,'om-avgPV':false,'om-avgExpPV':false,'om-grid':false,'om-load':false};
-        const ovMonthDsMap = {'om-grid':0,'om-pvGen':1,'om-avgPV':2,'om-avgExpPV':3,'om-irrad':4,'om-load':5,'om-avg30PV':6,'om-avg30Irrad':7,'om-p50':8,'om-pMin':9,'om-pMax':10,'om-mtdPV':11,'om-mtdPredPV':12,'om-mtdIrrad':13};
+        const ovMonthVis = {'om-pvGen':true,'om-irrad':true,'om-mtdPV':true,'om-mtdPredPV':true,'om-mtdIrrad':true,'om-mtdMin':true,'om-mtdMax':true,'om-avg30PV':false,'om-avg30Irrad':false,'om-p50':false,'om-pMin':false,'om-pMax':false,'om-avgPV':false,'om-avgExpPV':false,'om-grid':false,'om-load':false};
+        const ovMonthDsMap = {'om-grid':0,'om-pvGen':1,'om-avgPV':2,'om-avgExpPV':3,'om-irrad':4,'om-load':5,'om-avg30PV':6,'om-avg30Irrad':7,'om-p50':8,'om-pMin':9,'om-pMax':10,'om-mtdPV':11,'om-mtdPredPV':12,'om-mtdIrrad':13,'om-mtdMin':14,'om-mtdMax':15};
         function toggleOvMonthDs(key) {
             ovMonthVis[key] = !ovMonthVis[key];
             const el = document.querySelector('[data-om="'+key+'"]');
@@ -3234,6 +3273,7 @@
             // Irradiation actual: average daily real irradiation across those same days
             // Irradiation: average daily real irradiation across MTD days
             let mtdSumActPV = 0, mtdSumPredPV = 0, mtdSumActIrrad = 0, mtdN = 0;
+            const mtdPVValues = []; // for MTD min/max
             const allRecsDates = new Set(allRecs.map(r => r.date));
             dailyData.forEach(dd => {
                 const ds = yr+'-'+mm+'-'+String(dd.d).padStart(2,'0');
@@ -3241,12 +3281,15 @@
                     mtdSumActPV     += dd.pv;
                     mtdSumPredPV    += dd.dayExp;
                     mtdSumActIrrad  += dd.irradDayKwh;
+                    mtdPVValues.push(dd.pv);
                     mtdN++;
                 }
             });
             const mtdAvgActPV       = mtdN > 0 ? mtdSumActPV / mtdN     : 0;
             const mtdAvgPredPV      = mtdN > 0 ? mtdSumPredPV / mtdN    : 0;
             const mtdAvgActIrrad    = mtdN > 0 ? mtdSumActIrrad / mtdN  : 0;
+            const mtdMinPV          = mtdN > 0 ? Math.min(...mtdPVValues) : 0;
+            const mtdMaxPV          = mtdN > 0 ? Math.max(...mtdPVValues) : 0;
 
             // Scale irradiation (kWh/m²) up to PV magnitude
             const maxPV = Math.max(...dailyData.map(d => d.pv), 1);
@@ -3261,8 +3304,10 @@
             const flatMtdActPV      = mtdN > 0 ? Math.round(mtdAvgActPV)                    : null;
             const flatMtdPredPV     = mtdN > 0 ? Math.round(mtdAvgPredPV)                   : null;
             const flatMtdActIrrad   = mtdN > 0 ? Math.round(mtdAvgActIrrad * irradScale)    : null;
+            const flatMtdMin        = mtdN > 0 ? Math.round(mtdMinPV)                       : null;
+            const flatMtdMax        = mtdN > 0 ? Math.round(mtdMaxPV)                       : null;
 
-            const mtdPVArr = [], mtdPredPVArr = [], mtdIrradArr = [];
+            const mtdPVArr = [], mtdPredPVArr = [], mtdIrradArr = [], mtdMinArr = [], mtdMaxArr = [];
             const avgActPVLine = [], avgExpPVLine = [];
             dailyData.forEach(dd => {
                 labels.push(String(dd.d).padStart(2,'0') + ' ' + monthNames[mo]);
@@ -3280,6 +3325,8 @@
                 mtdPVArr.push(flatMtdActPV);
                 mtdPredPVArr.push(flatMtdPredPV);
                 mtdIrradArr.push(flatMtdActIrrad);
+                mtdMinArr.push(flatMtdMin);
+                mtdMaxArr.push(flatMtdMax);
             });
 
             const fmtTick = v => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -3301,6 +3348,8 @@
             if (ovMonthVis['om-mtdPV'])         yMaxRaw = Math.max(yMaxRaw, flatMtdActPV    || 0);
             if (ovMonthVis['om-mtdPredPV'])     yMaxRaw = Math.max(yMaxRaw, flatMtdPredPV   || 0);
             if (ovMonthVis['om-mtdIrrad'])      yMaxRaw = Math.max(yMaxRaw, flatMtdActIrrad || 0);
+            if (ovMonthVis['om-mtdMin'])        yMaxRaw = Math.max(yMaxRaw, flatMtdMin     || 0);
+            if (ovMonthVis['om-mtdMax'])        yMaxRaw = Math.max(yMaxRaw, flatMtdMax     || 0);
             const yMax = Math.ceil(yMaxRaw * 1.15);
 
             if (ovMonthChart) ovMonthChart.destroy();
@@ -3321,7 +3370,9 @@
                     { type:'line', label:'Max (30d)',                  data:pMaxArr,        borderColor:'rgba(148,163,184,0.7)', borderWidth:1.5, borderDash:[2,3], pointRadius:0, tension:0, fill:false, spanGaps:true, yAxisID:'y', hidden:!ovMonthVis['om-pMax'], order:2 },
                     { type:'line', label:'MTD Avg PV (actual)',        data:mtdPVArr,       borderColor:'#22c55e', borderWidth:2, pointRadius:0, tension:0, fill:false, spanGaps:true, yAxisID:'y', hidden:!ovMonthVis['om-mtdPV'], order:3 },
                     { type:'line', label:'MTD Avg PV (predicted)',     data:mtdPredPVArr,   borderColor:'#22c55e', borderWidth:2, borderDash:[8,4], pointRadius:0, tension:0, fill:false, spanGaps:true, yAxisID:'y', hidden:!ovMonthVis['om-mtdPredPV'], order:3 },
-                    { type:'line', label:'MTD Avg Irradiation',        data:mtdIrradArr,    borderColor:'#fb923c', borderWidth:2, pointRadius:0, tension:0, fill:false, spanGaps:true, yAxisID:'y', hidden:!ovMonthVis['om-mtdIrrad'], order:3 }
+                    { type:'line', label:'MTD Avg Irradiation',        data:mtdIrradArr,    borderColor:'#fb923c', borderWidth:2, pointRadius:0, tension:0, fill:false, spanGaps:true, yAxisID:'y', hidden:!ovMonthVis['om-mtdIrrad'], order:3 },
+                    { type:'line', label:'MTD Min',                    data:mtdMinArr,      borderColor:'#64748b', borderWidth:1.5, borderDash:[2,3], pointRadius:0, tension:0, fill:false, spanGaps:true, yAxisID:'y', hidden:!ovMonthVis['om-mtdMin'], order:2 },
+                    { type:'line', label:'MTD Max',                    data:mtdMaxArr,      borderColor:'#64748b', borderWidth:1.5, borderDash:[2,3], pointRadius:0, tension:0, fill:false, spanGaps:true, yAxisID:'y', hidden:!ovMonthVis['om-mtdMax'], order:2 }
                 ]},
                 options: {
                     responsive:true, maintainAspectRatio:false,
