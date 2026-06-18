@@ -37033,9 +37033,9 @@
     },
     {
       "date": "2026-06-18",
-      "generation_kwh": 104.53,
-      "actual_load_kwh": 781.22,
-      "actual_grid_kwh": 676.69,
+      "generation_kwh": 132.87,
+      "actual_load_kwh": 1050.09,
+      "actual_grid_kwh": 917.22,
       "hourly_data": [
         {
           "time": "00:00",
@@ -37137,40 +37137,68 @@
         },
         {
           "time": "14:00",
-          "generation_kw": 7.942,
-          "grid_kw": 11.98,
-          "load_kw": 19.922,
+          "generation_kw": 19.873,
+          "grid_kw": 46.707,
+          "load_kw": 66.58,
+          "intervals": 11
+        },
+        {
+          "time": "15:00",
+          "generation_kw": 12.154,
+          "grid_kw": 54.56,
+          "load_kw": 66.714,
+          "intervals": 12
+        },
+        {
+          "time": "16:00",
+          "generation_kw": 4.136,
+          "grid_kw": 65.427,
+          "load_kw": 69.562,
+          "intervals": 12
+        },
+        {
+          "time": "17:00",
+          "generation_kw": 0.123,
+          "grid_kw": 69.88,
+          "load_kw": 70.002,
+          "intervals": 12
+        },
+        {
+          "time": "18:00",
+          "generation_kw": 0.0,
+          "grid_kw": 15.933,
+          "load_kw": 15.933,
           "intervals": 3
         }
       ],
       "tou_breakdown": {
-        "peak_kwh": 0.443,
-        "standard_kwh": 104.08600000000001,
+        "peak_kwh": 0.5660000000000001,
+        "standard_kwh": 132.30700000000002,
         "off_peak_kwh": 0.0
       },
       "financial": {
         "utility": {
-          "peak_zar": 3.64,
-          "standard_zar": 245.64,
+          "peak_zar": 4.65,
+          "standard_zar": 312.24,
           "off_peak_zar": 0.0,
-          "total_zar": 249.28
+          "total_zar": 316.89
         },
         "ppa": {
-          "peak_zar": 0.66,
-          "standard_zar": 156.13,
+          "peak_zar": 0.85,
+          "standard_zar": 198.46,
           "off_peak_zar": 0.0,
-          "total_zar": 156.79
+          "total_zar": 199.31
         },
         "savings": {
-          "peak_savings_zar": 2.97,
-          "standard_savings_zar": 89.51,
+          "peak_savings_zar": 3.8,
+          "standard_savings_zar": 113.78,
           "off_peak_savings_zar": 0.0,
-          "total_savings_zar": 92.49
+          "total_savings_zar": 117.58
         },
-        "peak_savings_zar": 2.97,
-        "standard_savings_zar": 89.51,
+        "peak_savings_zar": 3.8,
+        "standard_savings_zar": 113.78,
         "off_peak_savings_zar": 0.0,
-        "total_savings_zar": 92.49
+        "total_savings_zar": 117.58
       }
     }
   ],
@@ -37625,37 +37653,37 @@
     },
     "2026-06": {
       "tou_breakdown": {
-        "peak_kwh": 7.431,
-        "standard_kwh": 1710.374,
+        "peak_kwh": 7.554,
+        "standard_kwh": 1738.595,
         "off_peak_kwh": 447.91400000000004
       },
       "financial": {
         "utility": {
-          "peak_zar": 61.01,
-          "standard_zar": 4036.48,
+          "peak_zar": 62.02,
+          "standard_zar": 4103.08,
           "off_peak_zar": 765.93,
-          "total_zar": 4863.42
+          "total_zar": 4931.04
         },
         "ppa": {
-          "peak_zar": 11.15,
-          "standard_zar": 2565.56,
+          "peak_zar": 11.33,
+          "standard_zar": 2607.89,
           "off_peak_zar": 671.87,
-          "total_zar": 3248.58
+          "total_zar": 3291.09
         },
         "savings": {
-          "peak_savings_zar": 49.86,
-          "standard_savings_zar": 1470.92,
+          "peak_savings_zar": 50.69,
+          "standard_savings_zar": 1495.19,
           "off_peak_savings_zar": 94.06,
-          "total_savings_zar": 1614.85
+          "total_savings_zar": 1639.94
         },
-        "peak_savings_zar": 49.86,
-        "standard_savings_zar": 1470.92,
+        "peak_savings_zar": 50.69,
+        "standard_savings_zar": 1495.19,
         "off_peak_savings_zar": 94.06,
-        "total_savings_zar": 1614.85
+        "total_savings_zar": 1639.94
       },
-      "total_generation_kwh": 2165.72,
-      "actual_load_kwh": 20557.44,
-      "actual_grid_kwh": 18391.71,
+      "total_generation_kwh": 2194.06,
+      "actual_load_kwh": 20826.31,
+      "actual_grid_kwh": 18632.24,
       "days_with_data": 18,
       "tou_breakdown_expected": {
         "peak_kwh": 1090.59,
@@ -37689,38 +37717,38 @@
     }
   },
   "lifetime_summary": {
-    "total_generation_kwh": 61920.18,
-    "actual_load_kwh": 274965.97,
-    "actual_grid_kwh": 213051.3,
+    "total_generation_kwh": 61948.52,
+    "actual_load_kwh": 275234.84,
+    "actual_grid_kwh": 213291.83,
     "days_active": 204,
     "tou_breakdown": {
-      "peak_kwh": 3389.0500000000025,
-      "standard_kwh": 43489.36600000001,
+      "peak_kwh": 3389.173000000002,
+      "standard_kwh": 43517.58700000001,
       "off_peak_kwh": 15041.756
     },
     "financial": {
       "utility": {
-        "peak_zar": 16030.21,
-        "standard_zar": 98394.69,
+        "peak_zar": 16030.79,
+        "standard_zar": 98458.54,
         "off_peak_zar": 25608.59,
-        "total_zar": 140033.49
+        "total_zar": 140097.92
       },
       "ppa": {
-        "peak_zar": 5083.58,
-        "standard_zar": 65234.05,
+        "peak_zar": 5083.76,
+        "standard_zar": 65276.38,
         "off_peak_zar": 22562.63,
-        "total_zar": 92880.26
+        "total_zar": 92922.77
       },
       "savings": {
-        "peak_savings_zar": 10946.63,
-        "standard_savings_zar": 33160.64,
+        "peak_savings_zar": 10947.03,
+        "standard_savings_zar": 33182.16,
         "off_peak_savings_zar": 3045.96,
-        "total_savings_zar": 47153.23
+        "total_savings_zar": 47175.14
       },
-      "peak_savings_zar": 10946.63,
-      "standard_savings_zar": 33160.64,
+      "peak_savings_zar": 10947.03,
+      "standard_savings_zar": 33182.16,
       "off_peak_savings_zar": 3045.96,
-      "total_savings_zar": 47153.23
+      "total_savings_zar": 47175.14
     }
   },
   "tou_rates": [
