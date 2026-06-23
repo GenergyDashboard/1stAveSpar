@@ -1326,6 +1326,8 @@
                             <div class="chart-legend-item" data-mds="m-actGen" onclick="toggleMonthlyDs('m-actGen')"><span class="legend-swatch" style="background:rgba(74,222,128,0.5);border:1px solid #4ade80;"></span>PV Generation (kWh)</div>
                             <div class="chart-legend-item" data-mds="m-avg30PV" onclick="toggleMonthlyDs('m-avg30PV')"><span class="legend-swatch dashed" style="border-color:#4ade80;"></span>30-Day Avg PV</div>
                             <div class="chart-legend-item" data-mds="m-irrad" onclick="toggleMonthlyDs('m-irrad')"><span class="legend-swatch" style="background:rgba(255,165,0,0.7);"></span>Irradiation (kWh equiv)</div>
+                            <div class="chart-legend-item" data-mds="m-predIrrad" onclick="toggleMonthlyDs('m-predIrrad')"><span class="legend-swatch" style="background:rgba(96,165,250,0.7);"></span>Predicted Irradiation (kWh equiv)</div>
+                            <div class="chart-legend-item" data-mds="m-mtdPredIrrad" onclick="toggleMonthlyDs('m-mtdPredIrrad')"><span class="legend-swatch dashed" style="border-color:#60a5fa;"></span>MTD Avg Predicted Irradiation</div>
                             <div class="chart-legend-item" data-mds="m-avg30Irrad" onclick="toggleMonthlyDs('m-avg30Irrad')"><span class="legend-swatch dashed" style="border-color:#f97316;"></span>30-Day Avg Irradiation</div>
                             <div class="chart-legend-item" data-mds="m-p50" onclick="toggleMonthlyDs('m-p50')"><span class="legend-swatch" style="background:#a78bfa;"></span>Median (30d)</div>
                             <div class="chart-legend-item" data-mds="m-pMin" onclick="toggleMonthlyDs('m-pMin')"><span class="legend-swatch" style="background:#94a3b8;"></span>Min (30d)</div>
@@ -1500,6 +1502,8 @@
                                 <div class="chart-legend-item off" data-lds="l-expLoad" onclick="event.stopPropagation();toggleLifetimeDs('l-expLoad')"><span class="legend-swatch dashed" style="border-color:#ef4444;"></span>Expected Load</div>
                                 <div class="chart-legend-item off" data-lds="l-actGrid" onclick="event.stopPropagation();toggleLifetimeDs('l-actGrid')"><span class="legend-swatch" style="background:#f97316;"></span>Actual Grid</div>
                                 <div class="chart-legend-item off" data-lds="l-expGrid" onclick="event.stopPropagation();toggleLifetimeDs('l-expGrid')"><span class="legend-swatch dashed" style="border-color:#f97316;"></span>Expected Grid</div>
+                                <div class="chart-legend-item off" data-lds="l-actIrrad" onclick="event.stopPropagation();toggleLifetimeDs('l-actIrrad')"><span class="legend-swatch" style="background:rgba(255,165,0,0.85);"></span>Actual Irradiation</div>
+                                <div class="chart-legend-item off" data-lds="l-predIrrad" onclick="event.stopPropagation();toggleLifetimeDs('l-predIrrad')"><span class="legend-swatch dashed" style="border-color:#60a5fa;"></span>Predicted Irradiation</div>
                             </div>
                         </div>
                     </div>
@@ -1817,6 +1821,7 @@
         const DATA_URL = 'data/dashboard_data.json';
         const PVSYST_URL = 'predictions_2025_2044.min.json';
         const IRRAD_URL = 'data/dashboard_data.json';
+        const PRED_IRRAD_URL = 'predicted_irradiation.json';
         const DAILY_HIST_URL = 'data/dashboard_data.json';
         const FIN_CONFIG_URL = 'data/dashboard_data.json';
         const DT_COMMENTS_URL = 'data/downtime_comments.json';
@@ -1824,6 +1829,7 @@
         let dashData = null;
         let pvsyst = null;
         let irradData = null;
+        let predIrradData = null;
         let dailyHist = null;
         let finConfig = null;
         let dtCommentsRemote = {}; // loaded from repo
@@ -2343,6 +2349,29 @@
             return { daily_records: daily_records };
         }
 
+        // ── Predicted irradiation (PVSyst) — lookup with cross-year fallback ──
+        // The PVSyst file covers one base year (2026). For any other year, we fall
+        // back to the same MM-DD from that base year (i.e. the predicted profile
+        // for "Jun 15" is identical regardless of which year is being viewed).
+        // Returns 24-element W/m² array, or null if the lookup misses entirely.
+        function getPredIrradHourlyWm2(dateStr) {
+            if (!predIrradData || !predIrradData.daily_records) return null;
+            const direct = predIrradData.daily_records[dateStr];
+            if (direct && Array.isArray(direct.hourly_wm2)) return direct.hourly_wm2;
+            // Cross-year fallback by MM-DD
+            if (typeof dateStr !== 'string' || dateStr.length < 10) return null;
+            const mmdd = dateStr.substring(5);
+            const baseYear = predIrradData.base_year || 2026;
+            const fallback = predIrradData.daily_records[baseYear + '-' + mmdd];
+            return (fallback && Array.isArray(fallback.hourly_wm2)) ? fallback.hourly_wm2 : null;
+        }
+        // Daily kWh/m² total from predicted irradiation for a given date
+        function dailyPredIrradKwh(dateStr) {
+            const arr = getPredIrradHourlyWm2(dateStr);
+            if (!arr) return 0;
+            return arr.reduce((a, b) => a + (b || 0), 0) / 1000;
+        }
+
         // ── DailyHistory adapter — produces BOTH flat (Spar-style) and nested (Nautica-style) ──
         // Plus converts tou_breakdown to per-period format with generation/utility_cost/pv_savings/export_savings
         function adaptSparDailyHistory(s) {
@@ -2503,6 +2532,14 @@
                     }
                 } catch(e) { console.warn('Predictions optional:', e.message); }
 
+                // Predicted irradiation from PVSyst (separate file)
+                try {
+                    const piRes = await fetch(cacheBust(PRED_IRRAD_URL));
+                    if (piRes.ok) {
+                        predIrradData = await piRes.json();
+                    }
+                } catch(e) { console.warn('Predicted irradiation optional:', e.message); }
+
                 try {
                     const dtRes = await fetch(cacheBust(DT_COMMENTS_URL));
                     if (dtRes && dtRes.ok) {
@@ -2545,6 +2582,13 @@
                         const rawPred = await pRes.json();
                         pvsyst = adaptSparPredictions(rawPred);
                         irradData = adaptSparIrradiation(rawPred);
+                    }
+                } catch(e) {}
+
+                try {
+                    const piRes = await fetch(cacheBust(PRED_IRRAD_URL));
+                    if (piRes.ok) {
+                        predIrradData = await piRes.json();
                     }
                 } catch(e) {}
 
@@ -4109,7 +4153,7 @@
         let monthlyTOUChart = null;
         let monthlyInited = false;
         let monthlyChartYM = ''; // Track which month is displayed for click-to-navigate
-        const monthlyDsVis = { 'm-actGen':true,'m-irrad':true,'m-avg30PV':true,'m-avg30Irrad':true,'m-p50':true,'m-pMin':true,'m-pMax':true,'m-actLoad':false,'m-actGrid':false,'m-avgPV':false,'m-avgExpPV':false,'m-actPeak':true,'m-actStd':true,'m-actOff':true,'m-expPeak':false,'m-expStd':false,'m-expOff':false };
+        const monthlyDsVis = { 'm-actGen':true,'m-irrad':true,'m-predIrrad':true,'m-mtdPredIrrad':true,'m-avg30PV':true,'m-avg30Irrad':true,'m-p50':true,'m-pMin':true,'m-pMax':true,'m-actLoad':false,'m-actGrid':false,'m-avgPV':false,'m-avgExpPV':false,'m-actPeak':true,'m-actStd':true,'m-actOff':true,'m-expPeak':false,'m-expStd':false,'m-expOff':false };
 
         function goToMonthly() {
             const btn = document.querySelectorAll('.tab-nav button')[2];
@@ -4155,7 +4199,7 @@
             const el = document.querySelector(`[data-mds="${key}"]`);
             if (el) el.classList.toggle('off', !monthlyDsVis[key]);
             // Daily generation chart datasets
-            const dMap = {'m-actGen':0,'m-irrad':1,'m-actLoad':2,'m-actGrid':3,'m-avgPV':4,'m-avgExpPV':5,'m-avg30PV':6,'m-avg30Irrad':7,'m-p50':8,'m-pMin':9,'m-pMax':10};
+            const dMap = {'m-actGen':0,'m-irrad':1,'m-actLoad':2,'m-actGrid':3,'m-avgPV':4,'m-avgExpPV':5,'m-avg30PV':6,'m-avg30Irrad':7,'m-p50':8,'m-pMin':9,'m-pMax':10,'m-predIrrad':11,'m-mtdPredIrrad':12};
             if (monthlyDailyChart && dMap[key] !== undefined) { monthlyDailyChart.data.datasets[dMap[key]].hidden = !monthlyDsVis[key]; monthlyDailyChart.update(); }
             // TOU chart datasets
             const tMap = {'m-actPeak':0,'m-actStd':1,'m-actOff':2,'m-expPeak':3,'m-expStd':4,'m-expOff':5};
@@ -4472,9 +4516,11 @@
 
                 // Day's actual irradiation from real measurements (kWh/m² equivalent)
                 const irradDayKwh = dailyIrradKwh(dateStr);
+                // Day's PREDICTED irradiation from PVSyst (kWh/m² equivalent)
+                const predIrradDayKwh = dailyPredIrradKwh(dateStr);
 
                 dailyData.push({
-                    d, dateStr, dayActPV, dayExpPV, dayActLoad, dayActGrid, irradDayKwh,
+                    d, dateStr, dayActPV, dayExpPV, dayActLoad, dayActGrid, irradDayKwh, predIrradDayKwh,
                 });
             }
 
@@ -4483,10 +4529,22 @@
             const avgActPV = numDays > 0 ? totalActPV / numDays : 0;
             const avgExpPV = numDays > 0 ? totalExpPV / numDays : 0;
 
-            // Scale irradiation (kWh/m²) up to PV magnitude (kWh) so they share an axis
+            // Scale irradiation (kWh/m²) up to PV magnitude (kWh) so they share an axis.
+            // Includes predicted irradiation in the scale so both curves stay visible.
             const maxPV = Math.max(...dailyData.map(d => d.dayActPV), 1);
-            const maxIrrad = Math.max(...dailyData.map(d => d.irradDayKwh), 1);
+            const maxIrrad = Math.max(
+                ...dailyData.map(d => d.irradDayKwh),
+                ...dailyData.map(d => d.predIrradDayKwh),
+                1
+            );
             const irradScale = maxPV / maxIrrad;
+
+            // MTD avg predicted irradiation — same value broadcast across days
+            const mtdDataDays = dailyData.filter(dd => dd.dayActPV > 0);
+            const mtdPredIrradAvg = mtdDataDays.length > 0
+                ? mtdDataDays.reduce((a, dd) => a + dd.predIrradDayKwh, 0) / mtdDataDays.length
+                : 0;
+            const flatMtdPredIrrad = mtdDataDays.length > 0 ? Math.round(mtdPredIrradAvg * irradScale) : null;
 
             // Reference values broadcast as a constant across every position
             const flatAvgPV    = refStats.n > 0 ? Math.round(refStats.avgG)              : null;
@@ -4495,11 +4553,13 @@
             const flatMin      = refStats.n > 0 ? Math.round(refStats.mn)                : null;
             const flatMax      = refStats.n > 0 ? Math.round(refStats.mx)                : null;
 
-            const avgActPVLine = [], avgExpPVLine = [];
+            const avgActPVLine = [], avgExpPVLine = [], predIrradArr = [], mtdPredIrradArr = [];
             dailyData.forEach(dd => {
                 labels.push(String(dd.d).padStart(2,'0') + ' ' + monthNames[mo]);
                 actGen.push(Math.round(dd.dayActPV));
                 irradScaled.push(Math.round(dd.irradDayKwh * irradScale));
+                predIrradArr.push(Math.round(dd.predIrradDayKwh * irradScale));
+                mtdPredIrradArr.push(flatMtdPredIrrad);
                 actLoadArr.push(Math.round(avgActLoad));
                 actGridArr.push(Math.round(avgActGrid));
                 avgActPVLine.push(Math.round(avgActPV));
@@ -4527,7 +4587,9 @@
                         { type:'line', label:'30-Day Avg Irradiation', data:avg30IrradArr, borderColor:'#f97316', borderWidth:2.5, borderDash:[6,4], pointRadius:0, tension:0.3, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-avg30Irrad'], order:4 },
                         { type:'line', label:'Median (30d)', data:p50Arr, borderColor:'#a78bfa', borderWidth:2, pointRadius:0, tension:0.2, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-p50'], order:3 },
                         { type:'line', label:'Min (30d)', data:pMinArr, borderColor:'rgba(148,163,184,0.7)', borderWidth:1.5, borderDash:[2,3], pointRadius:0, tension:0.2, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-pMin'], order:2 },
-                        { type:'line', label:'Max (30d)', data:pMaxArr, borderColor:'rgba(148,163,184,0.7)', borderWidth:1.5, borderDash:[2,3], pointRadius:0, tension:0.2, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-pMax'], order:2 }
+                        { type:'line', label:'Max (30d)', data:pMaxArr, borderColor:'rgba(148,163,184,0.7)', borderWidth:1.5, borderDash:[2,3], pointRadius:0, tension:0.2, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-pMax'], order:2 },
+                        { type:'line', label:'Predicted Irradiation (kWh equiv)', data:predIrradArr, borderColor:'rgba(96,165,250,0.85)', backgroundColor:'rgba(96,165,250,0.05)', borderWidth:2, pointRadius:0, tension:0.4, fill:false, yAxisID:'y', hidden:!monthlyDsVis['m-predIrrad'], order:5 },
+                        { type:'line', label:'MTD Avg Predicted Irradiation', data:mtdPredIrradArr, borderColor:'#60a5fa', borderWidth:2, borderDash:[8,4], pointRadius:0, tension:0, fill:false, spanGaps:true, yAxisID:'y', hidden:!monthlyDsVis['m-mtdPredIrrad'], order:4 }
                     ]
                 },
                 options: {
@@ -4589,7 +4651,7 @@
         let lifetimeSavChart = null;
         let lifetimeInited = false;
         let lifetimeRange = 0; // 0 = all, 3/6/9/12 months
-        const lifetimeDsVis = {'l-cumPerf':true,'l-actGen':true,'l-expGen':true,'l-actLoad':false,'l-expLoad':false,'l-actGrid':false,'l-expGrid':false,'l-actSav':true,'l-predSav':true};
+        const lifetimeDsVis = {'l-cumPerf':true,'l-actGen':true,'l-expGen':true,'l-actLoad':false,'l-expLoad':false,'l-actGrid':false,'l-expGrid':false,'l-actIrrad':false,'l-predIrrad':false,'l-actSav':true,'l-predSav':true};
 
         function setLifetimeRange(months, btn) {
             lifetimeRange = months;
@@ -4608,9 +4670,17 @@
             if (el) el.classList.toggle('off', !lifetimeDsVis[key]);
 
             // Gen chart mapping
-            const genMap = {'l-cumPerf':0,'l-actGen':1,'l-expGen':2,'l-actLoad':3,'l-expLoad':4,'l-actGrid':5,'l-expGrid':6};
+            const genMap = {'l-cumPerf':0,'l-actGen':1,'l-expGen':2,'l-actLoad':3,'l-expLoad':4,'l-actGrid':5,'l-expGrid':6,'l-actIrrad':7,'l-predIrrad':8};
             if (key in genMap && lifetimeGenChart) {
                 lifetimeGenChart.data.datasets[genMap[key]].hidden = !lifetimeDsVis[key];
+                // Toggle the right-side irradiation axis visibility based on whether
+                // either irradiation series is now visible.
+                if (key === 'l-actIrrad' || key === 'l-predIrrad') {
+                    if (lifetimeGenChart.options.scales && lifetimeGenChart.options.scales.y3) {
+                        lifetimeGenChart.options.scales.y3.display =
+                            (lifetimeDsVis['l-actIrrad'] || lifetimeDsVis['l-predIrrad']);
+                    }
+                }
                 lifetimeGenChart.update();
             }
             // Sav chart mapping
@@ -4856,6 +4926,7 @@
             const displayMonths = lifetimeRange > 0 ? sortedMonths.slice(-lifetimeRange) : sortedMonths;
             const labels = [];
             const actGenArr=[], expGenArr=[], actLoadArr=[], expLoadArr=[], actGridArr=[], expGridArr=[];
+            const actIrradArr=[], predIrradArr=[];
             const cumPerfArr = [];
             // Pre-calculate cumulative over ALL months, then only display sliced portion
             let cumActual = 0, cumExpected = 0;
@@ -4910,6 +4981,19 @@
                 actGridArr.push(Math.round(actGrid));
                 expGridArr.push(Math.round(expGrid > 0 ? expGrid : 0));
                 cumPerfArr.push(Math.round((cumMap[ym]||0) * 10) / 10);
+
+                // Monthly irradiation totals (kWh/m²) — sum across days in month.
+                // Actual: every record-bearing day; Predicted: every day in the month.
+                let mIrrActual = 0, mIrrPred = 0;
+                const lastDay = isCurrentMonth ? now.getDate() : daysInMonth;
+                for (let d = 1; d <= lastDay; d++) {
+                    const ds = yr + '-' + String(mm).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+                    const a = irradData?.daily_records?.[ds]?.hourly_wm2;
+                    if (Array.isArray(a)) mIrrActual += a.reduce((s,v)=>s+(v||0),0) / 1000;
+                    mIrrPred += dailyPredIrradKwh(ds);
+                }
+                actIrradArr.push(Math.round(mIrrActual * 10) / 10);
+                predIrradArr.push(Math.round(mIrrPred * 10) / 10);
             });
 
             if (lifetimeGenChart) lifetimeGenChart.destroy();
@@ -4922,7 +5006,9 @@
                         { type:'line', label:'Actual Load (kWh)', data:actLoadArr, borderColor:'#ef4444', borderWidth:2, pointRadius:0, tension:0.3, fill:false, yAxisID:'y', hidden:!lifetimeDsVis['l-actLoad'], order:1 },
                         { type:'line', label:'Expected Load (kWh)', data:expLoadArr, borderColor:'#ef4444', borderWidth:1.5, borderDash:[5,5], pointRadius:0, tension:0.3, fill:false, yAxisID:'y', hidden:!lifetimeDsVis['l-expLoad'], order:1 },
                         { type:'line', label:'Actual Grid (kWh)', data:actGridArr, borderColor:'#f97316', borderWidth:2, pointRadius:0, tension:0.3, fill:false, yAxisID:'y', hidden:!lifetimeDsVis['l-actGrid'], order:1 },
-                        { type:'line', label:'Expected Grid (kWh)', data:expGridArr, borderColor:'#f97316', borderWidth:1.5, borderDash:[5,5], pointRadius:0, tension:0.3, fill:false, yAxisID:'y', hidden:!lifetimeDsVis['l-expGrid'], order:1 }
+                        { type:'line', label:'Expected Grid (kWh)', data:expGridArr, borderColor:'#f97316', borderWidth:1.5, borderDash:[5,5], pointRadius:0, tension:0.3, fill:false, yAxisID:'y', hidden:!lifetimeDsVis['l-expGrid'], order:1 },
+                        { type:'line', label:'Actual Irradiation (kWh/m²)', data:actIrradArr, borderColor:'rgba(255,165,0,0.85)', backgroundColor:'rgba(255,165,0,0.1)', borderWidth:2, pointRadius:2, pointBackgroundColor:'#f97316', tension:0.3, fill:false, yAxisID:'y3', hidden:!lifetimeDsVis['l-actIrrad'], order:1 },
+                        { type:'line', label:'Predicted Irradiation (kWh/m²)', data:predIrradArr, borderColor:'#60a5fa', borderWidth:2, borderDash:[5,5], pointRadius:2, pointBackgroundColor:'#60a5fa', tension:0.3, fill:false, yAxisID:'y3', hidden:!lifetimeDsVis['l-predIrrad'], order:1 }
                     ]
                 },
                 options: {
@@ -4930,12 +5016,14 @@
                     interaction:{mode:'index',intersect:false},
                     plugins:{legend:{display:false},tooltip:{backgroundColor:'#111',titleColor:'#fff',bodyColor:'#ccc',titleFont:{size:chartMobile().tooltipTitleFont},bodyFont:{size:chartMobile().tooltipBodyFont},borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:chartMobile().tooltipPad,callbacks:{label:c=>{
                         if (c.datasetIndex===0) return c.dataset.label+': '+c.parsed.y.toFixed(1)+'%';
+                        if (c.datasetIndex===7 || c.datasetIndex===8) return c.dataset.label+': '+c.parsed.y.toFixed(1)+' kWh/m²';
                         return c.dataset.label+': '+fmtTick(c.parsed.y)+' kWh';
                     }}}},
                     scales:{
                         x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#bbb',font:{size:chartMobile().tickFont},maxRotation:45,minRotation:isMobile()?0:45,autoSkip:true,maxTicksLimit:isMobile()?8:20}},
                         y:{position:'left',beginAtZero:true,title:{display:chartMobile().showAxisTitles,text:'Energy (kWh)',color:'#bbb',font:{size:chartMobile().titleFont}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#bbb',font:{size:chartMobile().tickFont},callback:v=>fmtTick(v)}},
-                        y2:{position:'right',beginAtZero:true,suggestedMin:50,suggestedMax:120,title:{display:chartMobile().showAxisTitles,text:'Performance (%)',color:'#FFD700',font:{size:chartMobile().titleFont}},grid:{drawOnChartArea:false},ticks:{color:'#FFD700',font:{size:chartMobile().tickFont},callback:v=>Math.round(v)+'%'}}
+                        y2:{position:'right',beginAtZero:true,suggestedMin:50,suggestedMax:120,title:{display:chartMobile().showAxisTitles,text:'Performance (%)',color:'#FFD700',font:{size:chartMobile().titleFont}},grid:{drawOnChartArea:false},ticks:{color:'#FFD700',font:{size:chartMobile().tickFont},callback:v=>Math.round(v)+'%'}},
+                        y3:{position:'right',display:(lifetimeDsVis['l-actIrrad']||lifetimeDsVis['l-predIrrad']),beginAtZero:true,title:{display:chartMobile().showAxisTitles,text:'Irradiation (kWh/m²)',color:'#f97316',font:{size:chartMobile().titleFont}},grid:{drawOnChartArea:false},ticks:{color:'#f97316',font:{size:chartMobile().tickFont},callback:v=>Math.round(v)}}
                     }
                 }
             });
