@@ -41601,9 +41601,9 @@
     },
     {
       "date": "2026-07-11",
-      "generation_kwh": 19.34,
-      "actual_load_kwh": 493.23,
-      "actual_grid_kwh": 473.89,
+      "generation_kwh": 70.47,
+      "actual_load_kwh": 618.99,
+      "actual_grid_kwh": 548.52,
       "hourly_data": [
         {
           "time": "00:00",
@@ -41677,10 +41677,24 @@
         },
         {
           "time": "10:00",
-          "generation_kw": 5.072,
-          "grid_kw": 12.233,
-          "load_kw": 17.306,
-          "intervals": 3
+          "generation_kw": 21.692,
+          "grid_kw": 46.6,
+          "load_kw": 68.293,
+          "intervals": 12
+        },
+        {
+          "time": "11:00",
+          "generation_kw": 31.496,
+          "grid_kw": 36.387,
+          "load_kw": 67.882,
+          "intervals": 12
+        },
+        {
+          "time": "12:00",
+          "generation_kw": 3.013,
+          "grid_kw": 3.88,
+          "load_kw": 6.893,
+          "intervals": 1
         }
       ]
     }
@@ -42201,36 +42215,36 @@
     "2026-07": {
       "tou_breakdown": {
         "peak_kwh": 5.236,
-        "standard_kwh": 1225.391,
+        "standard_kwh": 1244.5040000000001,
         "off_peak_kwh": 268.15500000000003
       },
       "financial": {
         "utility": {
           "peak_zar": 42.99,
-          "standard_zar": 2891.92,
+          "standard_zar": 2937.03,
           "off_peak_zar": 458.55,
-          "total_zar": 3393.46
+          "total_zar": 3438.56
         },
         "ppa": {
           "peak_zar": 7.85,
-          "standard_zar": 1838.09,
+          "standard_zar": 1866.76,
           "off_peak_zar": 402.23,
-          "total_zar": 2248.17
+          "total_zar": 2276.84
         },
         "savings": {
           "peak_savings_zar": 35.13,
-          "standard_savings_zar": 1053.84,
+          "standard_savings_zar": 1070.27,
           "off_peak_savings_zar": 56.31,
-          "total_savings_zar": 1145.28
+          "total_savings_zar": 1161.72
         },
         "peak_savings_zar": 35.13,
-        "standard_savings_zar": 1053.84,
+        "standard_savings_zar": 1070.27,
         "off_peak_savings_zar": 56.31,
-        "total_savings_zar": 1145.28
+        "total_savings_zar": 1161.72
       },
-      "total_generation_kwh": 1498.78,
-      "actual_load_kwh": 12004.02,
-      "actual_grid_kwh": 10505.22,
+      "total_generation_kwh": 1517.89,
+      "actual_load_kwh": 12160.77,
+      "actual_grid_kwh": 10642.86,
       "days_with_data": 11,
       "tou_breakdown_expected": {
         "peak_kwh": 1162.57,
@@ -42264,38 +42278,38 @@
     }
   },
   "lifetime_summary": {
-    "total_generation_kwh": 65081.26,
-    "actual_load_kwh": 302780.74,
-    "actual_grid_kwh": 237704.96,
+    "total_generation_kwh": 65100.37,
+    "actual_load_kwh": 302937.49,
+    "actual_grid_kwh": 237842.6,
     "days_active": 227,
     "tou_breakdown": {
       "peak_kwh": 3398.4470000000015,
-      "standard_kwh": 45944.449000000015,
+      "standard_kwh": 45963.56200000001,
       "off_peak_kwh": 15738.366999999998
     },
     "financial": {
       "utility": {
         "peak_zar": 16074.65,
-        "standard_zar": 103949.32,
+        "standard_zar": 103992.56,
         "off_peak_zar": 26794.57,
-        "total_zar": 146818.54
+        "total_zar": 146861.78
       },
       "ppa": {
         "peak_zar": 5097.67,
-        "standard_zar": 68916.67,
+        "standard_zar": 68945.34,
         "off_peak_zar": 23607.55,
-        "total_zar": 97621.89
+        "total_zar": 97650.56
       },
       "savings": {
         "peak_savings_zar": 10976.98,
-        "standard_savings_zar": 35032.64,
+        "standard_savings_zar": 35047.22,
         "off_peak_savings_zar": 3187.02,
-        "total_savings_zar": 49196.65
+        "total_savings_zar": 49211.22
       },
       "peak_savings_zar": 10976.98,
-      "standard_savings_zar": 35032.64,
+      "standard_savings_zar": 35047.22,
       "off_peak_savings_zar": 3187.02,
-      "total_savings_zar": 49196.65
+      "total_savings_zar": 49211.22
     }
   },
   "tou_rates": [
