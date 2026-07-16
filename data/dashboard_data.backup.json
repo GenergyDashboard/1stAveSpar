@@ -42570,9 +42570,9 @@
     },
     {
       "date": "2026-07-16",
-      "generation_kwh": 0.27,
-      "actual_load_kwh": 340.79,
-      "actual_grid_kwh": 340.52,
+      "generation_kwh": 26.87,
+      "actual_load_kwh": 526.32,
+      "actual_grid_kwh": 499.45,
       "hourly_data": [
         {
           "time": "00:00",
@@ -42629,6 +42629,27 @@
           "grid_kw": 55.96,
           "load_kw": 56.228,
           "intervals": 10
+        },
+        {
+          "time": "08:00",
+          "generation_kw": 3.081,
+          "grid_kw": 66.567,
+          "load_kw": 69.647,
+          "intervals": 12
+        },
+        {
+          "time": "09:00",
+          "generation_kw": 12.275,
+          "grid_kw": 59.653,
+          "load_kw": 71.928,
+          "intervals": 12
+        },
+        {
+          "time": "10:00",
+          "generation_kw": 11.244,
+          "grid_kw": 32.707,
+          "load_kw": 43.951,
+          "intervals": 7
         }
       ]
     }
@@ -43148,38 +43169,38 @@
     },
     "2026-07": {
       "tou_breakdown": {
-        "peak_kwh": 7.498,
+        "peak_kwh": 7.766,
         "standard_kwh": 1822.644,
         "off_peak_kwh": 510.05100000000004
       },
       "financial": {
         "utility": {
-          "peak_zar": 61.56,
+          "peak_zar": 63.76,
           "standard_zar": 4301.44,
           "off_peak_zar": 872.19,
-          "total_zar": 5235.19
+          "total_zar": 5237.39
         },
         "ppa": {
-          "peak_zar": 11.25,
+          "peak_zar": 11.65,
           "standard_zar": 2733.97,
           "off_peak_zar": 765.08,
-          "total_zar": 3510.29
+          "total_zar": 3510.69
         },
         "savings": {
-          "peak_savings_zar": 50.31,
+          "peak_savings_zar": 52.11,
           "standard_savings_zar": 1567.47,
           "off_peak_savings_zar": 107.11,
-          "total_savings_zar": 1724.9
+          "total_savings_zar": 1726.69
         },
-        "peak_savings_zar": 50.31,
+        "peak_savings_zar": 52.11,
         "standard_savings_zar": 1567.47,
         "off_peak_savings_zar": 107.11,
-        "total_savings_zar": 1724.9
+        "total_savings_zar": 1726.69
       },
-      "total_generation_kwh": 2340.19,
-      "actual_load_kwh": 17662.4,
-      "actual_grid_kwh": 15322.19,
-      "days_with_data": 15,
+      "total_generation_kwh": 2340.46,
+      "actual_load_kwh": 18003.19,
+      "actual_grid_kwh": 15662.71,
+      "days_with_data": 16,
       "tou_breakdown_expected": {
         "peak_kwh": 1162.57,
         "standard_kwh": 2557.65,
@@ -43212,38 +43233,38 @@
     }
   },
   "lifetime_summary": {
-    "total_generation_kwh": 65922.67,
-    "actual_load_kwh": 308439.12,
-    "actual_grid_kwh": 242521.93,
-    "days_active": 231,
+    "total_generation_kwh": 65922.94,
+    "actual_load_kwh": 308779.91,
+    "actual_grid_kwh": 242862.45,
+    "days_active": 232,
     "tou_breakdown": {
-      "peak_kwh": 3400.7090000000017,
+      "peak_kwh": 3400.9770000000017,
       "standard_kwh": 46541.70200000001,
       "off_peak_kwh": 15980.262999999999
     },
     "financial": {
       "utility": {
-        "peak_zar": 16085.35,
+        "peak_zar": 16086.62,
         "standard_zar": 105300.6,
         "off_peak_zar": 27206.4,
-        "total_zar": 148592.35
+        "total_zar": 148593.62
       },
       "ppa": {
-        "peak_zar": 5101.06,
+        "peak_zar": 5101.47,
         "standard_zar": 69812.55,
         "off_peak_zar": 23970.39,
-        "total_zar": 98884.01
+        "total_zar": 98884.41
       },
       "savings": {
-        "peak_savings_zar": 10984.29,
+        "peak_savings_zar": 10985.16,
         "standard_savings_zar": 35488.05,
         "off_peak_savings_zar": 3236.0,
-        "total_savings_zar": 49708.34
+        "total_savings_zar": 49709.21
       },
-      "peak_savings_zar": 10984.29,
+      "peak_savings_zar": 10985.16,
       "standard_savings_zar": 35488.05,
       "off_peak_savings_zar": 3236.0,
-      "total_savings_zar": 49708.34
+      "total_savings_zar": 49709.21
     }
   },
   "tou_rates": [
